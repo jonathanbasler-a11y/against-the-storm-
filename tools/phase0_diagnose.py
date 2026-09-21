@@ -1,0 +1,725 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Phase-0-Diagnose fuer den Against-the-Storm-Assistenten.
+
+Beantwortet die drei Fragen aus SPEC.md Phase 0:
+
+  1. Save-Format    -> Container erkennen (JSON / gzip / zip / zlib / unbekannt),
+                       bei unbekannt Hexdump der ersten 256 Bytes + Formathypothese.
+  2. Schreibzeitpunkt -> mtime-Protokoll ueber N Minuten, Intervalle auswerten.
+  3. Sprache        -> stehen im Save englische IDs oder lokalisierte deutsche Strings?
+
+Zusaetzlich (kostet nichts, spart spaeter Arbeit): Schluesselindex und Feldsuche
+fuer die GameState-Felder aus Phase 2, damit die Entscheidungsvorlage beziffern
+kann, wie viel der Parser ueberhaupt abdeckt.
+
+Nur Standardbibliothek, keine Abhaengigkeiten. Laeuft unter Windows und Linux.
+Schreibt nichts in den Spielordner, oeffnet die Dateien ausschliesslich lesend.
+
+Beispiele:
+    python tools/phase0_diagnose.py inspect
+    python tools/phase0_diagnose.py watch --minutes 10
+    python tools/phase0_diagnose.py all --minutes 10
+    python tools/phase0_diagnose.py inspect --dir "D:/pfad/zum/ordner"
+"""
+
+from __future__ import annotations
+
+import argparse
+import gzip
+import json
+import os
+import platform
+import re
+import statistics
+import sys
+import time
+import zlib
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
+
+SCHEMA_VERSION = 1
+
+# --------------------------------------------------------------------------
+# Fundorte
+# --------------------------------------------------------------------------
+
+SAVE_SUBPATH = Path("AppData") / "LocalLow" / "Eremite Games" / "Against the Storm"
+
+# Steam-AppID von Against the Storm, fuer Proton-Praefixe unter Linux.
+PROTON_APPID = "1336490"
+
+
+def candidate_dirs() -> list[Path]:
+    """Mutmassliche Speicherorte, plattformabhaengig, ohne Existenzpruefung."""
+    out: list[Path] = []
+    userprofile = os.environ.get("USERPROFILE")
+    if userprofile:
+        out.append(Path(userprofile) / SAVE_SUBPATH)
+    out.append(Path.home() / SAVE_SUBPATH)
+
+    if platform.system() != "Windows":
+        # Proton/Wine: das Spiel liegt im Windows-Praefix.
+        for steam_root in (
+            Path.home() / ".steam" / "steam",
+            Path.home() / ".local" / "share" / "Steam",
+            Path.home() / "snap" / "steam" / "common" / ".steam" / "steam",
+        ):
+            out.append(
+                steam_root
+                / "steamapps"
+                / "compatdata"
+                / PROTON_APPID
+                / "pfx"
+                / "drive_c"
+                / "users"
+                / "steamuser"
+                / SAVE_SUBPATH
+            )
+        out.append(Path.home() / ".wine" / "drive_c" / "users" / os.environ.get("USER", "user") / SAVE_SUBPATH)
+
+    seen: set[str] = set()
+    uniq: list[Path] = []
+    for p in out:
+        key = str(p)
+        if key not in seen:
+            seen.add(key)
+            uniq.append(p)
+    return uniq
+
+
+def resolve_dir(explicit: str | None) -> tuple[Path | None, list[dict]]:
+    """Liefert den ersten existierenden Kandidaten plus Protokoll aller Versuche."""
+    tried: list[dict] = []
+    cands = [Path(explicit).expanduser()] if explicit else candidate_dirs()
+    found: Path | None = None
+    for c in cands:
+        exists = c.is_dir()
+        tried.append({"path": str(c), "exists": exists})
+        if exists and found is None:
+            found = c
+    return found, tried
+
+
+def list_save_files(directory: Path) -> list[Path]:
+    """Alle Save-artigen Dateien, bis zwei Ebenen tief (Profile/Backups)."""
+    hits: list[Path] = []
+    for pattern in ("*", "*/*", "*/*/*"):
+        for p in sorted(directory.glob(pattern)):
+            if p.is_file():
+                hits.append(p)
+    interesting = [p for p in hits if p.suffix.lower() in {".save", ".json", ".dat", ".bak"} or "save" in p.name.lower()]
+    return interesting or hits
+
+
+# --------------------------------------------------------------------------
+# Frage 1: Container erkennen
+# --------------------------------------------------------------------------
+
+MAGIC = [
+    (b"\x1f\x8b", "gzip"),
+    (b"PK\x03\x04", "zip"),
+    (b"\x04\x22\x4d\x18", "lz4-frame"),
+    (b"\xfd7zXZ\x00", "xz"),
+    (b"BZh", "bzip2"),
+    (b"\x28\xb5\x2f\xfd", "zstd"),
+    (b"\x5d\x00\x00", "lzma-alone"),
+    (b"UnityFS", "unity-bundle"),
+    (b"\x00\x01\x00\x00", "unity-serialized?"),
+]
+
+ZLIB_FIRST_BYTES = {b"\x78\x01", b"\x78\x5e", b"\x78\x9c", b"\x78\xda"}
+
+
+def hexdump(data: bytes, length: int = 256) -> str:
+    lines = []
+    chunk = data[:length]
+    for off in range(0, len(chunk), 16):
+        row = chunk[off : off + 16]
+        hexpart = " ".join(f"{b:02x}" for b in row)
+        asc = "".join(chr(b) if 32 <= b < 127 else "." for b in row)
+        lines.append(f"{off:08x}  {hexpart:<47}  |{asc}|")
+    return "\n".join(lines)
+
+
+def printable_ratio(data: bytes) -> float:
+    if not data:
+        return 0.0
+    ok = sum(1 for b in data if 32 <= b < 127 or b in (9, 10, 13))
+    return ok / len(data)
+
+
+def decode_container(raw: bytes) -> dict:
+    """Erkennt den Container und liefert, falls moeglich, die Nutzdaten."""
+    result: dict = {"container": "unbekannt", "payload": None, "notes": []}
+    head = raw[:16]
+
+    stripped = raw.lstrip(b" \t\r\n\ufeff")
+    if stripped[:1] in (b"{", b"["):
+        result["container"] = "plain-json"
+        result["payload"] = raw
+        return result
+
+    for magic, name in MAGIC:
+        if raw.startswith(magic):
+            result["container"] = name
+            break
+
+    if result["container"] == "gzip":
+        try:
+            result["payload"] = gzip.decompress(raw)
+        except OSError as exc:  # defekt oder mehrteilig
+            result["notes"].append(f"gzip.decompress fehlgeschlagen: {exc}")
+    elif result["container"] == "zip":
+        try:
+            import zipfile
+            import io as _io
+
+            with zipfile.ZipFile(_io.BytesIO(raw)) as zf:
+                names = zf.namelist()
+                result["notes"].append(f"Zip-Eintraege: {names[:10]}")
+                if names:
+                    result["payload"] = zf.read(names[0])
+        except Exception as exc:
+            result["notes"].append(f"Zip-Lesen fehlgeschlagen: {exc}")
+    elif result["container"] == "unbekannt":
+        if head[:2] in ZLIB_FIRST_BYTES:
+            try:
+                result["payload"] = zlib.decompress(raw)
+                result["container"] = "zlib"
+            except zlib.error as exc:
+                result["notes"].append(f"zlib.decompress fehlgeschlagen: {exc}")
+        if result["payload"] is None:
+            # roher Deflate-Strom ohne Header
+            try:
+                result["payload"] = zlib.decompressobj(-zlib.MAX_WBITS).decompress(raw)
+                if result["payload"]:
+                    result["container"] = "raw-deflate"
+            except zlib.error:
+                result["payload"] = None
+        if result["payload"] is None:
+            # Unity/Eremite legen manchmal einen kleinen Header vor den Strom.
+            for off in range(1, min(64, len(raw))):
+                if raw[off : off + 2] == b"\x1f\x8b":
+                    try:
+                        result["payload"] = gzip.decompress(raw[off:])
+                        result["container"] = f"gzip+{off}-byte-header"
+                        result["notes"].append(f"gzip-Magic erst ab Offset {off}")
+                        break
+                    except OSError:
+                        continue
+
+    if result["payload"] is None and result["container"] == "unbekannt":
+        result["notes"].append(
+            "Kein bekannter Container. Hypothese anhand Hexdump und Druckbarkeitsanteil bilden."
+        )
+    return result
+
+
+def format_hypothesis(raw: bytes) -> list[str]:
+    """Formathypothesen fuer den Fall, dass nichts dekodiert werden konnte."""
+    out: list[str] = []
+    ratio = printable_ratio(raw[:4096])
+    out.append(f"Druckbarkeitsanteil der ersten 4 KiB: {ratio:.0%}")
+    if ratio > 0.85:
+        out.append("Hoher Textanteil: vermutlich Text/JSON mit Praefix oder eigenem Textformat.")
+    else:
+        out.append("Ueberwiegend Binaer: Kompression oder binaere Serialisierung wahrscheinlich.")
+    if b"UnityFS" in raw[:4096]:
+        out.append("Unity-Assetbundle-Magic gefunden.")
+    if re.search(rb"[A-Za-z]{4,}\.[A-Za-z]{4,}", raw[:8192]):
+        out.append("Namensraum-artige ASCII-Laeufe: moeglicherweise .NET/Unity-Binaerserialisierung.")
+    if raw[:1] in (b"\x82", b"\x83", b"\x84", b"\xde", b"\xdf"):
+        out.append("Erstes Byte passt zu MessagePack-Map.")
+    if len(raw) > 4 and int.from_bytes(raw[:4], "little") in range(len(raw) - 64, len(raw) + 64):
+        out.append("Erste 4 Bytes entsprechen etwa der Dateilaenge: Laengenpraefix wahrscheinlich.")
+    return out
+
+
+# --------------------------------------------------------------------------
+# JSON-Analyse: Schluesselindex, Feldsuche, Sprachprobe
+# --------------------------------------------------------------------------
+
+GERMAN_SEEDS = [
+    "Entschlossenheit", "Ungeduld", "Grundstein", "Bernstein", "Teile",
+    "Schwelende Stadt", "Uralte Feuerstelle", "Gefaehrliche Lichtung", "Gefährliche Lichtung",
+    "Komplexe Nahrung", "Dienste", "Koenigswaelder", "Königswälder", "Felsschlucht",
+    "Bambusebene", "Saegewerk", "Sägewerk", "Primitive Werkbank", "Trapperlager",
+    "Fluffschnabel", "Gutsgericht", "Nahrung", "Jahreszeit", "Lichtung",
+]
+
+ENGLISH_SEEDS = [
+    "Resolve", "Impatience", "Cornerstone", "Amber", "Parts", "Hostility",
+    "Reputation", "Sawmill", "Woodcutter", "Beaver", "Harpy", "Lizard",
+    "Human", "Fox", "Frog", "Glade", "Hearth", "Blightrot", "Smoldering City",
+]
+
+# Welche GameState-Felder aus Phase 2 finden wir im Save wieder?
+FIELD_HINTS: dict[str, list[str]] = {
+    "Biom": ["biome"],
+    "Jahr / Jahreszeit / Restzeit": ["year", "season", "gametime", "timeleft", "daytime", "cycle"],
+    "Prestige-Stufe": ["prestige", "difficulty"],
+    "Weltmodifikatoren": ["modifier", "worldmodifier", "worldevent"],
+    "Bevoelkerung je Spezies": ["villager", "population", "race", "species"],
+    "Entschlossenheit": ["resolve"],
+    "Feindseligkeit": ["hostility"],
+    "Ungeduld": ["impatience"],
+    "Reputation": ["reputation"],
+    "Lagerbestaende": ["storage", "goods", "resourcesamount", "stock", "warehouse"],
+    "Gebaeude + Arbeiter": ["building", "worker", "workplace", "employee"],
+    "Entdeckte Lichtungen": ["glade", "field", "clearing"],
+    "Vorkommen + Restladungen": ["deposit", "node", "charges", "resourcedeposit"],
+    "Gewaehlte Grundsteine": ["cornerstone", "perk"],
+    "Auftraege / Orders": ["order", "quest", "goal"],
+}
+
+
+def walk_json(obj, max_nodes: int, max_strings: int) -> dict:
+    """Ein Durchlauf, iterativ: Schluesselzaehlung, Beispielpfade, Stringprobe."""
+    key_counts: Counter = Counter()
+    key_example: dict[str, dict] = {}
+    strings: list[str] = []
+    seen_strings: set[str] = set()
+    max_depth = 0
+    nodes = 0
+    truncated = False
+
+    stack = [(obj, "$", 0)]
+    while stack:
+        node, path, depth = stack.pop()
+        nodes += 1
+        max_depth = max(max_depth, depth)
+        if nodes > max_nodes:
+            truncated = True
+            break
+        if isinstance(node, dict):
+            for k, v in node.items():
+                key_counts[k] += 1
+                if k not in key_example:
+                    key_example[k] = {"path": f"{path}.{k}", "preview": preview(v)}
+                stack.append((v, f"{path}.{k}", depth + 1))
+        elif isinstance(node, list):
+            for i, v in enumerate(node[:200]):
+                stack.append((v, f"{path}[{i}]", depth + 1))
+            if len(node) > 200:
+                truncated = True
+        elif isinstance(node, str):
+            s = node.strip()
+            if 2 <= len(s) <= 80 and s not in seen_strings and len(strings) < max_strings:
+                seen_strings.add(s)
+                strings.append(s)
+
+    return {
+        "nodes_visited": nodes,
+        "max_depth": max_depth,
+        "truncated": truncated,
+        "key_counts": key_counts,
+        "key_example": key_example,
+        "strings": strings,
+    }
+
+
+def preview(value, limit: int = 120) -> str:
+    try:
+        if isinstance(value, (dict, list)):
+            kind = "dict" if isinstance(value, dict) else "list"
+            return f"<{kind} len={len(value)}>"
+        text = json.dumps(value, ensure_ascii=False)
+    except (TypeError, ValueError):
+        text = repr(value)
+    return text if len(text) <= limit else text[: limit - 3] + "..."
+
+
+def sketch(obj, depth: int = 0, max_depth: int = 3) -> object:
+    """Kompakte Strukturskizze der obersten Ebenen."""
+    if depth >= max_depth:
+        return preview(obj, 60)
+    if isinstance(obj, dict):
+        out = {}
+        for i, (k, v) in enumerate(obj.items()):
+            if i >= 40:
+                out["..."] = f"+{len(obj) - 40} weitere Schluessel"
+                break
+            out[k] = sketch(v, depth + 1, max_depth)
+        return out
+    if isinstance(obj, list):
+        if not obj:
+            return "<list len=0>"
+        return {"<list>": len(obj), "[0]": sketch(obj[0], depth + 1, max_depth)}
+    return preview(obj, 60)
+
+
+def field_report(key_counts: Counter, key_example: dict) -> dict:
+    lowered = {k.lower(): k for k in key_counts}
+    report: dict = {}
+    for label, hints in FIELD_HINTS.items():
+        hits = []
+        for low, orig in lowered.items():
+            if any(h in low for h in hints):
+                hits.append(
+                    {
+                        "key": orig,
+                        "count": key_counts[orig],
+                        "path": key_example[orig]["path"],
+                        "preview": key_example[orig]["preview"],
+                    }
+                )
+        hits.sort(key=lambda h: -h["count"])
+        report[label] = hits[:6]
+    return report
+
+
+def language_probe(strings: list[str]) -> dict:
+    blob = "\n".join(strings)
+    de_hits = sorted({s for s in GERMAN_SEEDS if s in blob})
+    en_hits = sorted({s for s in ENGLISH_SEEDS if re.search(rf"\b{re.escape(s)}\b", blob)})
+    umlauts = sum(1 for s in strings if re.search(r"[äöüÄÖÜß]", s))
+    id_like = sum(1 for s in strings if re.fullmatch(r"[A-Za-z][A-Za-z0-9_\- ]{2,40}", s))
+    guid_like = sum(1 for s in strings if re.fullmatch(r"[0-9a-fA-F\-]{16,40}", s))
+
+    if de_hits and not en_hits:
+        verdict = "lokalisierte deutsche Strings"
+    elif en_hits and not de_hits:
+        verdict = "englische IDs"
+    elif en_hits and de_hits:
+        verdict = "gemischt (englische IDs plus lokalisierte Texte)"
+    else:
+        verdict = "unklar, zu wenig Treffer in der Stringprobe"
+
+    return {
+        "verdict": verdict,
+        "german_hits": de_hits,
+        "english_hits": en_hits,
+        "strings_sampled": len(strings),
+        "strings_with_umlauts": umlauts,
+        "id_like_strings": id_like,
+        "guid_like_strings": guid_like,
+        "sample": strings[:40],
+    }
+
+
+# --------------------------------------------------------------------------
+# Frage 1 + 3: inspect
+# --------------------------------------------------------------------------
+
+
+def inspect_file(path: Path, args) -> dict:
+    stat = path.stat()
+    info: dict = {
+        "file": str(path),
+        "name": path.name,
+        "size_bytes": stat.st_size,
+        "size_mb": round(stat.st_size / 1024 / 1024, 2),
+        "mtime": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+    }
+    with path.open("rb") as fh:
+        raw = fh.read()
+
+    dec = decode_container(raw)
+    info["container"] = dec["container"]
+    info["container_notes"] = dec["notes"]
+    info["first_256_bytes_hex"] = hexdump(raw, 256)
+
+    payload = dec["payload"]
+    if payload is None:
+        info["decoded"] = False
+        info["hypothesis"] = format_hypothesis(raw)
+        return info
+
+    info["decoded"] = True
+    info["payload_bytes"] = len(payload)
+    info["payload_mb"] = round(len(payload) / 1024 / 1024, 2)
+    info["compression_ratio"] = round(len(payload) / max(stat.st_size, 1), 2)
+
+    try:
+        text = payload.decode("utf-8")
+        info["encoding"] = "utf-8"
+    except UnicodeDecodeError:
+        text = payload.decode("utf-8", errors="replace")
+        info["encoding"] = "utf-8 mit Ersetzungen"
+    info["payload_lines"] = text.count("\n") + 1
+    info["payload_head"] = text[:400]
+
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        info["json"] = False
+        info["json_error"] = f"{exc.msg} (Zeile {exc.lineno}, Spalte {exc.colno})"
+        return info
+
+    info["json"] = True
+    info["top_level_keys"] = list(data)[:60] if isinstance(data, dict) else f"<{type(data).__name__}>"
+    info["structure_sketch"] = sketch(data, max_depth=args.sketch_depth)
+
+    walked = walk_json(data, args.max_nodes, args.max_strings)
+    info["nodes_visited"] = walked["nodes_visited"]
+    info["max_depth"] = walked["max_depth"]
+    info["walk_truncated"] = walked["truncated"]
+    info["distinct_keys"] = len(walked["key_counts"])
+    info["most_common_keys"] = walked["key_counts"].most_common(30)
+    info["fields"] = field_report(walked["key_counts"], walked["key_example"])
+    info["language"] = language_probe(walked["strings"])
+    return info
+
+
+def cmd_inspect(args) -> dict:
+    directory, tried = resolve_dir(args.dir)
+    out: dict = {"tried_dirs": tried, "dir": str(directory) if directory else None, "files": []}
+    if directory is None:
+        out["error"] = (
+            "Kein Save-Verzeichnis gefunden. Mit --dir einen Pfad angeben, z. B. "
+            r'--dir "%USERPROFILE%\AppData\LocalLow\Eremite Games\Against the Storm"'
+        )
+        return out
+
+    files = list_save_files(directory)
+    out["dir_listing"] = [
+        {"name": str(p.relative_to(directory)), "size_bytes": p.stat().st_size,
+         "mtime": datetime.fromtimestamp(p.stat().st_mtime, timezone.utc).isoformat()}
+        for p in files
+    ]
+    targets = [p for p in files if p.name.lower() in {"save.save", "metasave.save"}] or files[: args.max_files]
+    for p in targets[: args.max_files]:
+        try:
+            out["files"].append(inspect_file(p, args))
+        except Exception as exc:  # Diagnose darf nie hart abbrechen
+            out["files"].append({"file": str(p), "error": f"{type(exc).__name__}: {exc}"})
+    return out
+
+
+# --------------------------------------------------------------------------
+# Frage 2: watch
+# --------------------------------------------------------------------------
+
+
+def cmd_watch(args) -> dict:
+    directory, tried = resolve_dir(args.dir)
+    out: dict = {"tried_dirs": tried, "dir": str(directory) if directory else None}
+    if directory is None:
+        out["error"] = "Kein Save-Verzeichnis gefunden, --dir angeben."
+        return out
+
+    files = [p for p in list_save_files(directory) if p.suffix.lower() == ".save"] or list_save_files(directory)
+    files = files[: args.max_files]
+    out["watched"] = [str(p) for p in files]
+    out["interval_seconds"] = args.interval
+    out["duration_minutes"] = args.minutes
+
+    last: dict[str, tuple[float, int]] = {}
+    events: list[dict] = []
+    deadline = time.time() + args.minutes * 60
+    started = time.time()
+
+    print(f"Beobachte {len(files)} Datei(en) fuer {args.minutes} Minuten, Abtastung alle {args.interval}s.")
+    print("Spiel laufen lassen und normal weiterspielen. Abbruch mit Strg+C.\n")
+
+    try:
+        while time.time() < deadline:
+            for p in files:
+                try:
+                    st = p.stat()
+                except FileNotFoundError:
+                    continue
+                key = str(p)
+                sig = (st.st_mtime, st.st_size)
+                if key not in last:
+                    last[key] = sig
+                    continue
+                if sig != last[key]:
+                    now = time.time()
+                    prev_evt = [e for e in events if e["file"] == key]
+                    gap = round(now - (prev_evt[-1]["wall_clock_epoch"] if prev_evt else started), 1)
+                    evt = {
+                        "file": key,
+                        "at": datetime.now(timezone.utc).isoformat(),
+                        "wall_clock_epoch": now,
+                        "seconds_since_previous": gap,
+                        "size_bytes": st.st_size,
+                        "size_delta": st.st_size - last[key][1],
+                    }
+                    events.append(evt)
+                    print(f"[{evt['at']}] Schreibvorgang {Path(key).name}: "
+                          f"+{evt['size_delta']} Bytes, {gap}s seit dem letzten")
+                    last[key] = sig
+            time.sleep(args.interval)
+    except KeyboardInterrupt:
+        out["interrupted"] = True
+        print("\nAbgebrochen.")
+
+    out["events"] = events
+    out["observed_minutes"] = round((time.time() - started) / 60, 2)
+
+    per_file: dict[str, dict] = {}
+    for p in files:
+        key = str(p)
+        gaps = [e["seconds_since_previous"] for e in events if e["file"] == key][1:]
+        entry: dict = {"writes": len([e for e in events if e["file"] == key])}
+        if gaps:
+            entry["gap_seconds"] = {
+                "min": min(gaps),
+                "median": round(statistics.median(gaps), 1),
+                "max": max(gaps),
+            }
+            entry["verdict"] = f"schreibt etwa alle {round(statistics.median(gaps))}s"
+        elif entry["writes"] == 1:
+            entry["verdict"] = "genau ein Schreibvorgang im Messfenster, Intervall nicht bestimmbar"
+        else:
+            entry["verdict"] = "kein Schreibvorgang im Messfenster"
+        per_file[Path(key).name] = entry
+    out["summary"] = per_file
+    return out
+
+
+# --------------------------------------------------------------------------
+# Bericht
+# --------------------------------------------------------------------------
+
+
+def render(report: dict) -> str:
+    L: list[str] = []
+    add = L.append
+    add("=" * 78)
+    add("PHASE-0-DIAGNOSE  Against the Storm Assistant")
+    add("=" * 78)
+    env = report["environment"]
+    add(f"System     : {env['platform']}  Python {env['python']}")
+    add(f"Zeitpunkt  : {env['timestamp']}")
+
+    ins = report.get("inspect")
+    if ins:
+        add("")
+        add("-" * 78)
+        add("FRAGE 1+3: SAVE-FORMAT UND SPRACHE")
+        add("-" * 78)
+        if ins.get("error"):
+            add(f"FEHLER: {ins['error']}")
+            add("Gesuchte Pfade:")
+            for t in ins["tried_dirs"]:
+                add(f"  [{'x' if t['exists'] else ' '}] {t['path']}")
+        else:
+            add(f"Verzeichnis: {ins['dir']}")
+            add("")
+            add("Dateien:")
+            for f in ins.get("dir_listing", [])[:30]:
+                add(f"  {f['name']:<40} {f['size_bytes']:>12,} B   {f['mtime']}")
+            for f in ins["files"]:
+                add("")
+                add(f"### {f.get('name', f['file'])}")
+                if "error" in f:
+                    add(f"  Fehler: {f['error']}")
+                    continue
+                add(f"  Groesse     : {f['size_mb']} MB")
+                add(f"  Container   : {f['container']}")
+                for n in f.get("container_notes", []):
+                    add(f"                {n}")
+                if not f.get("decoded"):
+                    add("  Dekodierung : FEHLGESCHLAGEN")
+                    add("  Hexdump der ersten 256 Bytes:")
+                    for line in f["first_256_bytes_hex"].splitlines():
+                        add("    " + line)
+                    add("  Hypothesen:")
+                    for h in f.get("hypothesis", []):
+                        add(f"    - {h}")
+                    continue
+                add(f"  Nutzdaten   : {f['payload_mb']} MB, {f.get('payload_lines', '?'):,} Zeilen, "
+                    f"Faktor {f.get('compression_ratio', '?')}")
+                if not f.get("json"):
+                    add(f"  JSON        : NEIN ({f.get('json_error')})")
+                    add(f"  Anfang      : {f.get('payload_head', '')[:200]!r}")
+                    continue
+                add(f"  JSON        : ja, {f['distinct_keys']:,} verschiedene Schluessel, "
+                    f"Tiefe {f['max_depth']}, {f['nodes_visited']:,} Knoten besucht"
+                    + ("  (Durchlauf gekappt)" if f.get("walk_truncated") else ""))
+                tl = f.get("top_level_keys")
+                if isinstance(tl, list):
+                    add(f"  Oberste Ebene: {', '.join(tl[:20])}")
+                lang = f["language"]
+                add("")
+                add(f"  Sprache     : {lang['verdict']}")
+                add(f"                {lang['strings_sampled']} Strings geprobt, "
+                    f"{lang['strings_with_umlauts']} mit Umlauten, {lang['id_like_strings']} ID-artig")
+                if lang["english_hits"]:
+                    add(f"                englische Treffer: {', '.join(lang['english_hits'][:12])}")
+                if lang["german_hits"]:
+                    add(f"                deutsche Treffer : {', '.join(lang['german_hits'][:12])}")
+                add(f"                Stringprobe: {', '.join(lang['sample'][:12])}")
+                add("")
+                add("  GameState-Felder (Phase 2) im Save:")
+                for label, hits in f["fields"].items():
+                    if hits:
+                        h = hits[0]
+                        add(f"    [ja  ] {label:<28} {h['key']} x{h['count']}  {h['path'][:60]}")
+                    else:
+                        add(f"    [nein] {label:<28} kein passender Schluessel gefunden")
+
+    w = report.get("watch")
+    if w:
+        add("")
+        add("-" * 78)
+        add("FRAGE 2: SCHREIBZEITPUNKT")
+        add("-" * 78)
+        if w.get("error"):
+            add(f"FEHLER: {w['error']}")
+        else:
+            add(f"Messdauer: {w.get('observed_minutes')} Minuten, Abtastung alle {w['interval_seconds']}s")
+            for name, s in w.get("summary", {}).items():
+                add(f"  {name:<24} {s['writes']} Schreibvorgaenge  -> {s['verdict']}")
+            if w.get("events"):
+                add("  Ereignisse:")
+                for e in w["events"][:40]:
+                    add(f"    {e['at']}  {Path(e['file']).name:<16} {e['size_delta']:+,} B  "
+                        f"(+{e['seconds_since_previous']}s)")
+    add("")
+    add("=" * 78)
+    return "\n".join(L)
+
+
+# --------------------------------------------------------------------------
+# CLI
+# --------------------------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("mode", choices=["inspect", "watch", "all"], nargs="?", default="inspect")
+    ap.add_argument("--dir", help="Save-Verzeichnis explizit angeben")
+    ap.add_argument("--minutes", type=float, default=10.0, help="Messdauer fuer watch (Vorgabe 10)")
+    ap.add_argument("--interval", type=float, default=2.0, help="Abtastintervall in Sekunden (Vorgabe 2)")
+    ap.add_argument("--max-files", type=int, default=4, help="Hoechstzahl untersuchter Dateien")
+    ap.add_argument("--max-nodes", type=int, default=3_000_000, help="Knotenobergrenze beim JSON-Durchlauf")
+    ap.add_argument("--max-strings", type=int, default=400, help="Groesse der Stringprobe")
+    ap.add_argument("--sketch-depth", type=int, default=3, help="Tiefe der Strukturskizze")
+    ap.add_argument("--out", default="diagnostics", help="Ausgabeverzeichnis fuer den Bericht")
+    args = ap.parse_args(argv)
+
+    report: dict = {
+        "schema_version": SCHEMA_VERSION,
+        "environment": {
+            "platform": platform.platform(),
+            "python": platform.python_version(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    }
+    if args.mode in ("inspect", "all"):
+        report["inspect"] = cmd_inspect(args)
+    if args.mode in ("watch", "all"):
+        report["watch"] = cmd_watch(args)
+
+    text = render(report)
+    print(text)
+
+    outdir = Path(args.out)
+    outdir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    json_path = outdir / f"phase0-{stamp}.json"
+    txt_path = outdir / f"phase0-{stamp}.txt"
+    json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    txt_path.write_text(text, encoding="utf-8")
+    print(f"\nBericht geschrieben: {json_path}\n                     {txt_path}")
+    print("Die Dateien bleiben lokal. Fuer die Auswertung reicht mir der .txt-Bericht.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
