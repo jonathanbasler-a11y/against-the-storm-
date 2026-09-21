@@ -10,6 +10,7 @@ dependencies = [
 
 [project.scripts]
 ats-mcp = "ats_assistant.mcp_server:main"
+ats-watch = "ats_assistant.watcher:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
