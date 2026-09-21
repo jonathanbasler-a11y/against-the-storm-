@@ -34,6 +34,15 @@ Schreibtakt. Bewertung der Recherche:
 [docs/RESEARCH-REVIEW.md](docs/RESEARCH-REVIEW.md), daraus abgeleitetes
 Rohmaterial: `data/name_map_seed.csv` (125 Paare, 109 davon unbestätigt).
 
+Vor Phase 1 steht noch eine Frage: liefert der Spielstand selbst genug für
+`kb.sqlite`, oder braucht es den Wiki-Scraper?
+
+```powershell
+python tools\kb_probe.py --dump-ids
+```
+
+Details: [docs/PHASE1-QUELLE.md](docs/PHASE1-QUELLE.md).
+
 Selbsttest ohne echte Spielstände:
 
 ```bash
