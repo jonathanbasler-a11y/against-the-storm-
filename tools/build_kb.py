@@ -431,7 +431,7 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
             pfad = nach_titel.get(titel)
             if not pfad:
                 continue
-            for t in tabellen_aus_datei(pfad):
+            for i, t in enumerate(tabellen_aus_datei(pfad), 1):
                 # Drei verschiedene Tabellen tragen Spezieswerte: Kennzahlen,
                 # Spezialisierungen und das Reputationsverhaeltnis. Sie
                 # ergaenzen sich, deshalb werden alle drei genommen --
@@ -441,7 +441,9 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
                                                 or _hat(t.kopf, "reputation ratio")):
                     n = kb.import_species(conn, t.als_dicts, source_page=pfad.stem)
                     if n:
-                        meldungen.append(f"species: {n} Zeilen aus {pfad.stem}")
+                        spalten = ", ".join(k for k in t.kopf[1:4] if k)
+                        meldungen.append(
+                            f"species: {n} Zeilen aus {pfad.stem} Tabelle {i} ({spalten})")
 
         pfad = nach_titel.get("difficulty")
         if pfad:
@@ -459,7 +461,12 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
             for t in tabellen_aus_datei(pfad):
                 if _hat(t.kopf, "name", "rarity"):
                     n = kb.import_cornerstones(conn, t.als_dicts, source_page=pfad.stem)
-                    meldungen.append(f"cornerstones: {n} Zeilen aus {pfad.stem}")
+                    eindeutig = conn.execute(
+                        "SELECT COUNT(*) c FROM cornerstones").fetchone()["c"]
+                    meldungen.append(
+                        f"cornerstones: {n} Zeilen aus {pfad.stem}, {eindeutig} eindeutige "
+                        f"Namen" + (f" ({n - eindeutig} mehrfach gelistet)"
+                                    if n > eindeutig else ""))
             break
         for titel, herkunft in HERKUNFT_SEITEN.items():
             pfad = nach_titel.get(titel)
