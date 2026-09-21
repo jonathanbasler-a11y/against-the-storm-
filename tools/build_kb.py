@@ -306,6 +306,94 @@ def cmd_page(args) -> int:
     return 0
 
 
+# Die Seiten, deren gerendertes HTML die Tabellen traegt, die im Wikitext
+# fehlen. Ihr Wikitext ist nur eine Abfrage ({{Perks|search=...}}), die Daten
+# klappt der Server aus.
+HTML_SEITEN = (
+    "List of Cornerstones and Perks",
+    "List of annual Cornerstones",
+    "List of Cornerstones available for purchase from traders",
+    "List of Cornerstones available from Orders",
+    "List of Perks",
+    "List of Buildings",
+    "List of Resources",
+    "List of Essential Blueprints",
+    "Glade Events",
+    "Dangerous Glade Event",
+    "Forbidden Glade Event",
+    "Prestige",
+    "Difficulty",
+    "Villagers",
+    "Resolve",
+    "Hunger Tolerance",
+    "Forest Hostility",
+    "Recipes",
+)
+
+
+def _passt(kopf: list[str], begriffe: tuple[str, ...]) -> bool:
+    text = " ".join(kopf).lower()
+    return all(b in text for b in begriffe)
+
+
+def cmd_html(args) -> int:
+    """Tabellen aus dem gerenderten HTML lesen und berichten, was drinsteht."""
+    from ats_assistant.wikihtml import html_dateien, tabellen_aus_datei
+
+    wiki_dir = Path(args.wiki_dir)
+    dateien = html_dateien(wiki_dir)
+    if not dateien:
+        print(f"Keine HTML-Dateien unter {wiki_dir}")
+        print("Erwartet wird ein Unterordner html/ mit .html-Dateien.")
+        return 1
+
+    gesucht = [s.lower() for s in (args.pages or HTML_SEITEN)]
+    nach_titel = {p.stem.lower(): p for p in dateien}
+
+    L: list[str] = []
+    add = L.append
+    add("=" * 78)
+    add("TABELLEN AUS DEM GERENDERTEN HTML")
+    add("=" * 78)
+    add(f"Verzeichnis: {wiki_dir}   ({len(dateien)} Seiten)")
+
+    gefunden = 0
+    for titel in gesucht:
+        pfad = nach_titel.get(titel)
+        add("")
+        add("-" * 78)
+        if pfad is None:
+            add(f"{titel}: nicht im Abzug")
+            continue
+        try:
+            tabellen = tabellen_aus_datei(pfad)
+        except Exception as exc:
+            add(f"{pfad.stem}: nicht lesbar ({type(exc).__name__}: {exc})")
+            continue
+        gefunden += 1
+        add(f"{pfad.stem}  ({pfad.stat().st_size // 1024} KB, {len(tabellen)} Tabellen)")
+        add("-" * 78)
+        for i, t in enumerate(tabellen[: args.max_tables], 1):
+            zeilen = t.als_dicts
+            add(f"  Tabelle {i}: {len(zeilen)} Zeilen")
+            add(f"    Kopf: {' | '.join(t.kopf[:12]) if t.kopf else '(keine Kopfzeile)'}")
+            for beispiel in zeilen[: args.examples]:
+                gekuerzt = {k: (v[:40] + "..." if len(v) > 40 else v)
+                            for k, v in list(beispiel.items())[:6]}
+                add(f"    z. B. {gekuerzt}")
+
+    text = "\n".join(L)
+    print(text)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    (out / f"wiki-html-{stamp}.txt").write_text(text, encoding="utf-8")
+    print(f"\n{gefunden} von {len(gesucht)} Seiten gelesen.")
+    print(f"Bericht geschrieben: {out / f'wiki-html-{stamp}.txt'}")
+    print("Schick mir den .txt -- daraus kommt die Zuordnung zu den Tabellen der Spec.")
+    return 0
+
+
 def cmd_seed(args) -> int:
     conn = kb.connect(args.db)
     csv_pfad = Path(args.names)
@@ -473,6 +561,14 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--title", nargs="+", required=True)
     s.add_argument("--chars", type=int, default=3000)
     s.set_defaults(func=cmd_page)
+
+    s = sub.add_parser("html", help="Tabellen aus dem gerenderten HTML lesen")
+    s.add_argument("--wiki-dir", required=True)
+    s.add_argument("--pages", nargs="*", help="Seitentitel, Vorgabe sind die Listenseiten")
+    s.add_argument("--max-tables", type=int, default=3)
+    s.add_argument("--examples", type=int, default=2)
+    s.add_argument("--out", default="diagnostics")
+    s.set_defaults(func=cmd_html)
 
     s = sub.add_parser("build", help="Wikitext auswerten (noch nicht fertig)")
     s.add_argument("--wiki-dir", required=True)
