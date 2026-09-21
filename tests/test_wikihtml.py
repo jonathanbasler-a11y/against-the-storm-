@@ -140,3 +140,56 @@ def test_title_wird_genommen_wenn_alt_fehlt() -> None:
     html = ('<table class="wikitable"><tr><th>X</th></tr>'
             '<tr><td><img src="a.png" title="Planks"></td></tr></table>')
     assert tabellen_aus_html(html)[0].als_dicts[0]["X"] == "Planks"
+
+
+def test_name_aus_bild_und_linktext_wird_nicht_verdoppelt() -> None:
+    """<a href="/Bats"><img alt="Bats">Bats</a> liefert den Namen zweimal."""
+    html = ('<table class="wikitable"><tr><th>Species</th></tr>'
+            '<tr><td><a href="/Bats"><img src="b.png" alt="Bats">Bats</a></td></tr></table>')
+    assert tabellen_aus_html(html)[0].als_dicts[0]["Species"] == "Bats"
+
+
+def test_mehrwortiger_name_wird_nicht_verdoppelt() -> None:
+    html = ('<table class="wikitable"><tr><th>X</th></tr>'
+            '<tr><td><img alt="Royal Treasure Stag">Royal Treasure Stag</td></tr></table>')
+    assert tabellen_aus_html(html)[0].als_dicts[0]["X"] == "Royal Treasure Stag"
+
+
+def test_zwei_echte_werte_bleiben_stehen() -> None:
+    """Nur die exakte Verdopplung der ganzen Zelle wird zusammengezogen."""
+    html = ('<table class="wikitable"><tr><th>X</th></tr>'
+            '<tr><td>5 Meat 5 Fuel</td></tr></table>')
+    assert tabellen_aus_html(html)[0].als_dicts[0]["X"] == "5 Meat 5 Fuel"
+
+
+def test_verschachtelte_tabelle_landet_in_der_zelle() -> None:
+    """Die Rezeptseite legt die Zutaten in Tabellen INNERHALB der Zellen ab.
+
+    Wer sie nur herauszieht, bekommt eine äussere Tabelle mit leeren Zellen --
+    genau so kamen "Recipes" und "Complex Food" mit null Zeilen zurück.
+    """
+    html = """
+    <table class="wikitable">
+    <tr><th>Building</th><th>Ingredients</th><th>Product</th></tr>
+    <tr><td>Smokehouse</td>
+        <td><table class="wikitable"><tr><td>5</td><td>Meat</td></tr>
+                                     <tr><td>2</td><td>Fuel</td></tr></table></td>
+        <td>10 Jerky</td></tr>
+    </table>
+    """
+    tabellen = tabellen_aus_html(html)
+    aussen = next(t for t in tabellen if "Building" in t.kopf)
+    zeile = aussen.als_dicts[0]
+    assert zeile["Building"] == "Smokehouse"
+    assert zeile["Ingredients"] == "5 Meat 2 Fuel"
+    assert zeile["Product"] == "10 Jerky"
+
+
+def test_innere_tabelle_bleibt_auch_einzeln_lesbar() -> None:
+    html = """
+    <table class="wikitable"><tr><th>A</th></tr>
+    <tr><td><table class="wikitable"><tr><th>Innen</th></tr><tr><td>i</td></tr></table></td></tr>
+    </table>
+    """
+    koepfe = [t.kopf for t in tabellen_aus_html(html)]
+    assert ["Innen"] in koepfe and ["A"] in koepfe

@@ -44,88 +44,126 @@ class Tabelle:
         return out
 
 
-class _TabellenLeser(HTMLParser):
-    """Sammelt Tabellen samt Kopfzeilen, Zellen und ausgeschriebenen Spannen.
+@dataclass
+class _Rahmen:
+    """Der Zustand einer Tabelle. Verschachtelte Tabellen bekommen je einen.
 
-    rowspan und colspan kommen in diesen Tabellen vor ("rowspan=2 | Amber
-    value"). Wer sie ignoriert, bekommt verrutschte Spalten -- deshalb werden
-    sie ausgeschrieben, statt sie wegzulassen.
+    Ohne eigenen Rahmen ueberschreibt eine Tabelle in einer Zelle die Zeile
+    der aeusseren -- und die aeussere Zelle bleibt leer. Genau so kamen
+    "Recipes" und "Complex Food" mit null Zeilen zurueck, obwohl ihre Zutaten
+    in verschachtelten Tabellen daneben standen.
     """
+
+    tabelle: Tabelle
+    zeile: list[str | None] | None = None
+    zelle: list[str] | None = None
+    ist_kopf: bool = False
+    span: list[tuple[int, int, str]] = field(default_factory=list)
+    colspan: int = 1
+    rowspan: int = 1
+
+
+def entdoppeln(text: str) -> str:
+    """'Bats Bats' -> 'Bats'.
+
+    Eine Zelle wie <a href="/Bats"><img alt="Bats">Bats</a> liefert den Namen
+    zweimal: einmal aus dem alt-Attribut, einmal als Linktext. Nur die exakte
+    Verdopplung wird zusammengezogen -- ein "5 5" mit zwei echten Werten
+    bliebe stehen, wenn es nicht die ganze Zelle ausmacht.
+    """
+    woerter = text.split()
+    n = len(woerter)
+    if n >= 2 and n % 2 == 0 and woerter[: n // 2] == woerter[n // 2:]:
+        return " ".join(woerter[: n // 2])
+    return text
+
+
+class _TabellenLeser(HTMLParser):
+    """Sammelt Tabellen samt Kopfzeilen, Zellen und ausgeschriebenen Spannen."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.tabellen: list[Tabelle] = []
-        self._stapel: list[Tabelle] = []
-        self._zeile: list[str | None] | None = None
-        self._zelle: list[str] | None = None
-        self._ist_kopf = False
-        self._span: list[tuple[int, int, str]] = []   # (Restzeilen, Spalte, Wert)
-        self._colspan = 1
-        self._rowspan = 1
+        self._rahmen: list[_Rahmen] = []
         self._unterdruecken = 0
 
-    # -- Tabellen ---------------------------------------------------------
+    @property
+    def _oben(self) -> _Rahmen | None:
+        return self._rahmen[-1] if self._rahmen else None
+
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = {k: (v or "") for k, v in attrs}
         if tag == "table":
-            self._stapel.append(Tabelle(css=a.get("class", "")))
-        elif tag == "tr" and self._stapel:
-            # Offene rowspans belegen ihre Spalte, BEVOR die eigenen Zellen
-            # einsortiert werden. Wer sie hinterher einsetzt, findet die
-            # Spalte besetzt und verschiebt die ganze Zeile.
-            self._zeile = []
-            for rest, spalte, wert in self._span:
-                while len(self._zeile) <= spalte:
-                    self._zeile.append(None)
-                self._zeile[spalte] = wert
-            self._span = [(rest - 1, spalte, wert) for rest, spalte, wert in self._span
-                          if rest - 1 > 0]
-            self._ist_kopf = False
-        elif tag in ("td", "th") and self._zeile is not None:
-            self._zelle = []
-            self._ist_kopf = self._ist_kopf or tag == "th"
-            self._colspan = _zahl(a.get("colspan"), 1)
-            self._rowspan = _zahl(a.get("rowspan"), 1)
+            self._rahmen.append(_Rahmen(Tabelle(css=a.get("class", ""))))
+            return
+        rahmen = self._oben
+        if rahmen is None:
+            return
+        if tag == "tr":
+            rahmen.zeile = []
+            for _rest, spalte, wert in rahmen.span:
+                while len(rahmen.zeile) <= spalte:
+                    rahmen.zeile.append(None)
+                rahmen.zeile[spalte] = wert
+            rahmen.span = [(r - 1, sp, w) for r, sp, w in rahmen.span if r - 1 > 0]
+            rahmen.ist_kopf = False
+        elif tag in ("td", "th") and rahmen.zeile is not None:
+            rahmen.zelle = []
+            rahmen.ist_kopf = rahmen.ist_kopf or tag == "th"
+            rahmen.colspan = _zahl(a.get("colspan"), 1)
+            rahmen.rowspan = _zahl(a.get("rowspan"), 1)
         elif tag in ("style", "script"):
             self._unterdruecken += 1
-        elif tag == "br" and self._zelle is not None:
-            self._zelle.append(" ")
-        elif tag == "img" and self._zelle is not None:
-            # Viele Zellen des Wikis enthalten nur ein Symbol: die Zutat eines
-            # Rezepts, das Produkt eines Gebaeudes. Der Name steht dann im
-            # alt- oder title-Attribut. Wer nur Text sammelt, haelt solche
-            # Tabellen fuer leer -- "Complex Food" und "Recipes" kamen so mit
-            # null Zeilen zurueck, obwohl sie gefuellt sind.
+        elif tag == "br" and rahmen.zelle is not None:
+            rahmen.zelle.append(" ")
+        elif tag == "img" and rahmen.zelle is not None:
+            # Viele Zellen enthalten nur ein Symbol: die Zutat eines Rezepts,
+            # das Produkt eines Gebaeudes. Der Name steht im alt-Attribut.
             beschriftung = (a.get("alt") or a.get("title") or "").strip()
             if beschriftung and not beschriftung.lower().startswith("file:"):
-                self._zelle.append(f" {beschriftung} ")
+                rahmen.zelle.append(f" {beschriftung} ")
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "table" and self._stapel:
-            fertig = self._stapel.pop()
-            self.tabellen.append(fertig)
-        elif tag == "tr" and self._zeile is not None and self._stapel:
-            self._zeile_abschliessen()
-        elif tag in ("td", "th") and self._zelle is not None and self._zeile is not None:
-            wert = LEER.sub(" ", "".join(self._zelle)).strip()
-            for _ in range(max(self._colspan, 1)):
-                spalte = self._naechste_freie()
-                self._zeile[spalte] = wert
-                if self._rowspan > 1:
-                    self._span.append((self._rowspan - 1, spalte, wert))
-            self._zelle = None
+        if tag == "table" and self._rahmen:
+            innen = self._rahmen.pop()
+            if innen.zeile is not None:
+                self._zeile_abschliessen(innen)
+            self.tabellen.append(innen.tabelle)
+            aussen = self._oben
+            if aussen is not None and aussen.zelle is not None:
+                # Die innere Tabelle gehoert in die Zelle, die sie enthaelt.
+                aussen.zelle.append(" " + _flach(innen.tabelle) + " ")
+            return
+
+        rahmen = self._oben
+        if rahmen is None:
+            if tag in ("style", "script") and self._unterdruecken:
+                self._unterdruecken -= 1
+            return
+
+        if tag == "tr" and rahmen.zeile is not None:
+            self._zeile_abschliessen(rahmen)
+        elif tag in ("td", "th") and rahmen.zelle is not None and rahmen.zeile is not None:
+            wert = entdoppeln(LEER.sub(" ", "".join(rahmen.zelle)).strip())
+            for _ in range(max(rahmen.colspan, 1)):
+                spalte = self._naechste_freie(rahmen)
+                rahmen.zeile[spalte] = wert
+                if rahmen.rowspan > 1:
+                    rahmen.span.append((rahmen.rowspan - 1, spalte, wert))
+            rahmen.zelle = None
         elif tag in ("style", "script") and self._unterdruecken:
             self._unterdruecken -= 1
 
     def handle_data(self, data: str) -> None:
         if self._unterdruecken:
             return
-        if self._zelle is not None:
-            self._zelle.append(data)
+        rahmen = self._oben
+        if rahmen is not None and rahmen.zelle is not None:
+            rahmen.zelle.append(data)
 
-    def _naechste_freie(self) -> int:
-        """Erste Spalte, die weder von einer Zelle noch von einem rowspan belegt ist."""
-        zeile = self._zeile
+    @staticmethod
+    def _naechste_freie(rahmen: _Rahmen) -> int:
+        zeile = rahmen.zeile
         assert zeile is not None
         for i, wert in enumerate(zeile):
             if wert is None:
@@ -133,15 +171,22 @@ class _TabellenLeser(HTMLParser):
         zeile.append(None)
         return len(zeile) - 1
 
-    def _zeile_abschliessen(self) -> None:
-        tabelle = self._stapel[-1]
-        zeile = [w if w is not None else "" for w in (self._zeile or [])]
+    @staticmethod
+    def _zeile_abschliessen(rahmen: _Rahmen) -> None:
+        zeile = [w if w is not None else "" for w in (rahmen.zeile or [])]
+        if rahmen.ist_kopf and not rahmen.tabelle.kopf:
+            rahmen.tabelle.kopf = zeile
+        elif any(z.strip() for z in zeile):
+            rahmen.tabelle.zeilen.append(zeile)
+        rahmen.zeile = None
 
-        if self._ist_kopf and not tabelle.kopf:
-            tabelle.kopf = zeile
-        else:
-            tabelle.zeilen.append(zeile)
-        self._zeile = None
+
+def _flach(tabelle: Tabelle) -> str:
+    """Eine Tabelle als eine Zeile Text, fuer die Zelle, die sie enthaelt."""
+    teile: list[str] = []
+    for zeile in tabelle.zeilen:
+        teile.append(" ".join(z for z in zeile if z))
+    return LEER.sub(" ", " ".join(teile)).strip()
 
 
 def _zahl(wert: str | None, vorgabe: int) -> int:

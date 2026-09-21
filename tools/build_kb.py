@@ -542,6 +542,51 @@ def template_params(inhalt: str) -> dict[str, str]:
     return out
 
 
+def cmd_status(args) -> int:
+    """Was steckt in der Wissensbasis, und wie belastbar ist es?"""
+    conn = kb.connect(args.db)
+    try:
+        abdeckung = kb.coverage(conn)
+        print(f"Wissensbasis: {args.db}")
+        print("\nSachtabellen:")
+        for tabelle, n in sorted(abdeckung["tabellen"].items()):
+            marke = "  " if n else "  (leer) "
+            print(f"{marke}{tabelle:<16} {n}")
+        if abdeckung["name_map"]:
+            print("\nNamenstabelle nach Belastbarkeit:")
+            for conf, n in sorted(abdeckung["name_map"].items(),
+                                  key=lambda kv: -kb.CONFIDENCE_RANK.get(kv[0], 0)):
+                print(f"  {conf:<18} {n}")
+        if abdeckung["save_ids"]:
+            print("\nVokabular aus dem Spielstand:")
+            for art, n in sorted(abdeckung["save_ids"].items()):
+                print(f"  {art:<18} {n}")
+
+        essbar = kb.food_goods(conn)
+        if essbar:
+            print(f"\nEssbare Waren: {len(essbar)}")
+            nach_saettigung: dict[float, list[str]] = {}
+            for w in essbar:
+                nach_saettigung.setdefault(w["eating_fullness"] or 0, []).append(w["en"])
+            for wert in sorted(nach_saettigung, reverse=True):
+                print(f"  Sättigung {wert}: {', '.join(sorted(nach_saettigung[wert]))}")
+
+        warnungen = conn.execute(
+            "SELECT COUNT(*) n FROM source_pages WHERE warning IS NOT NULL").fetchone()["n"]
+        seiten = conn.execute("SELECT COUNT(*) n FROM source_pages").fetchone()["n"]
+        if seiten:
+            print(f"\nQuellseiten: {seiten}, davon {warnungen} mit Versionswarnung "
+                  f"({warnungen * 100 // seiten} Prozent)")
+
+        offen = kb.unmatched_save_ids(conn)
+        if offen:
+            print(f"\nIDs aus dem Spielstand ohne Eintrag: {len(offen)}")
+            print("  " + ", ".join(offen[:12]) + (" ..." if len(offen) > 12 else ""))
+    finally:
+        conn.close()
+    return 0
+
+
 def cmd_build(args) -> int:
     """Datenseiten auswerten: Waren, guid-Index, Versionsstand, Baukosten."""
     wiki_dir = Path(args.wiki_dir)
@@ -671,6 +716,10 @@ def main(argv: list[str] | None = None) -> int:
                    help="die erkannten Tabellen in die Wissensbasis schreiben")
     s.add_argument("--db", default="kb.sqlite")
     s.set_defaults(func=cmd_html)
+
+    s = sub.add_parser("status", help="Inhalt der Wissensbasis zeigen")
+    s.add_argument("--db", default="kb.sqlite")
+    s.set_defaults(func=cmd_status)
 
     s = sub.add_parser("build", help="Wikitext auswerten (noch nicht fertig)")
     s.add_argument("--wiki-dir", required=True)
