@@ -174,3 +174,24 @@ Zwei Folgerungen:
 
 Stand der Datei: 16 `spec_seed`, 10 `screenshot`, 3 `observed` (im Bild
 gelesen, englische Entsprechung noch offen), 102 `guessed`.
+
+## Was die Messung ergeben hat (2026-09-21)
+
+| Behauptung | Messung | Ergebnis |
+|---|---|---|
+| unkomprimiertes JSON | `plain-json` | richtig |
+| 250.000 bis 350.000 Zeilen | 359.438 | knapp daneben, Größenordnung stimmt |
+| Kategoriepräfix `[Food Raw] Meat` | 112 Treffer | richtig |
+| Kategorie `Food Complex` | heißt `Food Processed` | falsch |
+| Kategorie `Trade Packs` | heißt `Packs` | falsch |
+| Heartbeat 120 bis 180 s | nicht gemessen (Skriptfehler) | offen |
+
+Die tragende Behauptung stimmt also: der Save ist lesbares JSON mit
+kategorisierten Waren-IDs. Die Detailvokabeln stimmen teilweise nicht, und
+vier Kategorien kennt die Recherche gar nicht — `Needs`, `SSE`, `Crafting`,
+`BIOME`. Dasselbe Muster wie bei der Namenstabelle: das Gerüst trägt, die
+Einzelangaben sind Behauptungen mit Fehlerquote.
+
+Bemerkenswert ist die Lücke bei `SSE`. Falls das die Effektkategorie ist, ist
+es die Kategorie, in der Grundsteine stehen — also genau das, worum sich das
+halbe Dokument dreht, und es kennt den Schlüssel nicht.

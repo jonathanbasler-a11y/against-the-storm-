@@ -102,6 +102,21 @@ def resolve_dir(explicit: str | None) -> tuple[Path | None, list[dict]]:
     return found, tried
 
 
+# Die beiden Dateien, um die es geht. Alles andere ist Beiwerk und darf sie
+# nicht aus der Auswahl draengen -- alphabetisch stehen CustomGamesLayout und
+# die MetaSave-Backups vor Save.save.
+PRIORITY_NAMES = ("save.save", "metasave.save")
+
+
+def select_targets(files: list[Path], max_files: int) -> tuple[list[Path], list[Path]]:
+    """Wichtige Dateien zuerst, Rest bis zur Obergrenze, Weggelassene zurueck."""
+    prio = [p for p in files if p.name.lower() in PRIORITY_NAMES]
+    rest = [p for p in files if p.name.lower() not in PRIORITY_NAMES]
+    ordered = prio + rest
+    cap = max(max_files, len(prio))
+    return ordered[:cap], ordered[cap:]
+
+
 def list_save_files(directory: Path) -> list[Path]:
     """Alle Save-artigen Dateien, bis zwei Ebenen tief (Profile/Backups)."""
     hits: list[Path] = []
@@ -588,8 +603,9 @@ def cmd_inspect(args) -> dict:
          "mtime": datetime.fromtimestamp(p.stat().st_mtime, timezone.utc).isoformat()}
         for p in files
     ]
-    targets = [p for p in files if p.name.lower() in {"save.save", "metasave.save"}] or files[: args.max_files]
-    for p in targets[: args.max_files]:
+    targets, skipped = select_targets(files, args.max_files)
+    out["skipped"] = [p.name for p in skipped]
+    for p in targets:
         try:
             out["files"].append(inspect_file(p, args))
         except Exception as exc:  # Diagnose darf nie hart abbrechen
@@ -610,8 +626,15 @@ def cmd_watch(args) -> dict:
         return out
 
     files = [p for p in list_save_files(directory) if p.suffix.lower() == ".save"] or list_save_files(directory)
-    files = files[: args.max_files]
+    files, skipped = select_targets(files, args.max_files)
     out["watched"] = [str(p) for p in files]
+    out["skipped"] = [p.name for p in skipped]
+    if not any(p.name.lower() == "save.save" for p in files):
+        out["warning"] = (
+            "Save.save liegt nicht im beobachteten Verzeichnis. Ohne diese Datei "
+            "beantwortet die Messung Frage 2 nicht -- MetaSave ist der Metafortschritt, "
+            "nicht die laufende Siedlung."
+        )
     out["interval_seconds"] = args.interval
     out["duration_minutes"] = args.minutes
 
@@ -664,18 +687,23 @@ def cmd_watch(args) -> dict:
         key = str(p)
         gaps = [e["seconds_since_previous"] for e in events if e["file"] == key][1:]
         entry: dict = {"writes": len([e for e in events if e["file"] == key])}
-        if gaps:
-            entry["gap_seconds"] = {
-                "min": min(gaps),
-                "median": round(statistics.median(gaps), 1),
-                "max": max(gaps),
-            }
+        # Ein einzelner Abstand ist kein Intervall. Erst ab drei Abstaenden
+        # laesst sich von einem Takt reden; darunter wird ausgewiesen, was es
+        # ist: Einzelbeobachtungen.
+        if len(gaps) >= 3:
             median = statistics.median(gaps)
-            entry["verdict"] = f"schreibt etwa alle {round(median)}s"
+            entry["gap_seconds"] = {"min": min(gaps), "median": round(median, 1), "max": max(gaps)}
+            entry["verdict"] = f"schreibt etwa alle {round(median)}s ({len(gaps)} Abstaende)"
             lo, hi = CLAIMED_HEARTBEAT
             entry["heartbeat_claim"] = (
                 f"Recherche behauptet {lo:.0f} bis {hi:.0f}s: "
                 + ("bestaetigt" if lo <= median <= hi else "abweichend")
+            )
+        elif gaps:
+            entry["gap_seconds"] = {"raw": gaps}
+            entry["verdict"] = (
+                f"nur {len(gaps)} Abstand(e) gemessen ({', '.join(f'{g:.0f}s' for g in gaps)}) -- "
+                "zu wenig fuer eine Taktaussage, laenger messen"
             )
         elif entry["writes"] == 1:
             entry["verdict"] = "genau ein Schreibvorgang im Messfenster, Intervall nicht bestimmbar"
@@ -714,6 +742,8 @@ def render(report: dict) -> str:
                 add(f"  [{'x' if t['exists'] else ' '}] {t['path']}")
         else:
             add(f"Verzeichnis: {ins['dir']}")
+            if ins.get("skipped"):
+                add(f"Nicht untersucht (Obergrenze --max-files): {', '.join(ins['skipped'])}")
             add("")
             add("Dateien:")
             for f in ins.get("dir_listing", [])[:30]:
@@ -801,6 +831,10 @@ def render(report: dict) -> str:
             add(f"FEHLER: {w['error']}")
         else:
             add(f"Messdauer: {w.get('observed_minutes')} Minuten, Abtastung alle {w['interval_seconds']}s")
+            if w.get("warning"):
+                add(f"ACHTUNG: {w['warning']}")
+            if w.get("skipped"):
+                add(f"Nicht beobachtet (Obergrenze --max-files): {', '.join(w['skipped'])}")
             for name, s in w.get("summary", {}).items():
                 add(f"  {name:<24} {s['writes']} Schreibvorgaenge  -> {s['verdict']}")
                 if s.get("heartbeat_claim"):

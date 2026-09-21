@@ -113,3 +113,74 @@ ohnehin alles anfassen muss:
 
 Erst wenn die Vorlage ausgefüllt ist und du sie freigegeben hast, fange ich mit
 Phase 1 an. Kein Produktcode vorher.
+
+---
+
+# Messung vom 2026-09-21
+
+Gelaufen auf dem Spielrechner, Windows, Siedlung aktiv. Ausgewertet ist
+bisher nur das Ende des Berichts — der Kopf mit Pfadprüfung, Feldsuche und
+Sprachprobe steht noch aus.
+
+## Entscheidungsvorlage, Stand jetzt
+
+| Frage | Befund | Quelle |
+|---|---|---|
+| Container | **plain-json**, unkomprimiert | gemessen |
+| Zeilenzahl | **359.438** | gemessen |
+| Kategoriepräfix | **bestätigt**, 112 Treffer | gemessen |
+| Sprache im Save | offen | Berichtskopf fehlt |
+| Abgedeckte GameState-Felder | offen | Berichtskopf fehlt |
+| Schreibintervall `Save.save` | **nicht gemessen** — Fehler im Skript, siehe unten | — |
+
+## Was der Save preisgibt
+
+Die Kategoriepräfixe sind da, und zwar reichlich. Gefundene Kategorien mit
+Trefferzahl:
+
+```
+Food Raw 15, Food Processed 13, Mat Processed 10, Needs 10, Mat Raw 9,
+SSE 8, Crafting 6, Packs 5, Metal 4, BIOME 4
+```
+
+Drei Dinge daran sind für Phase 2 wichtiger, als sie aussehen:
+
+1. **Präfixe können doppelt auftreten.** Beispiel aus dem Bericht:
+   `[SSE] [BIOME] Storm Penalty`. Ein Abschneider, der genau ein `[...]`
+   entfernt, lässt `[BIOME] Storm Penalty` stehen und legt damit zwei
+   verschiedene Schlüssel für dieselbe Sache an. Das Abschneiden muss
+   schleifen, nicht einmal zuschlagen.
+2. **`SSE` ist vermutlich die Effektkategorie.** `[SSE] Gift for Reputation`,
+   `[SSE] Corruption Favoring Block`, `[SSE] FuelRateHostility` lesen sich wie
+   Grundstein- und Modifikatoreffekte. Wenn das trägt, liegt hier die Antwort
+   auf „gewählte Grundsteine" aus dem `GameState`. Zu prüfen am Berichtskopf.
+3. **`[Crafting] Oil` schließt den Kreis zum Screenshot.** Die Auftragsleiste
+   zeigte „42/25 Öl", der Save kennt `Oil` in der Kategorie `Crafting`. Damit
+   ist das erste Namenspaar nicht geraten, sondern aus zwei unabhängigen
+   Quellen belegt — genau das Verfahren, das für die restliche `name_map`
+   gedacht ist.
+
+## Fehler im Skript, behoben
+
+Der `watch`-Lauf hat `Save.save` nie beobachtet. Die Dateiauswahl war
+alphabetisch und bei vier Dateien gedeckelt — `CustomGamesLayout.save`,
+`MetaSave.save`, `MetaSave_Backup.save` und `MetaSave_GameWonBackup.save`
+stehen im Alphabet vor `Save.save` und haben den Platz belegt. Gemessen wurde
+damit der Metafortschritt, nicht die laufende Siedlung. Frage 2 ist also
+unbeantwortet, nicht beantwortet.
+
+Behoben: `Save.save` und `MetaSave.save` werden jetzt vorrangig ausgewählt, der
+Bericht nennt die weggelassenen Dateien, und fehlt `Save.save` ganz, steht eine
+Warnung im Bericht.
+
+Zweiter Fehler, ebenfalls behoben: aus zwei Schreibvorgängen wurde ein
+„schreibt etwa alle 116s" gemacht. Zwei Ereignisse ergeben einen Abstand, und
+ein Abstand ist kein Takt. Ab jetzt braucht eine Taktaussage mindestens drei
+Abstände, darunter weist der Bericht die Einzelwerte aus.
+
+## Was noch fehlt
+
+1. Der Kopf des Berichts (`diagnostics\phase0-*.txt`, alles oberhalb von
+   „Kategoriepraefix"): Pfadprüfung, Feldsuche, Sprachprobe.
+2. Ein zweiter `watch`-Lauf mit der korrigierten Auswahl:
+   `python tools\phase0_diagnose.py watch --minutes 10`

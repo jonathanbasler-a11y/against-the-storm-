@@ -124,7 +124,7 @@ ashen_thicket,Aschenes Dickicht,biome,,guessed,research-2026-09,,
 bamboo_flats,Bambusebene,biome,,spec_seed,SPEC.md,,
 rocky_ravine,Felsschlucht,biome,,spec_seed,SPEC.md,,
 fluffbeak,Fluffschnabel,creature,,spec_seed,SPEC.md,,
-oil,Öl,resource,,screenshot,screenshot-2026-09-21,2026-09-21,Auftrag FESTMAHL: 42/25 Öl; in der Recherche gar nicht vorhanden
+oil,Öl,resource,Crafting,screenshot+save,screenshot-2026-09-21 + Save.save,2026-09-21,"Auftrag zeigt 42/25 Öl, Save kennt [Crafting] Oil"
 trade_routes,Handelswege,concept,Order,screenshot,screenshot-2026-09-21,2026-09-21,Auftrag LIEFERUNG: 4/3 Handelswege
 food_complex,Komplexe Nahrung,category,,screenshot,screenshot-2026-09-21,2026-09-21,Auftrag FESTMAHL; deckt sich mit SPEC.md
 ,Komfort,concept,,observed,screenshot-2026-09-21,2026-09-21,Auftrag HILFE FÜR DIE MENSCHEN-FRAKTION: 4/12 Komfort; englische Entsprechung offen
