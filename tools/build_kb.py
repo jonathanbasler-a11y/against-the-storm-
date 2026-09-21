@@ -336,11 +336,111 @@ def cmd_seed(args) -> int:
     return 0
 
 
+def template_params(inhalt: str) -> dict[str, str]:
+    """{{Vorlage|a|b|k=v}} -> {"1": "a", "2": "b", "k": "v"}."""
+    out: dict[str, str] = {}
+    pos = 0
+    for teil in split_params(inhalt):
+        if "=" in teil:
+            schluessel, _, wert = teil.partition("=")
+            schluessel = schluessel.strip()
+            # "cost={{Construction|Wood=10}}" -- der aeussere Schluessel steht
+            # vor dem ersten Gleichheitszeichen auf Ebene null, das hat
+            # split_params schon sichergestellt.
+            if schluessel and len(schluessel) < 40:
+                out[schluessel] = wert.strip()
+                continue
+        pos += 1
+        out[str(pos)] = teil.strip()
+    return out
+
+
 def cmd_build(args) -> int:
-    print("Die Extraktoren stehen noch aus -- sie werden gegen die")
-    print("Bestandsaufnahme geschrieben, nicht gegen Vermutungen:")
-    print(f"  python tools/build_kb.py survey --wiki-dir \"{args.wiki_dir}\"")
-    return 1
+    """Datenseiten auswerten: Waren, guid-Index, Versionsstand, Baukosten."""
+    wiki_dir = Path(args.wiki_dir)
+    dateien = wikitext_dateien(wiki_dir)
+    if not dateien:
+        print(f"Keine Wikitext-Dateien unter {wiki_dir}")
+        return 1
+
+    conn = kb.connect(args.db)
+    guids: list[dict] = []
+    waren: list[dict] = []
+    versionen = 0
+    warnungen = 0
+    baukosten = 0
+
+    for pfad in dateien:
+        text = pfad.read_text(encoding="utf-8", errors="replace")
+        titel = pfad.stem
+        seiten_version: str | None = None
+        kosten: dict[str, float] = {}
+
+        for name, inhalt in scan_templates(text):
+            klein = name.lower()
+            if klein == "dataloader/guid_index":
+                guids.append(template_params(inhalt))
+            elif klein == "dataloader/goods":
+                p = template_params(inhalt)
+                p["_seite"] = titel
+                waren.append(p)
+            elif klein == "version":
+                p = template_params(inhalt)
+                seiten_version = p.get("1") or seiten_version
+            elif klein == "construction":
+                for schluessel, wert in template_params(inhalt).items():
+                    if schluessel.isdigit():
+                        continue
+                    try:
+                        kosten[schluessel] = float(wert)
+                    except ValueError:
+                        pass
+
+        if seiten_version:
+            warnung = kb.record_page(conn, titel, None, None, seiten_version, GESPIELTE_VERSION)
+            versionen += 1
+            warnungen += 1 if warnung else 0
+        if kosten:
+            conn.execute(
+                "INSERT INTO buildings (en, cost, source_page) VALUES (?, ?, ?) "
+                "ON CONFLICT(en) DO UPDATE SET cost = excluded.cost, "
+                "source_page = excluded.source_page",
+                (titel, json.dumps(kosten, ensure_ascii=False), titel),
+            )
+            baukosten += 1
+
+    conn.commit()
+
+    # Erst der Index, dann die Waren -- die Kategorie wird ueber ihn aufgeloest.
+    n_guids = kb.import_guid_index(conn, guids)
+    n_waren = kb.import_goods(conn, waren, source_page="Data_Goods_1")
+    kb.link_name_map_to_resources(conn)
+
+    print(f"guid_index : {n_guids} Einträge")
+    print(f"resources  : {n_waren} Waren aus Dataloader/Goods")
+    print(f"buildings  : {baukosten} Baukosten aus {{{{Construction}}}}")
+    print(f"source_pages: {versionen} Seiten mit Versionsangabe, davon {warnungen} mit Warnung")
+
+    essbar = kb.food_goods(conn)
+    print(f"\nEssbare Waren: {len(essbar)}")
+    for w in essbar[:12]:
+        print(f"  {w['en']:<22} {w['save_id'] or '':<28} Sättigung {w['eating_fullness']}")
+
+    offen = kb.missing_german(conn)
+    print(f"\nWaren ohne belegten deutschen Namen: {len(offen)}")
+    for w in offen[:10]:
+        print(f"  {w['en']:<22} Schlüssel {w['display_key'] or '--'}")
+    if offen:
+        print("\n  display_key ist der Lokalisierungsschlüssel des Spiels. Findet sich")
+        print("  im Spielordner eine deutsche Sprachtabelle, sind diese Namen ein")
+        print("  Nachschlag statt einer Vermutung.")
+
+    print("\nAbdeckung:")
+    for bereich, werte in kb.coverage(conn).items():
+        if werte:
+            print(f"  {bereich}: " + ", ".join(f"{k}={v}" for k, v in sorted(werte.items())))
+    conn.close()
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -5,14 +5,43 @@
 
 PRAGMA journal_mode = WAL;
 
+-- Die Spalten stammen aus der Vorlage Dataloader/Goods des Wikis. Das sind
+-- die Spieldaten selbst, nicht Fliesstext: save_id traegt genau die
+-- Zeichenkette, die auch im Spielstand steht ("[Needs] Boots"), und
+-- display_key ist der Lokalisierungsschluessel, ueber den der deutsche Name
+-- zu holen waere.
 CREATE TABLE IF NOT EXISTS resources (
-    en           TEXT PRIMARY KEY,
-    category     TEXT,          -- Food Raw, Mat Processed, Crafting, ...
-    deposit      TEXT,          -- Herkunftsvorkommen
-    camp         TEXT,          -- erntendes Lager
-    biomes       TEXT,          -- kommaseparierte Biomnamen
+    en           TEXT PRIMARY KEY,   -- page_name, z. B. "Boots"
+    save_id      TEXT,               -- m_Name, z. B. "[Needs] Boots"
+    category     TEXT,               -- Kategorie, ueber guid_index aufgeloest
+    category_guid TEXT,
+    guid         TEXT,
+    display_name_en TEXT,
+    display_key  TEXT,               -- z. B. "Good_Boots_Name"
+    description_en TEXT,
+    eatable      INTEGER,
+    eating_fullness REAL,
+    burnable     INTEGER,
+    burning_time REAL,
+    sell_value   REAL,
+    buy_value    REAL,
+    deposit      TEXT,               -- Herkunftsvorkommen
+    camp         TEXT,               -- erntendes Lager
+    biomes       TEXT,
     source_page  TEXT REFERENCES source_pages(title)
 );
+
+CREATE INDEX IF NOT EXISTS resources_save_id ON resources(save_id);
+
+-- guid -> Seitenname, aus Dataloader/guid_index. Loest die Fremdschluessel
+-- auf, mit denen die Datenseiten untereinander verweisen.
+CREATE TABLE IF NOT EXISTS guid_index (
+    guid         TEXT PRIMARY KEY,
+    page_name    TEXT,
+    domain       TEXT
+);
+
+CREATE INDEX IF NOT EXISTS guid_index_page ON guid_index(page_name);
 
 CREATE TABLE IF NOT EXISTS biomes (
     en           TEXT PRIMARY KEY,

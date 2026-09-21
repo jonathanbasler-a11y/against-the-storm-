@@ -166,3 +166,121 @@ def unmatched_save_ids(conn: sqlite3.Connection, kind: str | None = None) -> lis
         sql += " AND s.kind = ?"
         params = (kind,)
     return [r["id"] for r in conn.execute(sql + " ORDER BY s.id", params)]
+
+
+# --------------------------------------------------------------------------
+# Datenseiten des Wikis
+# --------------------------------------------------------------------------
+#
+# Die Vorlage Dataloader/Goods traegt die Spieldaten selbst: m_Name ist genau
+# die Zeichenkette, die auch im Spielstand steht, displayName_key ist der
+# Lokalisierungsschluessel, und eatable/eatingFullness/canBeBurned sind das
+# Nahrungs- und Brennstoffmodell in Zahlen. Das ist keine Wiki-Prosa und wird
+# deshalb auch nicht wie solche behandelt.
+
+
+def _zahl(wert: str | None) -> float | None:
+    if wert is None:
+        return None
+    try:
+        return float(str(wert).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _flag(wert: str | None) -> int | None:
+    zahl = _zahl(wert)
+    return None if zahl is None else int(bool(zahl))
+
+
+def import_guid_index(conn: sqlite3.Connection, eintraege: list[dict]) -> int:
+    n = 0
+    for e in eintraege:
+        guid = (e.get("guid") or "").strip()
+        if not guid:
+            continue
+        conn.execute(
+            "INSERT OR REPLACE INTO guid_index (guid, page_name, domain) VALUES (?, ?, ?)",
+            (guid, (e.get("page_name") or "").strip(), (e.get("domain") or "").strip()),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def import_goods(conn: sqlite3.Connection, eintraege: list[dict],
+                 source_page: str | None = None) -> int:
+    """Waren aus Dataloader/Goods uebernehmen, Kategorie ueber guid_index."""
+    n = 0
+    for e in eintraege:
+        name = (e.get("page_name") or "").strip()
+        if not name:
+            continue
+        cat_guid = (e.get("category") or "").strip() or None
+        kategorie = None
+        if cat_guid:
+            zeile = conn.execute(
+                "SELECT page_name FROM guid_index WHERE guid = ?", (cat_guid,)).fetchone()
+            if zeile:
+                kategorie = zeile["page_name"]
+        conn.execute(
+            "INSERT OR REPLACE INTO resources "
+            "(en, save_id, category, category_guid, guid, display_name_en, display_key, "
+            " description_en, eatable, eating_fullness, burnable, burning_time, "
+            " sell_value, buy_value, source_page) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (name, (e.get("m_Name") or "").strip() or None, kategorie, cat_guid,
+             (e.get("guid") or "").strip() or None,
+             e.get("displayName_key_en"), e.get("displayName_key"),
+             e.get("description_key_en"),
+             _flag(e.get("eatable")), _zahl(e.get("eatingFullness")),
+             _flag(e.get("canBeBurned")), _zahl(e.get("burningTime")),
+             _zahl(e.get("tradingSellValue")), _zahl(e.get("tradingBuyValue")),
+             source_page),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def link_name_map_to_resources(conn: sqlite3.Connection) -> int:
+    """Die englischen IDs der Namenstabelle an die Warentabelle binden.
+
+    Die Namenstabelle kennt `oil`, die Warentabelle `Oil` mit save_id
+    `[Crafting] Oil`. Wo sich beides trifft, ist die englische Seite belegt --
+    und es faellt auf, wo die deutsche Seite noch fehlt.
+    """
+    n = 0
+    for zeile in conn.execute("SELECT en, save_id, display_name_en FROM resources"):
+        kandidaten = {zeile["en"], zeile["display_name_en"] or "",
+                      (zeile["en"] or "").lower().replace(" ", "_")}
+        for kandidat in kandidaten:
+            if not kandidat:
+                continue
+            n += conn.execute(
+                "UPDATE name_map SET note = COALESCE(note || '; ', '') || ? "
+                "WHERE en = ? AND (note IS NULL OR note NOT LIKE '%Save-ID:%')",
+                (f"Save-ID: {zeile['save_id']}", kandidat),
+            ).rowcount
+    conn.commit()
+    return n
+
+
+def food_goods(conn: sqlite3.Connection) -> list[dict]:
+    """Essbare Waren mit ihrer Saettigung -- Eingang fuer food_forecast."""
+    return [dict(r) for r in conn.execute(
+        "SELECT en, save_id, category, eating_fullness FROM resources "
+        "WHERE eatable = 1 ORDER BY eating_fullness DESC, en")]
+
+
+def missing_german(conn: sqlite3.Connection) -> list[dict]:
+    """Waren, für die der deutsche Name noch fehlt oder nur geraten ist.
+
+    display_key ist der Lokalisierungsschluessel des Spiels -- damit waere der
+    deutsche Name ein Nachschlag statt einer Vermutung.
+    """
+    return [dict(r) for r in conn.execute(
+        "SELECT r.en, r.save_id, r.display_key, n.de, n.confidence "
+        "FROM resources r LEFT JOIN name_map n ON n.en = r.en OR n.en = LOWER(r.en) "
+        "WHERE n.de IS NULL OR n.confidence IN ('guessed', 'observed') "
+        "ORDER BY r.en")]
