@@ -568,3 +568,107 @@ Das ist noch keine Gewissheit — ein einziges Intervall, und die Werte stammen
 aus Schreibzeitpunkten, nicht aus exakten Momentaufnahmen. Aber es ist ein
 Modell für die Ungeduldsvorhersage, das aus dem Save allein gefüttert werden
 kann, und der nächste Lauf prüft es mit.
+
+---
+
+# Dritter watch-Lauf: der Siegmoment, und die letzte offene Frage ist beantwortet
+
+## Die Zeitreihen haben eine Auflösung von 10 Spielzeitsekunden
+
+| Intervall | geänderte Stellen | Spielzeit | je Stützstelle |
+|---|---|---|---|
+| 1 | 29 (ab Index 75) | 299,4 s | 10,3 s |
+| 2 | 30 (ab Index 104) | 298,8 s | 10,0 s |
+| 3 | 19 (ab Index 134) | 184,4 s | 9,7 s |
+
+Der Schreibzeiger wandert um 29 bis 30 Stellen je Schreibvorgang durch das
+Feld — genau das Ringpufferverhalten, das die Vermutung nahegelegt hatte.
+**180 Plätze mal 10 Sekunden sind 1800 Spielzeitsekunden, also eine halbe
+Stunde Spielzeit Vorgeschichte in jeder geschriebenen Datei.**
+
+## Das kippt die Einordnung: Szenario B war zu pessimistisch
+
+Meine Begründung für Szenario B lautete: der Parser sieht nur alle 300
+Spielzeitsekunden einen Zustand und kann deshalb keine Verbrauchsrate bilden.
+Das war falsch. Jeder Schreibvorgang liefert **dreißig frische Stützstellen im
+Zehnsekundentakt**. `food_forecast` braucht eine Steigung, und die steht damit
+präzise in der Datei — genauer, als zwei Momentaufnahmen im Abstand von 300
+Sekunden es je hergäben.
+
+Was bleibt: der **Pegel** ist bis zu 300 Spielzeitsekunden alt. Die Rate ist es
+nicht. Aus letztem bekannten Bestand plus bekannter Rate mal verstrichener Zeit
+lässt sich der aktuelle Stand fortschreiben, und der Fehler dieser
+Fortschreibung ist klein, weil die Rate aus dreißig Messpunkten kommt.
+
+**Folge für den Zuschnitt:** `read_hud()` ist keine Voraussetzung mehr, sondern
+eine Verbesserung. Die Reihenfolge bleibt wie in der Spec vorgesehen:
+**1 → 2 → 4 → 3 → 5.** Phase 3 schrumpft auf das, was wirklich nicht im Save
+steht — die Auswahlbildschirme für Grundsteine und Baupläne — plus, wenn es
+sich lohnt, die Restzeit der laufenden Jahreszeit.
+
+## Der Siegmoment ist im Save sichtbar
+
+Der letzte Schreibvorgang kam nach 184 statt 300 Spielzeitsekunden: das Spiel
+war zu Ende. `reputation` stand auf **exakt 18,0**, `reputationToWin` auf 18.
+Die Siegbedingung ist also direkt ablesbar, ohne Bildschirmauslesung.
+
+Gleichzeitig schrieb `WorldSave.save` erstmals mehr als null Bytes (+628),
+`cycle.year` sprang von 26 auf 39 und `wonFieldPopulation` von 0 auf 31.
+`MetaSave_GameWonBackup.save` wurde im selben Bündel angelegt.
+
+Und `MetaSave.gameTime` steht doch nicht still: es sprang von 7527,31738 auf
+7144,5083 — beim Spielende. Meine frühere Aussage war in der Sache richtig
+(als Uhr während eines Laufs unbrauchbar), in der Begründung falsch: das Feld
+wird am Laufende geschrieben, nicht nie.
+
+## Das Ungeduldsmodell steht — und es rechnet in ganzen Punkten
+
+Drei Intervalle, drei Treffer:
+
+| Intervall | Spielzeit | Δ Reputation | volle Punkte | Δ Ungeduld | erwartet | Abweichung |
+|---|---|---|---|---|---|---|
+| 1 | 299,40 s | +0,6051 | 0 | +0,7664 | +0,7635 | 0,0029 |
+| 2 | 298,82 s | +1,0271 | 1 | −0,2336 | −0,2380 | 0,0044 |
+| 3 | 184,38 s | +3,3635 | 4 | −3,5271 | −3,5298 | 0,0028 |
+
+Das Modell:
+
+```
+Ungeduld += reputationPenaltyPerSec * (1 + reputationPenaltyBonusRate) * Δt
+Ungeduld -= 1,0 * (Anzahl überschrittener ganzer Reputationspunkte)
+```
+
+Mit `0,00425 * 0,6 = 0,00255` je Spielzeitsekunde. Entscheidend ist der zweite
+Teil: die Gutschrift kommt **je vollem Punkt**, nicht anteilig. Rechnet man
+anteilig, kommen 0,00 · 0,97 · 1,19 heraus — kein konstanter Faktor. Rechnet
+man in ganzen Punkten, stimmt es dreimal auf vier Tausendstel.
+
+Damit ist `impatience_forecast()` für Phase 4 vollständig bestimmt, aus dem
+Save allein, ohne Wiki. Und es bestätigt beiläufig die Recherche, die 1,0 für
+Prestige unter 14 nennt.
+
+## Zwei Fehler im Werkzeug, die dieser Lauf aufgedeckt hat
+
+**Mein eigenes Werkzeug hat eine These bestätigt, die es selbst widerlegt
+hatte.** Der Bericht meldete „Recherche behauptet 120 bis 180s: bestaetigt".
+Die Prüfung lief gegen den **Wanduhr**-Median, und bei 1,74- bis 2,23-facher
+Geschwindigkeit landen 300 Spielzeitsekunden bei 134 bis 172 Wanduhrsekunden —
+zufällig mitten im behaupteten Fenster. Die Prüfung läuft jetzt gegen die
+Spielzeit und sagt dazu, warum der Wanduhrwert dafür nichts taugt.
+
+**Der Zeitreihen-Fühler nahm die erste Reihe als Beispiel.** Das war
+`[Crafting] Oil`, konstant auf 4 — also meldete er „unveraendert", während
+sich 56 andere Reihen bewegten. Er nimmt jetzt die lebendigste Reihe und
+bildet zusätzlich eine Prüfsumme über alle; ändert sich die Beispielreihe
+nicht, sagt der Bericht, ob die Prüfsumme sich trotzdem geändert hat.
+
+## Phase 0 ist abgeschlossen
+
+| Frage | Befund |
+|---|---|
+| Container | `plain-json`, unkomprimiert, 8,5 MB, in 0,1 s geparst |
+| Sprache | englische IDs, null Umlaute in 400 Strings |
+| Schreibtakt | ~300 Spielzeitsekunden, plus manuelles Speichern und Spielende |
+| Bündel | vier Dateien, nicht atomar (bis 2 s Versatz) |
+| Vorgeschichte | 180 Stützstellen à 10 Spielzeitsekunden je Ware und Kategorie |
+| Zuschnitt | **Parser trägt Phase 2 und die Nahrungsvorschau**, Phase 3 nur Auswahlbildschirme |

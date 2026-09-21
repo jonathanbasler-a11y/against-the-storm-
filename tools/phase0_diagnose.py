@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import hashlib
 import json
 import os
 import platform
@@ -674,13 +675,27 @@ def series_fingerprint(data, max_depth: int = 4) -> dict:
             isinstance(v, list) and len(v) >= 10 and all(isinstance(x, (int, float)) for x in v[:5])
             for v in vals[:8]
         ):
-            first_key = next(iter(node))
-            series = node[first_key]
+            # Nicht die erste Reihe als Beispiel nehmen, sondern die
+            # lebendigste: eine Ware, die nie produziert wird, steht konstant
+            # auf einem Wert und meldet faelschlich "unveraendert".
+            def liveliness(k):
+                v = node[k]
+                return len(set(v)) if isinstance(v, list) else 0
+
+            example = max(node, key=liveliness)
+            series = node[example]
+            # Pruefsumme ueber alle Reihen: erkennt jede Aenderung, auch wenn
+            # die Beispielreihe zufaellig stillsteht.
+            checksum = hashlib.sha256(
+                json.dumps(node, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()[:16]
             out[path] = {
                 "keys": len(node),
                 "length": len(series),
-                "example_key": first_key,
+                "example_key": example,
+                "distinct_values": liveliness(example),
                 "tail": series[-4:],
+                "checksum": checksum,
                 # Die ganze Reihe, damit zwei aufeinanderfolgende
                 # Schreibvorgaenge stellenweise verglichen werden koennen.
                 "sample": list(series[:400]),
@@ -826,10 +841,27 @@ def cmd_watch(args) -> dict:
             entry["gap_seconds"] = {"min": min(gaps), "median": round(median, 1), "max": max(gaps)}
             entry["verdict"] = f"schreibt etwa alle {round(median)}s ({len(gaps)} Abstaende)"
             lo, hi = CLAIMED_HEARTBEAT
-            entry["heartbeat_claim"] = (
-                f"Recherche behauptet {lo:.0f} bis {hi:.0f}s: "
-                + ("bestaetigt" if lo <= median <= hi else "abweichend")
-            )
+            game_gaps = []
+            clocked = [e for e in events if e["file"] == key
+                       and (e.get("probe") or {}).get("_clock") is not None]
+            for prev, cur in zip(clocked, clocked[1:]):
+                d = cur["probe"]["_clock"] - prev["probe"]["_clock"]
+                if d > 0:
+                    game_gaps.append(d)
+            if game_gaps:
+                gmed = statistics.median(game_gaps)
+                entry["game_gap_median"] = round(gmed, 1)
+                entry["heartbeat_claim"] = (
+                    f"Recherche behauptet {lo:.0f} bis {hi:.0f}s; in Spielzeit gemessen "
+                    f"{gmed:.0f}s: " + ("bestaetigt" if lo <= gmed <= hi else "abweichend")
+                    + " (der Wanduhr-Median haengt an der Spielgeschwindigkeit und "
+                      "taugt fuer diese Pruefung nicht)"
+                )
+            else:
+                entry["heartbeat_claim"] = (
+                    f"Recherche behauptet {lo:.0f} bis {hi:.0f}s -- ohne Spieluhr nicht pruefbar, "
+                    "der Wanduhr-Median haengt an der Spielgeschwindigkeit"
+                )
         elif gaps:
             entry["gap_seconds"] = {"raw": gaps}
             entry["verdict"] = (
@@ -862,6 +894,7 @@ def cmd_watch(args) -> dict:
                     "changed_indices": changed[:12], "changed_count": len(changed),
                     "length_before": len(a), "length_after": len(b),
                     "game_seconds": d_game,
+                    "other_series_changed": s_prev.get("checksum") != s_cur.get("checksum"),
                 }
                 if changed and d_game:
                     entry_shift["seconds_per_step"] = round(d_game / len(changed), 1)
@@ -1033,8 +1066,11 @@ def render(report: dict) -> str:
                     add(f"  {'':<24} {s['heartbeat_claim']}")
                 for sh in s.get("series_shifts", [])[:6]:
                     if sh["changed_count"] == 0:
-                        add(f"  {'':<24} {sh['series']}: unveraendert ueber "
-                            f"{sh['game_seconds']}s Spielzeit -- Fuehler greift nicht")
+                        rest = ("andere Reihen darin haben sich aber geaendert"
+                                if sh.get("other_series_changed")
+                                else "auch die Pruefsumme ueber alle Reihen ist gleich")
+                        add(f"  {'':<24} {sh['series']}: Beispielreihe {sh['key']} unveraendert "
+                            f"ueber {sh['game_seconds']}s Spielzeit -- {rest}")
                     else:
                         add(f"  {'':<24} {sh['series']}: {sh['changed_count']} Stellen geaendert "
                             f"(Index {sh['changed_indices']}) in {sh['game_seconds']}s Spielzeit"
