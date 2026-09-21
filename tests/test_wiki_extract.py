@@ -6,6 +6,7 @@ Die Beispiele stammen wörtlich aus `build_kb.py detail` über den Abzug vom
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -174,4 +175,87 @@ def test_bruchteil_einer_minute_wird_umgerechnet(tmp_path: Path) -> None:
     kb.import_species(conn, [{"Species": "Bats", "Break Interval": "01:40"}])
     assert conn.execute(
         "SELECT break_seconds FROM species WHERE en='Bats'").fetchone()["break_seconds"] == 100.0
+    conn.close()
+
+
+# Wörtlich aus dem HTML-Abzug, Seite "Recipes", Tabelle 3.
+ECHTE_REZEPTZEILE = {
+    "Building": "Butcher", "Grade": "★★ 2:06",
+    "Ingredient #1": "5 Insects 5 Meat",
+    "Ingredient #2": "5 Wood 2 Oil 2 Salt 1 Coal 1 Sea Marrow",
+    "#": "10", "Product": "Jerky",
+}
+
+
+def test_zutaten_sind_alternativen_keine_liste() -> None:
+    """'5 Insects 5 Meat' heisst: 5 Insekten ODER 5 Fleisch."""
+    zutaten = kb.parse_zutaten("5 Insects 5 Meat")
+    assert zutaten == [{"menge": 5.0, "ware": "Insects"}, {"menge": 5.0, "ware": "Meat"}]
+
+
+def test_zutaten_mit_zweiwortigen_namen() -> None:
+    zutaten = kb.parse_zutaten("5 Wood 2 Oil 1 Sea Marrow")
+    assert {"menge": 1.0, "ware": "Sea Marrow"} in zutaten
+
+
+def test_grad_traegt_sterne_und_dauer() -> None:
+    assert kb.parse_grad("★★ 2:06") == (2, 126.0)
+    assert kb.parse_grad("★★★ 0:45") == (3, 45.0)
+    assert kb.parse_grad(None) == (None, None)
+    assert kb.parse_grad("ohne alles") == (None, None)
+
+
+def test_rezept_landet_vollstaendig_in_der_datenbank(tmp_path: Path) -> None:
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    assert kb.import_recipes(conn, [ECHTE_REZEPTZEILE]) == 1
+    z = conn.execute("SELECT * FROM recipes").fetchone()
+    assert z["building"] == "Butcher" and z["product"] == "Jerky"
+    assert z["product_amount"] == 10.0 and z["stars"] == 2 and z["seconds"] == 126.0
+    gruppen = json.loads(z["inputs"])
+    assert len(gruppen) == 2          # zwei Zutaten, je mit Alternativen
+    assert {"menge": 5.0, "ware": "Meat"} in gruppen[0]
+    conn.close()
+
+
+def test_nahrungsverstaerkung_rechnet_mit_saettigung(tmp_path: Path) -> None:
+    """Der Kern der Spec: 5 Fleisch mit Sättigung 1 werden zu 10 Dörrfleisch
+    mit Sättigung 2 -- fünf Punkte rein, zwanzig raus."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    kb.import_goods(conn, [
+        {"page_name": "Meat", "eatable": "1", "eatingFullness": "1"},
+        {"page_name": "Insects", "eatable": "1", "eatingFullness": "1"},
+        {"page_name": "Jerky", "eatable": "1", "eatingFullness": "2"},
+    ])
+    kb.import_recipes(conn, [ECHTE_REZEPTZEILE])
+    verstaerkung = kb.food_amplification(conn)
+    assert len(verstaerkung) == 1
+    assert verstaerkung[0]["saettigung_rein"] == 5.0
+    assert verstaerkung[0]["saettigung_raus"] == 20.0
+    assert verstaerkung[0]["faktor"] == 4.0
+    conn.close()
+
+
+def test_nicht_essbare_produkte_zaehlen_nicht(tmp_path: Path) -> None:
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    kb.import_goods(conn, [{"page_name": "Planks", "eatable": "0"},
+                           {"page_name": "Wood", "eatable": "0"}])
+    kb.import_recipes(conn, [{"Building": "Lumber Mill", "Ingredient #1": "2 Wood",
+                              "#": "1", "Product": "Planks"}])
+    assert kb.food_amplification(conn) == []
+    conn.close()
+
+
+def test_billigste_alternative_wird_gerechnet(tmp_path: Path) -> None:
+    """Das Spiel lässt die Wahl; wer plant, nimmt die günstigste."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    kb.import_goods(conn, [
+        {"page_name": "Berries", "eatable": "1", "eatingFullness": "1"},
+        {"page_name": "Pie", "eatable": "1", "eatingFullness": "3"},
+        {"page_name": "Meat", "eatable": "1", "eatingFullness": "1"},
+    ])
+    kb.import_recipes(conn, [{"Building": "Bakery", "Ingredient #1": "2 Berries 8 Meat",
+                              "#": "10", "Product": "Pie"}])
+    e = kb.food_amplification(conn)[0]
+    assert e["saettigung_rein"] == 2.0      # Beeren, nicht Fleisch
+    assert e["faktor"] == 15.0
     conn.close()

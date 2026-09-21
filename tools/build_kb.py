@@ -426,6 +426,12 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
     conn = kb.connect(db)
     meldungen: list[str] = []
     try:
+        # Diese Tabellen stammen vollstaendig aus dem Wiki. Ohne Leeren
+        # sammeln sich bei jedem Lauf Altlasten an -- nach der Korrektur der
+        # doppelten Namen standen "Bats" und "Bats Bats" nebeneinander.
+        for tabelle in ("species", "difficulty", "cornerstones", "glade_events", "recipes"):
+            conn.execute(f"DELETE FROM {tabelle}")
+        conn.commit()
         # Spezies: zwei Seiten mit teils verschiedenen Spalten, die sich ergaenzen.
         for titel in ("resolve", "villagers"):
             pfad = nach_titel.get(titel)
@@ -477,6 +483,26 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
                     n = kb.import_cornerstones(conn, t.als_dicts, origin=herkunft,
                                                source_page=pfad.stem)
                     meldungen.append(f"cornerstones: {n} mal Herkunft '{herkunft}'")
+
+        # Rezepte stehen auf den Gebaeudeseiten, nicht nur auf "Recipes" --
+        # 435 Aufrufe der Vorlage verteilen sich ueber den ganzen Abzug.
+        rezepte = 0
+        seiten_mit_rezepten = 0
+        for titel, rezeptpfad in sorted(nach_titel.items()):
+            try:
+                tabellen = tabellen_aus_datei(rezeptpfad)
+            except Exception:
+                continue
+            gefunden_hier = 0
+            for t in tabellen:
+                if _hat(t.kopf, "ingredient", "product"):
+                    gefunden_hier += kb.import_recipes(conn, t.als_dicts,
+                                                       source_page=rezeptpfad.stem)
+            if gefunden_hier:
+                rezepte += gefunden_hier
+                seiten_mit_rezepten += 1
+        if rezepte:
+            meldungen.append(f"recipes: {rezepte} Rezepte von {seiten_mit_rezepten} Seiten")
 
         pfad = nach_titel.get("glade events")
         if pfad:
@@ -577,6 +603,13 @@ def cmd_status(args) -> int:
                 nach_saettigung.setdefault(w["eating_fullness"] or 0, []).append(w["en"])
             for wert in sorted(nach_saettigung, reverse=True):
                 print(f"  Sättigung {wert}: {', '.join(sorted(nach_saettigung[wert]))}")
+
+        verstaerkung = kb.food_amplification(conn)
+        if verstaerkung:
+            print(f"\nNahrungsverstärkung durch Verarbeitung: {len(verstaerkung)} Rezepte")
+            for e in verstaerkung[:8]:
+                print(f"  {e['eingesetzt']:<28} -> {e['saettigung_raus']:.0f} Sättigung "
+                      f"(Faktor {e['faktor']}) in {e['gebaeude'] or '?'}")
 
         warnungen = conn.execute(
             "SELECT COUNT(*) n FROM source_pages WHERE warning IS NOT NULL").fetchone()["n"]

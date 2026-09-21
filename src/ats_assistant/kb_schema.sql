@@ -69,15 +69,23 @@ CREATE TABLE IF NOT EXISTS buildings (
     source_page  TEXT REFERENCES source_pages(title)
 );
 
+-- inputs ist eine Liste von Listen: je Zutat die Alternativen, unter denen
+-- das Spiel waehlen laesst. "5 Insects 5 Meat" sind nicht zwei Zutaten,
+-- sondern zwei Moeglichkeiten fuer eine.
 CREATE TABLE IF NOT EXISTS recipes (
     id           INTEGER PRIMARY KEY,
     building     TEXT REFERENCES buildings(en),
-    inputs       TEXT,          -- JSON
+    inputs       TEXT,          -- JSON: [[{menge, ware}, ...], ...]
     outputs      TEXT,          -- JSON
     ratio        TEXT,
     stars        INTEGER,
+    seconds      REAL,          -- Produktionsdauer
+    product      TEXT,
+    product_amount REAL,
     source_page  TEXT REFERENCES source_pages(title)
 );
+
+CREATE INDEX IF NOT EXISTS recipes_product ON recipes(product);
 
 CREATE TABLE IF NOT EXISTS species (
     en            TEXT PRIMARY KEY,

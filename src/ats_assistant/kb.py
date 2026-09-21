@@ -492,3 +492,104 @@ def import_glade_events(conn: sqlite3.Connection, zeilen: list[tuple[str, str]],
         n += 1
     conn.commit()
     return n
+
+
+# --------------------------------------------------------------------------
+# Rezepte
+# --------------------------------------------------------------------------
+#
+# Eine Zutatenspalte sieht so aus: "5 Insects 5 Meat". Das sind keine zwei
+# Zutaten, sondern zwei Alternativen fuer dieselbe -- das Spiel laesst die
+# Wahl. Die zweite Spalte fuehrt die Alternativen der zweiten Zutat.
+
+ZUTAT_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s+([A-Za-z][A-Za-z' \-]*?)(?=\s+\d|$)")
+STERNE_RE = re.compile(r"[★*]")
+ZEIT_RE = re.compile(r"(\d+):(\d{2})")
+
+
+def parse_zutaten(text: str | None) -> list[dict]:
+    """'5 Insects 5 Meat' -> [{'menge': 5, 'ware': 'Insects'}, ...]."""
+    if not text:
+        return []
+    out: list[dict] = []
+    for menge, ware in ZUTAT_RE.findall(text.strip()):
+        name = ware.strip()
+        if not name:
+            continue
+        out.append({"menge": float(menge.replace(",", ".")), "ware": name})
+    return out
+
+
+def parse_grad(text: str | None) -> tuple[int | None, float | None]:
+    """'★★ 2:06' -> (2, 126.0)."""
+    if not text:
+        return None, None
+    sterne = len(STERNE_RE.findall(text)) or None
+    m = ZEIT_RE.search(text)
+    sekunden = float(m.group(1)) * 60 + float(m.group(2)) if m else None
+    return sterne, sekunden
+
+
+def import_recipes(conn: sqlite3.Connection, zeilen: list[dict],
+                   source_page: str | None = None) -> int:
+    n = 0
+    for z in zeilen:
+        gebaeude = _spalte(z, "Building")
+        produkt = _spalte(z, "Product")
+        if not produkt or (gebaeude or "").lower() == "building":
+            continue
+        menge = _zahl(_spalte(z, "#", "Amount", "Quantity")) or 1.0
+        sterne, sekunden = parse_grad(_spalte(z, "Grade", "Stars"))
+        eingaben = [parse_zutaten(_spalte(z, f"Ingredient #{i}")) for i in (1, 2, 3)]
+        eingaben = [e for e in eingaben if e]
+        conn.execute(
+            "INSERT INTO recipes (building, inputs, outputs, ratio, stars, seconds, "
+            "product, product_amount, source_page) VALUES (?,?,?,?,?,?,?,?,?)",
+            (gebaeude, json.dumps(eingaben, ensure_ascii=False),
+             json.dumps([{"menge": menge, "ware": produkt}], ensure_ascii=False),
+             None, sterne, sekunden, produkt, menge, source_page),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def food_amplification(conn: sqlite3.Connection) -> list[dict]:
+    """Wie viel Saettigung ein Rezept aus der eingesetzten macht.
+
+    Das ist die Zahl, an der SPEC.md haengt: Nahrungsmangel im ersten Jahr ist
+    das Problem, und die Umwandlung ist der Hebel. Gerechnet wird mit der
+    guenstigsten Alternative je Zutat -- das Spiel laesst die Wahl, und wer
+    plant, waehlt die billigste.
+    """
+    saettigung = {
+        r["en"]: r["eating_fullness"] or 0.0
+        for r in conn.execute("SELECT en, eating_fullness FROM resources WHERE eatable = 1")
+    }
+    out: list[dict] = []
+    for r in conn.execute("SELECT * FROM recipes WHERE product IS NOT NULL"):
+        aus = saettigung.get(r["product"])
+        if not aus:
+            continue      # kein Nahrungsmittel
+        raus = aus * (r["product_amount"] or 1.0)
+        rein = 0.0
+        eingesetzt: list[str] = []
+        for gruppe in json.loads(r["inputs"] or "[]"):
+            essbar = [(z["menge"] * saettigung[z["ware"]], z)
+                      for z in gruppe if z["ware"] in saettigung]
+            if not essbar:
+                continue
+            wert, zutat = min(essbar, key=lambda p: p[0])
+            rein += wert
+            eingesetzt.append(f"{zutat['menge']:.0f} {zutat['ware']}")
+        if rein <= 0:
+            continue
+        out.append({
+            "rezept": r["product"], "gebaeude": r["building"],
+            "eingesetzt": " + ".join(eingesetzt),
+            "saettigung_rein": rein, "saettigung_raus": raus,
+            "faktor": round(raus / rein, 2),
+            "sterne": r["stars"], "sekunden": r["seconds"],
+        })
+    out.sort(key=lambda e: -e["faktor"])
+    return out
