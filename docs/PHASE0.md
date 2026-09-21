@@ -360,3 +360,101 @@ Damit ist egal, wie oft du die Geschwindigkeit umstellst: der Bericht rechnet
 die Abstände selbst um. `Spielgeschwindigkeit` ist außerdem als gesuchtes
 Feld in der Feldsuche aufgenommen — falls das Spiel die eingestellte Stufe im
 Save ablegt, taucht sie künftig direkt im Bericht auf.
+
+---
+
+# Entscheidungsvorlage (Messung vom 2026-09-21, 15 Minuten, mit Sonde)
+
+## Frage 2 ist beantwortet: Autosave alle 300 Spielzeitsekunden
+
+Drei Schreibvorgänge, zwei Abstände:
+
+| | Spielzeit (`time` aus `Save.save`) | Wanduhr | Spielzeit je Wanduhrsekunde |
+|---|---|---|---|
+| 1 → 2 | **300,827 s** | 252,2 s | 1,19 |
+| 2 → 3 | **300,857 s** | 300,857 / 222,2 | 1,35 |
+
+Auf drei Nachkommastellen dasselbe Intervall, bei zwei verschiedenen
+Wanduhrabständen. Der Auslöser ist die Spieluhr, nicht die Wanduhr, nicht der
+Jahreszeitenwechsel: das Spiel schreibt alle 300 Spielzeitsekunden. Die
+Normalisierung hat sich damit sofort bezahlt gemacht — ohne sie stünden hier
+252 und 222 Sekunden und die Schlussfolgerung wäre „unregelmäßig".
+
+Die beiden Schreibvorgänge im Abstand von 26 Sekunden aus dem vorherigen Lauf
+waren dein manuelles Speichern. Autosave und manuelles Speichern sind also zu
+unterscheiden.
+
+Die Heartbeat-These der Recherche (120 bis 180 Sekunden) ist damit endgültig
+widerlegt — in Wanduhrsekunden und in Spielzeit gleichermaßen.
+
+## Das Bündel umfasst vier Dateien
+
+`Save.save`, `WorldSave.save`, `MetaSave.save` und `MetaSave_Backup.save`
+ändern sich bei jedem der drei Schreibvorgänge innerhalb derselben Sekunde.
+`WorldSave.save` blieb dabei jedes Mal **exakt gleich groß** (+0 B) — sie wird
+angefasst, aber inhaltlich kaum verändert.
+
+## Der Parser ist schnell genug, Punkt
+
+**0,1 Sekunden** für 8,5 MB `Save.save`, 0,02 s für `WorldSave.save`, 0,01 s
+für `MetaSave.save` — gemessen mit `json.loads` aus der Standardbibliothek.
+Die Empfehlung der Recherche, wegen 30-MB-Dateien auf `ijson` oder `mmap`
+auszuweichen, ist damit gegenstandslos.
+
+## Entscheidung: Szenario B
+
+Ein Zustand alle 300 Spielzeitsekunden. Zwischen dem ersten und zweiten
+Schreibvorgang ist das Spieljahr von 5 auf 6 gesprungen — in einem einzigen
+Intervall vergeht also fast ein ganzes Jahr. Der Parser sieht die Siedlung
+damit etwa einmal pro Jahr.
+
+- Für `analyze_runs` und die Grundstein- und Bauplanberatung reicht das
+  vollkommen. Diese Entscheidungen fallen ohnehin an Jahresgrenzen.
+- Für `food_forecast` reicht es nicht. Eine Nahrungswarnung, die bis zu 300
+  Spielzeitsekunden alt sein kann, kommt nach dem Sturm.
+
+**Folge für den Zuschnitt:** `read_hud()` aus Phase 3 wird Pflicht und rückt
+vor Phase 5. Die Reihenfolge lautet damit 1 → 2 → 4 → **3** → 5, wie in der
+Spec für diesen Fall vorgesehen. `runs/*.jsonl` bekommt zwei Quellen mit
+verschiedener Aktualität; welcher Wert woher stammt, gehört ins Datenmodell,
+sonst rechnet die Nahrungsvorschau mit Zahlen von vorletztem Jahr.
+
+Der Umfang von Phase 3 bleibt trotzdem klein: gebraucht werden nur die Zahlen,
+die sich schnell ändern — Restzeit der Jahreszeit, Lagerbestand Nahrung,
+Entschlossenheit — plus die Auswahlbildschirme. Alles Langsame liefert der
+Parser.
+
+## Gefundene Feldnamen
+
+Die Sonde hat nebenbei die Vokabeln geliefert, nach denen Phase 2 suchen muss:
+
+| Gesucht | Heißt im Save | Anmerkung |
+|---|---|---|
+| Spieluhr | `time` in `Save.save` | `gameTime` in `MetaSave.save` steht still (dreimal 7527,31738) und taugt nicht |
+| Ungeduld | `reputationPenalty` | **nicht** `impatience` — die Feldsuche fand sie deshalb nie |
+| Verlustschwelle | `reputationPenaltyToLoose` = 14 | deckt sich mit der Recherche |
+| Siegschwelle | `reputationToWin` = 18 | passt zum Prestige-1-Modifikator |
+| Reputation | `reputation` | lebendig: 2,718 → 3,570 → 4,239 |
+| Feindseligkeit | `hostility` | **ein Dictionary mit drei Schlüsseln**, kein Skalar |
+| Spezies | `races` (Länge 3) | passt zu Menschen, Biber, Echsen |
+| Weltbevölkerung | `population` = 13 in `WorldSave.save` | passt zur Anzeige |
+
+Zwei Werte sind noch verdächtig: `season=0` und `timeLeft=0.0` standen in
+allen drei Schreibvorgängen unverändert da. Das riecht nach einem Vorgabewert
+tief in einer Vorlage statt nach dem geführten Wert. Deshalb bevorzugt die
+Feldsuche jetzt den **flachsten** Fund eines Schlüsselnamens und weist die
+Tiefe mit aus — der nächste Lauf zeigt, ob dann die echten Werte erscheinen.
+
+## Was Phase 0 damit abschließt
+
+| Frage | Befund |
+|---|---|
+| Container | `plain-json`, unkomprimiert |
+| Größe | `Save.save` 8,5 MB, 359.438 Zeilen, in 0,1 s geparst |
+| Sprache | englische IDs, null Umlaute in 400 Strings |
+| Schreibtakt | alle 300 Spielzeitsekunden, als Bündel aus vier Dateien |
+| Zuschnitt | **Szenario B** — Parser trägt Phase 2, `read_hud()` wird Pflicht |
+
+Offen bleibt einzig der `### Save.save`-Block des ersten Berichts mit der
+vollständigen Feldsuche über alle fünfzehn Felder. Für die Entscheidung ist er
+nicht mehr nötig, für den Zuschnitt von Phase 2 schon.

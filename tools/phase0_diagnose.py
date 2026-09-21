@@ -282,7 +282,9 @@ FIELD_HINTS: dict[str, list[str]] = {
     "Bevoelkerung je Spezies": ["villager", "population", "race", "species"],
     "Entschlossenheit": ["resolve"],
     "Feindseligkeit": ["hostility"],
-    "Ungeduld": ["impatience"],
+    # Das Spiel nennt die Ungeduld "reputationPenalty" -- mit "impatience"
+    # allein findet die Feldsuche sie nicht.
+    "Ungeduld": ["impatience", "reputationpenalty"],
     "Reputation": ["reputation"],
     "Lagerbestaende": ["storage", "goods", "resourcesamount", "stock", "warehouse"],
     "Gebaeude + Arbeiter": ["building", "worker", "workplace", "employee"],
@@ -320,8 +322,13 @@ def walk_json(obj, max_nodes: int, max_strings: int) -> dict:
         if isinstance(node, dict):
             for k, v in node.items():
                 key_counts[k] += 1
-                if k not in key_example:
-                    key_example[k] = {"path": f"{path}.{k}", "preview": preview(v)}
+                # Flachster Fund gewinnt: ein "season" tief in einer Vorlage
+                # sagt nichts, ein "season" nahe der Wurzel ist der Wert, den
+                # das Spiel fuehrt.
+                seen = key_example.get(k)
+                if seen is None or depth + 1 < seen["depth"]:
+                    key_example[k] = {"path": f"{path}.{k}", "preview": preview(v),
+                                      "depth": depth + 1}
                 stack.append((v, f"{path}.{k}", depth + 1))
         elif isinstance(node, list):
             for i, v in enumerate(node[:200]):
@@ -392,10 +399,11 @@ def field_report(key_counts: Counter, key_example: dict) -> dict:
                     "count": key_counts[orig],
                     "path": key_example[orig]["path"],
                     "preview": key_example[orig]["preview"],
+                    "depth": key_example[orig]["depth"],
                     "_rank": exact,
                 }
             )
-        hits.sort(key=lambda h: (h["_rank"], -h["count"]))
+        hits.sort(key=lambda h: (h["_rank"], h["depth"], -h["count"]))
         report[label] = hits[:6]
     return report
 
@@ -897,7 +905,7 @@ def render(report: dict) -> str:
                 for label, hits in f["fields"].items():
                     if hits:
                         h = hits[0]
-                        add(f"    [ja  ] {label:<28} {h['key']} x{h['count']}  {h['path'][:60]}")
+                        add(f"    [ja  ] {label:<28} {h['key']} x{h['count']} (Tiefe {h['depth']})  {h['path'][:52]}")
                     else:
                         add(f"    [nein] {label:<28} kein passender Schluessel gefunden")
 

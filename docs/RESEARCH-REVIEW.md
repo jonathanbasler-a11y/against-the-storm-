@@ -195,3 +195,25 @@ Einzelangaben sind Behauptungen mit Fehlerquote.
 Bemerkenswert ist die Lücke bei `SSE`. Falls das die Effektkategorie ist, ist
 es die Kategorie, in der Grundsteine stehen — also genau das, worum sich das
 halbe Dokument dreht, und es kennt den Schlüssel nicht.
+
+## Schreibtakt gemessen: die Heartbeat-These ist widerlegt
+
+Behauptet war ein rollender Schreibvorgang alle 120 bis 180 Sekunden.
+Gemessen wurde ein Autosave alle **300,83 Spielzeitsekunden**, zweimal auf
+drei Nachkommastellen identisch, bei Wanduhrabständen von 252 und 222
+Sekunden. Weder der Wert noch die Bezugsgröße stimmen.
+
+Ebenfalls widerlegt: die 30-MB-Datei, die angeblich `ijson` oder `mmap`
+erzwingt. `Save.save` ist 8,5 MB und wird von `json.loads` in **0,1 Sekunden**
+gelesen.
+
+Zwei Punkte gehen dagegen an die Recherche:
+
+- Sie nennt die Ungeduld `reputationPenalty`. Das Spiel auch — die Feldsuche
+  fand sie vorher nur deshalb nicht, weil sie nach `impatience` gesucht hat.
+- Sie nennt 14,0 als Verlustschwelle. Im Save steht
+  `reputationPenaltyToLoose = 14`.
+
+Das Muster bleibt damit über alle Prüfungen hinweg dasselbe: wo die Recherche
+Vokabeln und Mechaniken benennt, liegt sie oft richtig; wo sie Zahlen und
+Größenordnungen angibt, muss jede einzelne nachgemessen werden.
