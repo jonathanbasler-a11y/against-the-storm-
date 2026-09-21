@@ -158,6 +158,154 @@ def cmd_survey(args) -> int:
     return 0
 
 
+def scan_templates(text: str) -> list[tuple[str, str]]:
+    """Alle {{Vorlage|...}} mit Inhalt, auch verschachtelt.
+
+    Ein einfacher regulaerer Ausdruck reicht nicht: {{Recipe|{{rl|Wood}}|...}}
+    enthaelt geschweifte Klammern, und wer beim ersten `}}` aufhoert,
+    zerschneidet den Aufruf mitten im Parameter.
+    """
+    out: list[tuple[str, str]] = []
+    i = 0
+    while True:
+        start = text.find("{{", i)
+        if start < 0:
+            return out
+        tiefe, j = 0, start
+        while j < len(text) - 1:
+            if text[j:j + 2] == "{{":
+                tiefe += 1
+                j += 2
+            elif text[j:j + 2] == "}}":
+                tiefe -= 1
+                j += 2
+                if tiefe == 0:
+                    break
+            else:
+                j += 1
+        if tiefe != 0:
+            return out
+        inhalt = text[start + 2:j - 2]
+        name = inhalt.split("|", 1)[0].strip()
+        out.append((name, inhalt))
+        i = start + 2
+
+
+def split_params(inhalt: str) -> list[str]:
+    """Parameter trennen, ohne in verschachtelten Vorlagen zu schneiden."""
+    teile, tiefe, puffer = [], 0, []
+    i = 0
+    while i < len(inhalt):
+        zwei = inhalt[i:i + 2]
+        if zwei == "{{" or zwei == "[[":
+            tiefe += 1
+            puffer.append(zwei)
+            i += 2
+            continue
+        if zwei == "}}" or zwei == "]]":
+            tiefe -= 1
+            puffer.append(zwei)
+            i += 2
+            continue
+        if inhalt[i] == "|" and tiefe == 0:
+            teile.append("".join(puffer))
+            puffer = []
+            i += 1
+            continue
+        puffer.append(inhalt[i])
+        i += 1
+    teile.append("".join(puffer))
+    return teile[1:]   # der erste Teil ist der Vorlagenname
+
+
+def cmd_detail(args) -> int:
+    """Vorlagen aufschluesseln: welche Parameter, mit echten Beispielen."""
+    wiki_dir = Path(args.wiki_dir)
+    dateien = wikitext_dateien(wiki_dir)
+    if not dateien:
+        print(f"Keine Wikitext-Dateien unter {wiki_dir}")
+        return 1
+
+    gesucht = {n.lower() for n in args.name}
+    treffer: dict[str, dict] = {}
+    datenseiten: list[str] = []
+
+    for pfad in dateien:
+        text = pfad.read_text(encoding="utf-8", errors="replace")
+        if pfad.stem.lower().startswith("data") or "dataloader" in text.lower()[:2000]:
+            datenseiten.append(pfad.stem)
+        for name, inhalt in scan_templates(text):
+            if name.lower() not in gesucht:
+                continue
+            eintrag = treffer.setdefault(name, {"anzahl": 0, "params": Counter(), "beispiele": []})
+            eintrag["anzahl"] += 1
+            benannt = []
+            for teil in split_params(inhalt):
+                schluessel = teil.split("=", 1)[0].strip() if "=" in teil else "(unbenannt)"
+                if len(schluessel) < 30:
+                    benannt.append(schluessel)
+            eintrag["params"].update(benannt)
+            if len(eintrag["beispiele"]) < args.examples:
+                gekuerzt = " ".join(inhalt.split())
+                eintrag["beispiele"].append(f"[{pfad.stem}] {{{{{gekuerzt[:600]}}}}}")
+
+    L: list[str] = []
+    add = L.append
+    add("=" * 78)
+    add("VORLAGEN IM DETAIL")
+    add("=" * 78)
+    for name in args.name:
+        eintrag = next((v for k, v in treffer.items() if k.lower() == name.lower()), None)
+        add("")
+        add("-" * 78)
+        if not eintrag:
+            add(f"{name}: nicht gefunden")
+            continue
+        add(f"{name}: {eintrag['anzahl']} Aufrufe")
+        add("-" * 78)
+        add("  Parameter:")
+        for schluessel, n in eintrag["params"].most_common(30):
+            add(f"    {n:>5}  {schluessel}")
+        add("  Beispiele:")
+        for b in eintrag["beispiele"]:
+            add(f"    {b}")
+
+    add("")
+    add("-" * 78)
+    add(f"Datenseiten (Dataloader): {len(datenseiten)}")
+    add("-" * 78)
+    for t in sorted(datenseiten)[:40]:
+        add(f"  {t}")
+
+    text = "\n".join(L)
+    print(text)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    (out / f"wiki-detail-{stamp}.txt").write_text(text, encoding="utf-8")
+    print(f"\nBericht geschrieben: {out / f'wiki-detail-{stamp}.txt'}")
+    return 0
+
+
+def cmd_page(args) -> int:
+    """Eine Seite im Rohzustand zeigen -- fuer alles, was die Aufschluesselung offen laesst."""
+    wiki_dir = Path(args.wiki_dir)
+    for titel in args.title:
+        kandidaten = [p for p in wikitext_dateien(wiki_dir)
+                      if p.stem.lower().replace("_", " ") == titel.lower().replace("_", " ")]
+        print("=" * 78)
+        if not kandidaten:
+            print(f"{titel}: nicht gefunden")
+            continue
+        text = kandidaten[0].read_text(encoding="utf-8", errors="replace")
+        print(f"{kandidaten[0].stem}  ({len(text)} Zeichen)")
+        print("=" * 78)
+        print(text[:args.chars])
+        if len(text) > args.chars:
+            print(f"\n[... {len(text) - args.chars} Zeichen gekuerzt]")
+    return 0
+
+
 def cmd_seed(args) -> int:
     conn = kb.connect(args.db)
     csv_pfad = Path(args.names)
@@ -209,6 +357,22 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--names", default="data/name_map_seed.csv")
     s.add_argument("--ids", help="Verzeichnis aus kb_probe.py --dump-ids")
     s.set_defaults(func=cmd_seed)
+
+    s = sub.add_parser("detail", help="Vorlagen aufschluesseln: Parameter und Beispiele")
+    s.add_argument("--wiki-dir", required=True)
+    s.add_argument("--name", nargs="+", default=[
+        "Buildingbox", "Goodbox", "Recipe", "Construction", "Perk", "Perks",
+        "Version", "Deposit", "Dataloader/Goods", "Dataloader/guid_index",
+    ])
+    s.add_argument("--examples", type=int, default=3)
+    s.add_argument("--out", default="diagnostics")
+    s.set_defaults(func=cmd_detail)
+
+    s = sub.add_parser("page", help="eine Wikiseite im Rohzustand zeigen")
+    s.add_argument("--wiki-dir", required=True)
+    s.add_argument("--title", nargs="+", required=True)
+    s.add_argument("--chars", type=int, default=3000)
+    s.set_defaults(func=cmd_page)
 
     s = sub.add_parser("build", help="Wikitext auswerten (noch nicht fertig)")
     s.add_argument("--wiki-dir", required=True)

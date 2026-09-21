@@ -59,6 +59,43 @@ verwendeter Vorlage, weil die Seite „Bakery" nicht nach Gebäude heißt, aber
 
 Schick mir den `.txt`, dann schreibe ich die Extraktoren gegen Belege.
 
+### Was die Bestandsaufnahme ergeben hat (587 Seiten, 3,5 MB Wikitext)
+
+Drei Befunde, die den Zuschnitt bestimmen:
+
+1. **Das Wiki hält strukturierte Datenseiten.** `Dataloader/guid_index`
+   erscheint 6469-mal, dazu `Dataloader/Goods` und `Dataloader/Deeds`, und es
+   gibt Seiten wie `Data_Goods_1`. Das ist deutlich besser als
+   Fließtexttabellen — falls diese Seiten maschinenlesbar sind, kommt die
+   Wissensbasis daher und nicht aus Prosa.
+2. **Die tragenden Vorlagen sind identifiziert:** `Recipe` (435 Aufrufe),
+   `Perk` (320, mit Farbvarianten für die Seltenheit), `Buildingbox` (96),
+   `Construction` (96), `Goodbox` (70), `Deposit` (43), `Version` (237) sowie
+   die Kurzverweise `rl`, `bl`, `sl`, `pl`. Und die Seiten *List of annual
+   Cornerstones*, *… available for purchase from traders*, *… available from
+   Orders* liefern genau das Feld `origin`, das die Spec für Grundsteine will.
+3. **1.10 kommt in den Versionsangaben überhaupt nicht vor.** Häufigste sind
+   1.8.10 (57×), 1.9 (20×), 1.9.8 (17×), dazu viel 1.3 bis 1.5. Der
+   Versionsvorbehalt der Spec ist damit nicht die Ausnahme, sondern der
+   Normalfall — `source_pages.warning` wird an fast jedem Datensatz hängen.
+
+### Nächster Schritt: Vorlagen aufschlüsseln
+
+```powershell
+python tools\build_kb.py detail --wiki-dir "C:\Users\Joni\.cursor\wiki\against-the-storm-wiki"
+```
+
+Das zeigt je Vorlage die verwendeten Parameter mit Häufigkeit und drei echte
+Beispielaufrufe — verschachtelte Vorlagen werden dabei korrekt behandelt,
+`cost={{Construction|Planks|10}}` wird also nicht mitten im Parameter
+zerschnitten. Dazu die Liste der Datenseiten.
+
+Einzelne Seiten im Rohzustand, falls etwas offenbleibt:
+
+```powershell
+python tools\build_kb.py page --wiki-dir "..." --title "Data_Goods_1" "List of annual Cornerstones"
+```
+
 Zusätzlich, sobald du die ID-Listen aus der KB-Sonde hast:
 
 ```powershell
