@@ -649,6 +649,11 @@ PROBE_LABELS = (
 
 PROBE_MAX_BYTES = 64 * 1024 * 1024
 
+# Wie weit Schreibvorgaenge auseinanderliegen duerfen und noch als ein Bündel
+# gelten. Gemessen wurden 2,02 Sekunden zwischen MetaSave und Save -- mit zwei
+# Sekunden Fenster faellt genau die Datei heraus, um die es geht.
+CO_WRITE_WINDOW = 5.0
+
 
 def series_fingerprint(data, max_depth: int = 4) -> dict:
     """Findet Zeitreihen und merkt sich Laenge und Ende.
@@ -670,11 +675,15 @@ def series_fingerprint(data, max_depth: int = 4) -> dict:
             for v in vals[:8]
         ):
             first_key = next(iter(node))
+            series = node[first_key]
             out[path] = {
                 "keys": len(node),
-                "length": len(node[first_key]),
+                "length": len(series),
                 "example_key": first_key,
-                "tail": node[first_key][-4:],
+                "tail": series[-4:],
+                # Die ganze Reihe, damit zwei aufeinanderfolgende
+                # Schreibvorgaenge stellenweise verglichen werden koennen.
+                "sample": list(series[:400]),
             }
             continue
         for k, v in node.items():
@@ -832,6 +841,34 @@ def cmd_watch(args) -> dict:
         else:
             entry["verdict"] = "kein Schreibvorgang im Messfenster"
 
+        # Zeitreihen: welche Stellen ruecken zwischen zwei Schreibvorgaengen
+        # weiter? Die Zahl der geaenderten Stellen geteilt in die vergangene
+        # Spielzeit ergibt den Abstand der Stuetzstellen.
+        with_series = [e for e in events if e["file"] == key and (e.get("probe") or {}).get("_series")]
+        shifts: list[dict] = []
+        for prev, cur in zip(with_series, with_series[1:]):
+            for spath, s_cur in cur["probe"]["_series"].items():
+                s_prev = prev["probe"]["_series"].get(spath)
+                if not s_prev or not s_cur.get("sample") or not s_prev.get("sample"):
+                    continue
+                a, b = s_prev["sample"], s_cur["sample"]
+                changed = [i for i, (x, y) in enumerate(zip(a, b)) if x != y]
+                d_game = None
+                if (prev["probe"].get("_clock") is not None
+                        and cur["probe"].get("_clock") is not None):
+                    d_game = round(cur["probe"]["_clock"] - prev["probe"]["_clock"], 1)
+                entry_shift = {
+                    "series": spath, "key": s_cur["example_key"],
+                    "changed_indices": changed[:12], "changed_count": len(changed),
+                    "length_before": len(a), "length_after": len(b),
+                    "game_seconds": d_game,
+                }
+                if changed and d_game:
+                    entry_shift["seconds_per_step"] = round(d_game / len(changed), 1)
+                shifts.append(entry_shift)
+        if shifts:
+            entry["series_shifts"] = shifts
+
         # Spielzeit gegen Wanduhr: verraet die effektive Geschwindigkeit und
         # macht Messungen ueber Geschwindigkeitswechsel hinweg vergleichbar.
         clocked = [e for e in events if e["file"] == key and (e.get("probe") or {}).get("_clock") is not None]
@@ -855,12 +892,17 @@ def cmd_watch(args) -> dict:
     # der Parser eine Datei beobachten muss oder drei.
     groups: list[dict] = []
     for e in sorted(events, key=lambda x: x["wall_clock_epoch"]):
-        if groups and e["wall_clock_epoch"] - groups[-1]["epoch"] <= 2.0:
+        if groups and e["wall_clock_epoch"] - groups[-1]["epoch"] <= CO_WRITE_WINDOW:
             groups[-1]["files"].append(Path(e["file"]).name)
+            groups[-1]["last"] = e["wall_clock_epoch"]
         else:
             groups.append({"epoch": e["wall_clock_epoch"], "at": e["at"],
+                           "last": e["wall_clock_epoch"],
                            "files": [Path(e["file"]).name]})
-    out["co_writes"] = [{"at": g["at"], "files": g["files"]} for g in groups if len(g["files"]) > 1]
+    out["co_writes"] = [
+        {"at": g["at"], "files": g["files"], "spread_seconds": round(g["last"] - g["epoch"], 2)}
+        for g in groups if len(g["files"]) > 1
+    ]
     return out
 
 
@@ -989,12 +1031,22 @@ def render(report: dict) -> str:
                 add(f"  {name:<24} {s['writes']} Schreibvorgaenge  -> {s['verdict']}")
                 if s.get("heartbeat_claim"):
                     add(f"  {'':<24} {s['heartbeat_claim']}")
+                for sh in s.get("series_shifts", [])[:6]:
+                    if sh["changed_count"] == 0:
+                        add(f"  {'':<24} {sh['series']}: unveraendert ueber "
+                            f"{sh['game_seconds']}s Spielzeit -- Fuehler greift nicht")
+                    else:
+                        add(f"  {'':<24} {sh['series']}: {sh['changed_count']} Stellen geaendert "
+                            f"(Index {sh['changed_indices']}) in {sh['game_seconds']}s Spielzeit"
+                            + (f" -> etwa {sh['seconds_per_step']}s je Stuetzstelle"
+                               if sh.get("seconds_per_step") else ""))
                 if s.get("speed_note"):
                     add(f"  {'':<24} {s['speed_note']} (Uhr: {s.get('clock_key')})")
             if w.get("co_writes"):
-                add("  Gemeinsame Schreibvorgaenge (innerhalb von 2s):")
+                add(f"  Gemeinsame Schreibvorgaenge (innerhalb von {CO_WRITE_WINDOW:.0f}s):")
                 for g in w["co_writes"][:20]:
-                    add(f"    {g['at']}  {', '.join(g['files'])}")
+                    add(f"    {g['at']}  {', '.join(g['files'])}"
+                        f"   (Spanne {g['spread_seconds']}s)")
             if w.get("events"):
                 add("  Ereignisse:")
                 for e in w["events"][:40]:

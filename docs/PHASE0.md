@@ -458,3 +458,113 @@ Tiefe mit aus — der nächste Lauf zeigt, ob dann die echten Werte erscheinen.
 Offen bleibt einzig der `### Save.save`-Block des ersten Berichts mit der
 vollständigen Feldsuche über alle fünfzehn Felder. Für die Entscheidung ist er
 nicht mehr nötig, für den Zuschnitt von Phase 2 schon.
+
+---
+
+# Zweiter watch-Lauf (12 Minuten, mit Zeitreihen-Fühler)
+
+Drei Korrekturen an dem, was ich oben geschrieben habe.
+
+## 1. Der Takt ist ungefähr 300 Sekunden, nicht exakt
+
+Ich hatte „auf drei Nachkommastellen dasselbe Intervall" geschrieben. Das
+stimmte für zwei Messwerte aus einem Lauf. Mit vier Messwerten aus zwei Läufen
+sieht es so aus:
+
+| Lauf | Abstände in Spielzeit |
+|---|---|
+| 1 | 300,827 s · 300,857 s |
+| 2 | 298,676 s · 298,734 s |
+
+Mittel 299,77 s, Spanne 298,68 bis 300,86, Streuung 2,18 s. Innerhalb eines
+Laufs sind die beiden Werte fast gleich, zwischen den Läufen unterscheiden sie
+sich um gut zwei Sekunden. Die Aussage lautet also: **Autosave etwa alle 300
+Spielzeitsekunden, mit rund einer Sekunde Spiel nach oben und unten.** Für den
+Parser ändert das nichts, für eine Behauptung über den Auslöser schon — eine
+exakte Konstante wäre ein Zähler, ein schwankender Wert eher eine Prüfung im
+Spieltakt.
+
+## 2. Das Bündel ist nicht atomar
+
+Im dritten Schreibvorgang lagen die Dateien so:
+
+```
+MetaSave.save         +0,000 s
+WorldSave.save        +0,007 s
+MetaSave_Backup.save  +0,023 s
+Save.save             +2,024 s
+```
+
+`Save.save` kam zwei Sekunden nach den anderen — und fiel damit aus meinem
+Zweisekundenfenster, weshalb der Bericht dort nur drei Dateien als Bündel
+auswies.
+
+**Das ist ein Entwurfsdetail für Phase 2, kein Schönheitsfehler.** Ein Parser,
+der auf die erste Änderung reagiert, liest `MetaSave` neu und `Save.save` noch
+alt. Er muss auf Ruhe warten: nach der ersten Änderung ein paar Sekunden
+nichts tun und erst lesen, wenn sich eine Weile nichts mehr rührt. Das Fenster
+im Skript steht jetzt auf fünf Sekunden und der Bericht weist die Spanne je
+Bündel aus.
+
+## 3. Mein Zeitreihen-Fühler war am falschen Ende
+
+Das Ende der Reihen hat sich über drei Schreibvorgänge und rund 600
+Spielzeitsekunden **nicht um einen Wert verändert** — `Food` blieb bei
+`[97, 94, 92, 100]`, `[Crafting] Oil` bei `[8, 4, 4, 4]`. Gleichzeitig wuchs
+`Save.save` um 38 KB, das Jahr sprang von 9 auf 10 und die Reputation stieg um
+zwei Punkte. Die Siedlung ändert sich also sehr wohl.
+
+Die wahrscheinliche Erklärung: **ein Ringpuffer.** 180 feste Plätze und ein
+Schreibzeiger, der mitten durch das Feld wandert. Wer auf die letzten vier
+Plätze schaut, sieht jahrelang nichts.
+
+Der Fühler merkt sich jetzt die ganze Reihe und vergleicht zwei
+aufeinanderfolgende Schreibvorgänge Stelle für Stelle. Geprüft gegen einen
+nachgebauten Ringpuffer:
+
+```
+$.trends.goodsTrends: 6 Stellen geaendert (Index [46, 47, 48, 49, 50, 51])
+in 300.0s Spielzeit -> etwa 50.0s je Stuetzstelle
+```
+
+Damit beantwortet der nächste Lauf die Frage, an der Phase 3 hängt.
+
+## Was der Lauf bestätigt hat
+
+**Die Feldsuche liest jetzt die richtigen Werte.** Nach der Umstellung auf den
+flachsten Fund stehen dort lebendige Zahlen statt Vorgabewerte:
+
+| Feld | Verlauf über drei Schreibvorgänge |
+|---|---|
+| `year` / `season` | 9/2 → 10/1 → 10/2 |
+| `reputation` | 8,832 → 9,418 → 10,852 |
+| `reputationPenalty` (Ungeduld) | 10,809 → 10,573 → 10,336 |
+
+`timeLeft` steht weiterhin konstant auf 0,0 — das ist also immer noch nicht das
+geführte Feld, sondern ein Namensvetter. `MetaSave.gameTime` steht ebenfalls
+still; die Spieluhr ist `time` in `Save.save`.
+
+Nebenbei: `goodsTrends` wuchs von 51 auf 54 Reihen. Das Spiel legt eine Reihe
+offenbar erst an, wenn die Ware zum ersten Mal auftaucht.
+
+## Ein Modell für die Ungeduld, das sich rechnen lässt
+
+Die Ungeduld **fiel** über den Messzeitraum, obwohl sie laufend zunimmt. Der
+Save nennt beide Größen: `reputationPenaltyPerSec = 0,00425` und
+`reputationPenaltyBonusRate = −0,4`. Damit lässt sich prüfen, wie viel ein
+Reputationspunkt wegnimmt:
+
+| Annahme | Zuwachs über 597,41 s | Ungeduld je Reputationspunkt |
+|---|---|---|
+| Bonusrate ignoriert | 2,539 | 1,491 |
+| Bonusrate angewandt | 1,523 | **0,988** |
+
+Mit angewandter Bonusrate kommt fast genau **1,0** heraus — der Wert, den die
+Recherche für Prestige unter 14 nennt (ab Prestige 14 halbiert er sich auf
+0,5). Zwei Dinge fallen damit zusammen, die unabhängig voneinander sind: eine
+Behauptung aus dem Dokument und eine Rechnung aus meinem Spielstand.
+
+Das ist noch keine Gewissheit — ein einziges Intervall, und die Werte stammen
+aus Schreibzeitpunkten, nicht aus exakten Momentaufnahmen. Aber es ist ein
+Modell für die Ungeduldsvorhersage, das aus dem Save allein gefüttert werden
+kann, und der nächste Lauf prüft es mit.
