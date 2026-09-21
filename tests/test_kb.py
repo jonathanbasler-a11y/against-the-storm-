@@ -124,3 +124,52 @@ def test_versionsabweichung_haengt_eine_warnung_an(tmp_path: Path) -> None:
     zeile = conn.execute("SELECT warning FROM source_pages WHERE title='Smokehouse'").fetchone()
     assert zeile["warning"] == mit
     conn.close()
+
+
+def test_fehlende_spalten_werden_ergaenzt(tmp_path: Path) -> None:
+    """Eine Datenbank aus einer früheren Fassung muss weiterbenutzbar sein.
+
+    CREATE TABLE IF NOT EXISTS ändert an einer bestehenden Tabelle nichts --
+    ohne Wanderung scheitert der nächste Schreibzugriff mit
+    "table species has no column named resilience".
+    """
+    import sqlite3
+
+    pfad = tmp_path / "alt.sqlite"
+    alt = sqlite3.connect(pfad)
+    alt.execute("CREATE TABLE species (en TEXT PRIMARY KEY, base_resolve REAL)")
+    alt.execute("INSERT INTO species (en, base_resolve) VALUES ('Beavers', 10)")
+    alt.commit()
+    alt.close()
+
+    conn = kb.connect(pfad)
+    spalten = {r[1] for r in conn.execute("PRAGMA table_info(species)")}
+    assert {"resilience", "demand", "decadence", "comfort"} <= spalten
+    # Die vorhandene Zeile überlebt die Wanderung
+    assert conn.execute("SELECT base_resolve FROM species WHERE en='Beavers'"
+                        ).fetchone()["base_resolve"] == 10
+    kb.import_species(conn, [{"Species": "Beavers", "Resilience": "Low"}])
+    assert conn.execute("SELECT resilience FROM species WHERE en='Beavers'"
+                        ).fetchone()["resilience"] == "Low"
+    conn.close()
+
+
+def test_wanderung_laeuft_zweimal_ohne_schaden(tmp_path: Path) -> None:
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    assert kb.migrate(conn) == []      # frisch angelegt, nichts zu ergänzen
+    conn.close()
+
+
+def test_wanderung_fasst_fremde_tabellen_nicht_an(tmp_path: Path) -> None:
+    import sqlite3
+
+    pfad = tmp_path / "fremd.sqlite"
+    fremd = sqlite3.connect(pfad)
+    fremd.execute("CREATE TABLE notizen (text TEXT)")
+    fremd.execute("INSERT INTO notizen VALUES ('bleibt')")
+    fremd.commit()
+    fremd.close()
+
+    conn = kb.connect(pfad)
+    assert conn.execute("SELECT text FROM notizen").fetchone()["text"] == "bleibt"
+    conn.close()

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import logging
 import sqlite3
 from datetime import datetime, timezone
@@ -31,10 +32,62 @@ CONFIDENCE_RANK = {
 }
 
 
+# CREATE TABLE IF NOT EXISTS legt nur neue Tabellen an. Kommt spaeter eine
+# Spalte dazu, bleibt eine bestehende Datenbank unveraendert -- und der naechste
+# Schreibzugriff scheitert mit "table species has no column named resilience".
+# Deshalb wird nach dem Schema geprueft, was fehlt, und ergaenzt.
+SPALTEN_RE = re.compile(
+    r"CREATE TABLE IF NOT EXISTS\s+(\w+)\s*\((.*?)\n\);", re.DOTALL | re.IGNORECASE)
+CONSTRAINT_ANFAENGE = ("primary", "foreign", "unique", "check", "constraint")
+
+
+def _erwartete_spalten(schema: str) -> dict[str, list[tuple[str, str]]]:
+    """Aus dem Schema lesen, welche Spalten eine Tabelle haben soll."""
+    out: dict[str, list[tuple[str, str]]] = {}
+    for tabelle, koerper in SPALTEN_RE.findall(schema):
+        spalten: list[tuple[str, str]] = []
+        for zeile in koerper.split("\n"):
+            zeile = zeile.split("--", 1)[0].strip().rstrip(",")
+            if not zeile or zeile.lower().startswith(CONSTRAINT_ANFAENGE):
+                continue
+            teile = zeile.split()
+            if len(teile) < 2:
+                continue
+            # Typ ohne Zusaetze: ALTER TABLE ADD COLUMN vertraegt kein
+            # PRIMARY KEY und keine Fremdschluesselangabe.
+            spalten.append((teile[0], teile[1]))
+        out[tabelle] = spalten
+    return out
+
+
+def migrate(conn: sqlite3.Connection, schema: str | None = None) -> list[str]:
+    """Fehlende Spalten ergaenzen. Nur additiv -- nichts wird geloescht."""
+    schema = schema if schema is not None else SCHEMA.read_text(encoding="utf-8")
+    ergaenzt: list[str] = []
+    for tabelle, spalten in _erwartete_spalten(schema).items():
+        try:
+            vorhanden = {r[1] for r in conn.execute(f"PRAGMA table_info({tabelle})")}
+        except sqlite3.DatabaseError:
+            continue
+        if not vorhanden:
+            continue    # Tabelle gibt es nicht, das Schema legt sie gleich an
+        for name, typ in spalten:
+            if name in vorhanden:
+                continue
+            conn.execute(f"ALTER TABLE {tabelle} ADD COLUMN {name} {typ}")
+            ergaenzt.append(f"{tabelle}.{name}")
+    if ergaenzt:
+        conn.commit()
+        log.info("Wissensbasis ergaenzt: %s", ", ".join(ergaenzt))
+    return ergaenzt
+
+
 def connect(path: Path | str = "kb.sqlite") -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
-    conn.executescript(SCHEMA.read_text(encoding="utf-8"))
+    schema = SCHEMA.read_text(encoding="utf-8")
+    conn.executescript(schema)
+    migrate(conn, schema)
     return conn
 
 
