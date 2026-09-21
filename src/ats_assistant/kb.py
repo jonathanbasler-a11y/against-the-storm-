@@ -82,12 +82,27 @@ def migrate(conn: sqlite3.Connection, schema: str | None = None) -> list[str]:
     return ergaenzt
 
 
+INDEX_RE = re.compile(r"CREATE\s+INDEX[^;]*;", re.IGNORECASE)
+
+
 def connect(path: Path | str = "kb.sqlite") -> sqlite3.Connection:
+    """Oeffnen, Schema anlegen, fehlende Spalten ergaenzen, dann Indizes.
+
+    Die Reihenfolge ist nicht beliebig: ein Index auf einer neuen Spalte
+    scheitert an einer bestehenden Datenbank, solange die Spalte fehlt --
+    "no such column: product". Erst die Tabellen, dann die Wanderung, dann
+    die Indizes.
+    """
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     schema = SCHEMA.read_text(encoding="utf-8")
-    conn.executescript(schema)
+
+    indizes = INDEX_RE.findall(schema)
+    conn.executescript(INDEX_RE.sub("", schema))
     migrate(conn, schema)
+    for anweisung in indizes:
+        conn.execute(anweisung.rstrip(";"))
+    conn.commit()
     return conn
 
 

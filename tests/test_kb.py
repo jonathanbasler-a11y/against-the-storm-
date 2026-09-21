@@ -173,3 +173,25 @@ def test_wanderung_fasst_fremde_tabellen_nicht_an(tmp_path: Path) -> None:
     conn = kb.connect(pfad)
     assert conn.execute("SELECT text FROM notizen").fetchone()["text"] == "bleibt"
     conn.close()
+
+
+def test_index_auf_neuer_spalte_scheitert_nicht(tmp_path: Path) -> None:
+    """Das Schema legt einen Index auf recipes(product) an. An einer
+    bestehenden Datenbank ohne diese Spalte scheiterte das mit
+    "no such column: product" -- die Wanderung lief erst danach."""
+    import sqlite3
+
+    pfad = tmp_path / "alt.sqlite"
+    alt = sqlite3.connect(pfad)
+    alt.execute("CREATE TABLE recipes (id INTEGER PRIMARY KEY, building TEXT)")
+    alt.execute("INSERT INTO recipes (building) VALUES ('Butcher')")
+    alt.commit()
+    alt.close()
+
+    conn = kb.connect(pfad)       # darf nicht werfen
+    spalten = {r[1] for r in conn.execute("PRAGMA table_info(recipes)")}
+    assert {"product", "stars", "seconds"} <= spalten
+    assert conn.execute("SELECT building FROM recipes").fetchone()["building"] == "Butcher"
+    indizes = {r["name"] for r in conn.execute("PRAGMA index_list(recipes)")}
+    assert "recipes_product" in indizes
+    conn.close()
