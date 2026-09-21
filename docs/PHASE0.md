@@ -184,3 +184,76 @@ Abstände, darunter weist der Bericht die Einzelwerte aus.
    „Kategoriepraefix"): Pfadprüfung, Feldsuche, Sprachprobe.
 2. Ein zweiter `watch`-Lauf mit der korrigierten Auswahl:
    `python tools\phase0_diagnose.py watch --minutes 10`
+
+## Nachtrag: Berichtskopf, `MetaSave.save` und der Dateibestand
+
+### Frage 3 ist beantwortet: englische IDs
+
+400 Strings geprobt, **null mit Umlauten**, 356 davon ID-artig. Stichprobe:
+`[Mat Raw] Leather`, `[Food Raw] Mushrooms`, `[Food Processed] Jerky`,
+`[Crafting] Coal`, `[Map Mod] Trader Attack`, `[Embark] Cornerstone Reroll +3`.
+
+Damit ist der Fall eingetreten, auf den die Spec gehofft hat. Die deutsche
+Oberfläche ist reine Präsentation, im Save steht Englisch. `name_map` wird
+nur für die Ausgabe an mich und für die Bildschirmauslesung gebraucht, nicht
+fürs Rechnen. Zwei weitere Kategorien tauchen hier auf, die im Save der
+Siedlung nicht vorkamen: `Map Mod` und `Embark`.
+
+### Der Dateibestand ist aufschlussreicher als erwartet
+
+Sechzehn Dateien im Ordner. Drei davon tragen die laufende Partie:
+
+| Datei | Größe | Geschrieben |
+|---|---|---|
+| `Save.save` | 8,47 MB | 19:07:29.538 |
+| `WorldSave.save` | 1,52 MB | 19:07:29.086 |
+| `MetaSave.save` | 0,18 MB | 19:07:28.934 |
+
+**Alle drei innerhalb von 0,6 Sekunden.** Die zugehörigen `_Backup`-Dateien
+ebenso, geschlossen um 15:52:11. Das Spiel schreibt also nicht eine Datei,
+sondern ein Bündel — und der Parser muss entsprechend auf das Bündel
+reagieren, sonst liest er `Save.save` neu und `WorldSave.save` noch alt.
+
+`WorldSave.save` kommt in der Recherche überhaupt nicht vor. 1,5 MB Weltkarte,
+und der Verdacht liegt nahe, dass dort die entdeckten Lichtungen und die
+Vorkommen mit Restladungen stehen — zwei der fünfzehn GameState-Felder.
+
+Nebenbei: `Save.save` ist **8,5 MB**, nicht die von der Recherche genannten
+30 MB. Die daraus abgeleitete Warnung, `json.loads` sei zu langsam und man
+brauche `ijson` oder `mmap`, schrumpft damit erheblich. 8 MB liest die
+Standardbibliothek in Bruchteilen einer Sekunde.
+
+### `MetaSave.save` enthält zwei Dinge, die Arbeit sparen könnten
+
+1. **Eine Laufhistorie.** `$.gamesHistory.records[19]` — also mindestens
+   zwanzig Einträge, je mit `gameTime`, `modifiers`, `cornerstones` und
+   `lakeChargesUsed`. Das ist die Vorgeschichte meiner Läufe, die das Spiel
+   selbst führt. `analyze_runs(n)` aus Phase 4 bekommt damit einen Sockel,
+   noch bevor `runs/*.jsonl` den ersten Eintrag hat. Ob dort mehr steht als
+   Endzustände, muss der Berichtskopf zu `Save.save` zeigen.
+2. **Möglicherweise den Inhaltskatalog des Spiels.**
+   `$.content.buildings` ist eine Liste mit **169 Einträgen**. Falls das die
+   Gebäudeliste des Spiels ist und nicht nur Freischaltmarker, wäre das eine
+   bessere Quelle für `kb.sqlite` als das Wiki: aktuell zur installierten
+   Version, in denselben IDs wie der Rest des Saves, und ohne Crawlen. Das
+   ist die einzige offene Frage, die Phase 1 im Zuschnitt verändern könnte —
+   deshalb steht sie hier und nicht in einer Fußnote.
+
+Ebenfalls in `MetaSave`: `$.gameConditions.{biome, difficulty, races,
+reputationToWin, worldField}`. Die Laufbedingungen samt Prestige-Stufe stehen
+also im Metafortschritt, nicht nur im Siedlungs-Save.
+
+### Was die 0 von 7 Pfaden *nicht* bedeutet
+
+Der Abschnitt zu `MetaSave.save` meldet null bestätigte Pfade. Das ist kein
+Urteil über die Recherche: sie hat ihre Pfade für `Save.save` behauptet,
+geprüft wurden sie hier gegen die falsche Datei. Die Bewertung steht im
+Abschnitt zu `Save.save`, der noch fehlt.
+
+### Skript nachgezogen
+
+`WorldSave.save` gehört jetzt zu den vorrangig ausgewählten Dateien,
+`--max-files` steht auf 6, und `watch` meldet gemeinsame Schreibvorgänge:
+ändern sich mehrere Dateien innerhalb von zwei Sekunden, steht das als Gruppe
+im Bericht. Damit beantwortet der nächste Lauf nicht nur „wie oft", sondern
+auch „was zusammen".

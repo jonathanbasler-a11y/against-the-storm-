@@ -102,10 +102,11 @@ def resolve_dir(explicit: str | None) -> tuple[Path | None, list[dict]]:
     return found, tried
 
 
-# Die beiden Dateien, um die es geht. Alles andere ist Beiwerk und darf sie
-# nicht aus der Auswahl draengen -- alphabetisch stehen CustomGamesLayout und
-# die MetaSave-Backups vor Save.save.
-PRIORITY_NAMES = ("save.save", "metasave.save")
+# Die drei Dateien, um die es geht: laufende Siedlung, Weltkarte,
+# Metafortschritt. Alles andere ist Beiwerk und darf sie nicht aus der
+# Auswahl draengen -- alphabetisch stehen CustomGamesLayout und die neun
+# MetaSave-Varianten vor Save.save.
+PRIORITY_NAMES = ("save.save", "worldsave.save", "metasave.save")
 
 
 def select_targets(files: list[Path], max_files: int) -> tuple[list[Path], list[Path]]:
@@ -711,6 +712,17 @@ def cmd_watch(args) -> dict:
             entry["verdict"] = "kein Schreibvorgang im Messfenster"
         per_file[Path(key).name] = entry
     out["summary"] = per_file
+
+    # Schreibt das Spiel mehrere Dateien im selben Zug? Das entscheidet, ob
+    # der Parser eine Datei beobachten muss oder drei.
+    groups: list[dict] = []
+    for e in sorted(events, key=lambda x: x["wall_clock_epoch"]):
+        if groups and e["wall_clock_epoch"] - groups[-1]["epoch"] <= 2.0:
+            groups[-1]["files"].append(Path(e["file"]).name)
+        else:
+            groups.append({"epoch": e["wall_clock_epoch"], "at": e["at"],
+                           "files": [Path(e["file"]).name]})
+    out["co_writes"] = [{"at": g["at"], "files": g["files"]} for g in groups if len(g["files"]) > 1]
     return out
 
 
@@ -839,6 +851,10 @@ def render(report: dict) -> str:
                 add(f"  {name:<24} {s['writes']} Schreibvorgaenge  -> {s['verdict']}")
                 if s.get("heartbeat_claim"):
                     add(f"  {'':<24} {s['heartbeat_claim']}")
+            if w.get("co_writes"):
+                add("  Gemeinsame Schreibvorgaenge (innerhalb von 2s):")
+                for g in w["co_writes"][:20]:
+                    add(f"    {g['at']}  {', '.join(g['files'])}")
             if w.get("events"):
                 add("  Ereignisse:")
                 for e in w["events"][:40]:
@@ -860,7 +876,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dir", help="Save-Verzeichnis explizit angeben")
     ap.add_argument("--minutes", type=float, default=10.0, help="Messdauer fuer watch (Vorgabe 10)")
     ap.add_argument("--interval", type=float, default=2.0, help="Abtastintervall in Sekunden (Vorgabe 2)")
-    ap.add_argument("--max-files", type=int, default=4, help="Hoechstzahl untersuchter Dateien")
+    ap.add_argument("--max-files", type=int, default=6, help="Hoechstzahl untersuchter Dateien")
     ap.add_argument("--max-nodes", type=int, default=3_000_000, help="Knotenobergrenze beim JSON-Durchlauf")
     ap.add_argument("--max-strings", type=int, default=400, help="Groesse der Stringprobe")
     ap.add_argument("--sketch-depth", type=int, default=3, help="Tiefe der Strukturskizze")
