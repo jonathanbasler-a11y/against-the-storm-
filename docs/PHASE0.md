@@ -257,3 +257,66 @@ Abschnitt zu `Save.save`, der noch fehlt.
 ändern sich mehrere Dateien innerhalb von zwei Sekunden, steht das als Gruppe
 im Bericht. Damit beantwortet der nächste Lauf nicht nur „wie oft", sondern
 auch „was zusammen".
+
+## Frage 2, erste echte Daten (Messung 19:29 bis 19:39)
+
+Diesmal war `Save.save` dabei. Zwei Schreibvorgänge in zehn Minuten Spielzeit:
+
+| Zeit | Seit dem letzten | `Save.save` | `MetaSave.save` | `MetaSave_Backup.save` |
+|---|---|---|---|---|
+| 19:31:56 | 170 s | −3.081 B | −1 B | −4 B |
+| 19:32:22 | 26 s | −6.351 B | −1 B | −1 B |
+
+Danach sieben Minuten nichts. Zusammen mit dem ersten Lauf (`MetaSave` um
+19:16:07 und 19:18:03, Abstand 116 s) ergibt das die Abstände 116 s, 833 s,
+26 s.
+
+**Das ist kein Heartbeat.** Die Recherche behauptet einen rollenden
+Schreibvorgang alle 120 bis 180 Sekunden; gemessen sind zwei Schreibvorgänge
+im Abstand von 26 Sekunden und danach sieben Minuten Stille. Das Muster ist
+ereignisgetrieben, nicht getaktet. Die Screenshots rund um die Messung zeigen
+den Übergang von Jahr IV auf Jahr V — der naheliegende Verdacht ist, dass die
+beiden Schreibvorgänge zum Jahreszeitenwechsel gehören.
+
+**Bestätigt ist dagegen das Bündel:** `Save.save`, `MetaSave.save` und
+`MetaSave_Backup.save` ändern sich auf dieselbe Sekunde. Das war bisher nur
+aus den Änderungszeitpunkten der Dateiliste geschlossen, jetzt ist es
+beobachtet.
+
+### Vorläufige Einordnung: Szenario B
+
+Zwei Zustände in zehn Minuten, zu unvorhersehbaren Zeitpunkten. Für
+`analyze_runs` und für die Grundsteinberatung reicht das. Für
+`food_forecast` in Echtzeit reicht es nicht — eine Nahrungswarnung, die
+sieben Minuten alt sein kann, kommt bei einer Jahreszeit von wenigen Minuten
+zu spät. Damit wird `read_hud()` aus Phase 3 Pflicht und muss vor Phase 5
+stehen, und `runs/*.jsonl` bekommt zwei Quellen mit unterschiedlicher
+Aktualität, die im Datenmodell auseinandergehalten werden müssen.
+
+Endgültig ist das erst, wenn der Auslöser feststeht. Deshalb die Sonde.
+
+### Neu: Sonde bei jedem Schreibvorgang
+
+`watch` liest den Spielstand jetzt bei jeder erkannten Änderung und
+protokolliert Jahr, Jahreszeit, Restzeit, Feindseligkeit, Ungeduld,
+Reputation und Bevölkerung mit. Aus „hat um 19:31:56 geschrieben" wird damit
+„hat beim Wechsel in die Auslichtung geschrieben" — und erst das beantwortet,
+ob der Auslöser der Jahreszeitenwechsel ist, ein Auftrag, ein
+Lichtungsereignis oder schlicht die Pausetaste. Abschaltbar mit `--no-probe`.
+
+### Zwei Fehler im Skript, behoben
+
+1. **`SyntaxWarning: invalid escape sequence '\u'`** — in `decode_container`
+   stand `raw.lstrip(b" \t\r\n﻿")`. In einem Bytes-Literal ist `﻿`
+   kein BOM, sondern die ASCII-Zeichen `\`, `u`, `f`, `e`. Das Skript hat
+   also Backslash, u, f und e vom Dateianfang abgeschnitten und ein echtes
+   BOM stehen lassen — eine JSON-Datei mit BOM wäre als „unbekannt"
+   durchgefallen. Jetzt wird das BOM als `\xef\xbb\xbf` geprüft.
+2. **`+-3081 Bytes`** in der Ausgabe: das Vorzeichen stand doppelt.
+
+### Noch offen
+
+- `WorldSave.save` fehlt weiterhin in der Messung. Der Lauf lief auf dem
+  Stand vor dem Commit, der sie aufgenommen hat — ein `git pull` fehlt.
+- Der `### Save.save`-Block aus dem ersten Bericht: Sprachprobe, Feldsuche
+  über die fünfzehn Felder, die sieben Pfadprüfungen.

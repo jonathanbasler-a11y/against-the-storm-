@@ -171,7 +171,9 @@ def decode_container(raw: bytes) -> dict:
     result: dict = {"container": "unbekannt", "payload": None, "notes": []}
     head = raw[:16]
 
-    stripped = raw.lstrip(b" \t\r\n\ufeff")
+    stripped = raw.lstrip(b" \t\r\n")
+    if stripped.startswith(b"\xef\xbb\xbf"):  # UTF-8-BOM
+        stripped = stripped[3:].lstrip(b" \t\r\n")
     if stripped[:1] in (b"{", b"["):
         result["container"] = "plain-json"
         result["payload"] = raw
@@ -619,6 +621,51 @@ def cmd_inspect(args) -> dict:
 # --------------------------------------------------------------------------
 
 
+# Welche Werte bei jedem Schreibvorgang mitprotokolliert werden. Damit wird
+# aus "hat um 19:31:56 geschrieben" ein "hat beim Wechsel in die Auslichtung
+# geschrieben" -- und erst das beantwortet, ob der Parser einen Live-Strom
+# bekommt oder Standbilder.
+PROBE_LABELS = (
+    "Jahr / Jahreszeit / Restzeit",
+    "Feindseligkeit",
+    "Ungeduld",
+    "Reputation",
+    "Bevoelkerung je Spezies",
+)
+
+PROBE_MAX_BYTES = 64 * 1024 * 1024
+
+
+def probe_savestate(path: Path, max_nodes: int = 400_000) -> dict:
+    """Liest den geschriebenen Spielstand und zieht ein paar Kennzahlen heraus."""
+    started = time.time()
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        return {"error": f"nicht lesbar: {exc}"}
+    if len(raw) > PROBE_MAX_BYTES:
+        return {"error": f"uebersprungen, {len(raw) // 1024 // 1024} MB"}
+
+    dec = decode_container(raw)
+    if dec["payload"] is None:
+        return {"error": f"Container {dec['container']} nicht dekodierbar"}
+    try:
+        data = json.loads(dec["payload"].decode("utf-8", errors="replace"))
+    except json.JSONDecodeError as exc:
+        # Halb geschriebene Datei beim Zugriff mitten im Schreibvorgang.
+        return {"error": f"JSON unvollstaendig: {exc.msg}"}
+
+    walked = walk_json(data, max_nodes, 0)
+    report = field_report(walked["key_counts"], walked["key_example"])
+    values = {}
+    for label in PROBE_LABELS:
+        hits = report.get(label) or []
+        if hits:
+            values[label] = ", ".join(f"{h['key']}={h['preview']}" for h in hits[:3])
+    values["_parse_seconds"] = round(time.time() - started, 2)
+    return values
+
+
 def cmd_watch(args) -> dict:
     directory, tried = resolve_dir(args.dir)
     out: dict = {"tried_dirs": tried, "dir": str(directory) if directory else None}
@@ -671,9 +718,14 @@ def cmd_watch(args) -> dict:
                         "size_bytes": st.st_size,
                         "size_delta": st.st_size - last[key][1],
                     }
+                    if args.probe and p.name.lower() in PRIORITY_NAMES:
+                        evt["probe"] = probe_savestate(p, args.max_nodes)
                     events.append(evt)
                     print(f"[{evt['at']}] Schreibvorgang {Path(key).name}: "
-                          f"+{evt['size_delta']} Bytes, {gap}s seit dem letzten")
+                          f"{evt['size_delta']:+,} Bytes, {gap}s seit dem letzten")
+                    for k, v in (evt.get("probe") or {}).items():
+                        if not k.startswith("_"):
+                            print(f"    {k}: {v}")
                     last[key] = sig
             time.sleep(args.interval)
     except KeyboardInterrupt:
@@ -860,6 +912,11 @@ def render(report: dict) -> str:
                 for e in w["events"][:40]:
                     add(f"    {e['at']}  {Path(e['file']).name:<16} {e['size_delta']:+,} B  "
                         f"(+{e['seconds_since_previous']}s)")
+                    for k, v in (e.get("probe") or {}).items():
+                        if k == "_parse_seconds":
+                            add(f"        (Spielstand in {v}s gelesen)")
+                        else:
+                            add(f"        {k}: {v}")
     add("")
     add("=" * 78)
     return "\n".join(L)
@@ -877,6 +934,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--minutes", type=float, default=10.0, help="Messdauer fuer watch (Vorgabe 10)")
     ap.add_argument("--interval", type=float, default=2.0, help="Abtastintervall in Sekunden (Vorgabe 2)")
     ap.add_argument("--max-files", type=int, default=6, help="Hoechstzahl untersuchter Dateien")
+    ap.add_argument("--probe", dest="probe", action="store_true", default=True,
+                    help="bei jedem Schreibvorgang Kennzahlen aus dem Spielstand lesen (Vorgabe)")
+    ap.add_argument("--no-probe", dest="probe", action="store_false",
+                    help="Sonde abschalten, nur Zeitpunkte protokollieren")
     ap.add_argument("--max-nodes", type=int, default=3_000_000, help="Knotenobergrenze beim JSON-Durchlauf")
     ap.add_argument("--max-strings", type=int, default=400, help="Groesse der Stringprobe")
     ap.add_argument("--sketch-depth", type=int, default=3, help="Tiefe der Strukturskizze")
