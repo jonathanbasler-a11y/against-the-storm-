@@ -64,3 +64,100 @@ Der Befund entscheidet, wie Phase 1 zugeschnitten wird:
 - Überwiegend „nur IDs" → der Scraper bleibt, bekommt aber die ID-Liste als
   Sollvorgabe. Das macht ihn prüfbar: was das Wiki nicht liefert, fällt auf.
 - Überwiegend „nicht gefunden" → Phase 1 wie in der Spec beschrieben.
+
+---
+
+# Antwort (Lauf vom 2026-09-21)
+
+**Meine Vermutung war richtig: nur IDs.** Nirgends im Spielstand steht eine
+Gebäudedefinition mit Kosten oder Rezept. Was dort steht, sind Instanzen
+dieser Siedlung — `$.buildings.roads` mit 193 Wegstücken samt Position und
+Baufortschritt — und Kataloge, die nur aus Namen bestehen.
+
+Der Scraper wird also gebraucht. Aber er bekommt eine Sollvorgabe, und das
+ändert seinen Charakter: was das Wiki nicht liefert, fällt künftig auf.
+
+## Vokabular, das der Save liefert
+
+| Fundort | Einträge | Beispiele |
+|---|---|---|
+| `MetaSave.content.buildings` | **169** | Bakery, Beaver House, Brewery, Brickyard |
+| `MetaSave.content.essentialBuildings` | 182 | Bank, Small Hearth, Biome Poro, AncientShrine_T1 |
+| `MetaSave.content.effects` | **65** | Insect for tree, Crystaline Water, LessHostilityPerWoodcutter, RawDepositsCharges_10 |
+| `MetaSave.gameplay.playedWorldEffects` | 62 | [Biome] Wood in Woodlands, [Map Mod] No Control, [BIOME] Giant Organisms |
+| `Save.trends.goodsTrends` (Schlüssel) | alle Waren | [Crafting] Oil, [Food Processed] Jerky, Hearth Parts, Blight Fuel |
+| `Save.trends.goodsCategoriesTrends` (Schlüssel) | 7 | Building Materials, Consumable Items, Crafting, Food, Fuel, Others, Trade Goods |
+| `WorldSave.cycle.seenModifiers` | 24 | Modifier_OnePerk, Modifier_NoOrders, Modifier_NoGoodsRefund |
+| `WorldSave.cycle.seenEvents` | 12 | Gambler, Loremaster, Mosquito Nest, Hanged Viceroy |
+
+**Wichtiger Vorbehalt:** `seenModifiers` und `seenEvents` heißen so, weil sie
+festhalten, was *ich* gesehen habe. Das sind Teilmengen, keine vollständigen
+Listen. `content.buildings` und `content.effects` sehen dagegen nach dem
+vollständigen Bestand aus — 169 Gebäude ist ungefähr die richtige
+Größenordnung —, aber auch das ist eine Vermutung, solange kein zweiter
+Spielstand mit anderem Fortschritt danebenliegt.
+
+## Was das für Phase 1 heißt
+
+| Tabelle | Vokabular aus dem Save | Zahlen |
+|---|---|---|
+| `buildings` | ja, 169 | Wiki |
+| `resources` | ja, über die Reihenschlüssel | Wiki |
+| `cornerstones` | ja, 65 Effekte | Wiki |
+| `prestige` | teilweise, 24 gesehene Modifikatoren | Wiki |
+| `glade_events` | teilweise, 12 gesehene Ereignisse | Wiki |
+| `recipes` | nein | Wiki |
+| `species` | nein | Wiki |
+| `biomes` | nein | Wiki |
+
+Der Gewinn ist trotzdem konkret: die `en`-Spalte von `name_map` steht jetzt
+für 16 Waren nicht mehr auf Verdacht, sondern auf der ID aus dem Spielstand.
+Und die Kategorie `Food Complex`, die die Recherche erfunden hatte, heißt im
+Spiel `Food Processed` — in der Tabelle korrigiert.
+
+---
+
+# Der wichtigere Fund: `trends.goodsTrends`
+
+Der Spielstand führt **je Ware eine Zeitreihe mit 180 Werten**, dazu dieselbe
+Reihe je Warenkategorie. `$.trends.goodsCategoriesTrends.Food` ist damit
+wörtlich die Vorgeschichte des Nahrungsbestands.
+
+Das rührt an der Einordnung aus Phase 0. Szenario B beruhte darauf, dass der
+Parser nur alle 300 Spielzeitsekunden einen Zustand sieht und deshalb keine
+Verbrauchsrate bilden kann. Aber `food_forecast` braucht keine Momentaufnahme,
+es braucht eine **Steigung** — und die steht mit 180 Stützstellen in jeder
+geschriebenen Datei. Ein Spielstand liefert also nicht einen Punkt, sondern
+eine Kurve.
+
+Was damit noch offen ist: der Abstand zwischen zwei Stützstellen. 180 Werte
+können zehn Minuten oder das ganze Spiel abdecken, und davon hängt ab, wie fein
+die Vorhersage wird.
+
+**Das misst der nächste `watch`-Lauf von selbst.** Die Sonde hält bei jedem
+Schreibvorgang Länge und Ende der Reihen fest; wie weit die Reihe zwischen zwei
+Schreibvorgängen weiterrückt, ergibt den Abstand — bei bekannten 300
+Spielzeitsekunden dazwischen.
+
+Fällt der Abstand fein genug aus, schrumpft Phase 3 womöglich wieder auf die
+Auswahlbildschirme zusammen, und die Nahrungswarnung kommt doch aus dem Parser.
+Vor dieser Messung wird an Phase 3 nichts entschieden.
+
+# Zwei Funde nebenbei
+
+**`MetaSave.gamesHistory.records`** führt zwanzig abgeschlossene Läufe mit
+`hasWon`, `difficulty`, `biome`, `years`, `gameTime`, `tradeValueInAmbers`,
+`hearthCorruptedAmount` und je Lauf den verwendeten Gebäuden. Das ist genau
+die Gegenüberstellung, die `analyze_runs` leisten soll — gewonnene gegen
+verlorene Läufe —, und sie existiert schon, bevor die erste eigene Zeile in
+`runs/*.jsonl` steht.
+
+**`Save.world.naturalResources`** hat 6.067 Einträge mit Position und
+`isActive`, `Save.world.glades[n].fields` beschreibt die Lichtungen. Die beiden
+GameState-Felder „entdeckte Lichtungen" und „Vorkommen mit Restladungen" liegen
+damit dort, wo man sie erwartet.
+
+Und eine Kleinigkeit, die Vertrauen schafft:
+`MetaSave.gameConditions.embarkGoods` enthält `{"name": "[Crafting] Oil",
+"amount": 42}` — dieselben 42 Öl, die im Auftragsfenster als „42/25 Öl" und im
+Lagerraster als 42 stehen. Screenshot und Spielstand sagen dasselbe.

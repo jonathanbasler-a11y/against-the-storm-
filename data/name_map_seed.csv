@@ -1,39 +1,39 @@
 en,de,kind,category,confidence,source,verified_at,note
-wood,Holz,resource,Mat Raw,guessed,research-2026-09,,
-planks,Bretter,resource,Mat Processed,guessed,research-2026-09,,
+wood,Holz,resource,Mat Raw,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Mat Raw] Wood
+planks,Bretter,resource,Mat Processed,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Mat Processed] Planks
 stone,Stein,resource,Mat Raw,guessed,research-2026-09,,
 bricks,Ziegel,resource,Mat Processed,screenshot,screenshot-2026-09-21,2026-09-21,Auftrag LAGER: 2/10 Ziegel
 clay,Lehm,resource,Mat Raw,guessed,research-2026-09,,
 plant_fiber,Pflanzenfasern,resource,Mat Raw,guessed,research-2026-09,,
-fabric,Stoff,resource,Mat Processed,guessed,research-2026-09,,
+fabric,Stoff,resource,Mat Processed,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Mat Processed] Fabric
 reeds,Schilfrohr,resource,Mat Raw,guessed,research-2026-09,,
 resin,Harz,resource,Mat Raw,guessed,research-2026-09,,
-leather,Leder,resource,Mat Raw,guessed,research-2026-09,,
-meat,Fleisch,resource,Food Raw,guessed,research-2026-09,,
-insects,Insekten,resource,Food Raw,guessed,research-2026-09,,
-mushrooms,Pilze,resource,Food Raw,guessed,research-2026-09,,
+leather,Leder,resource,Mat Raw,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Mat Raw] Leather
+meat,Fleisch,resource,Food Raw,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Food Raw] Meat
+insects,Insekten,resource,Food Raw,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Food Raw] Insects
+mushrooms,Pilze,resource,Food Raw,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Food Raw] Mushrooms
 berries,Beeren,resource,Food Raw,guessed,research-2026-09,,
-vegetables,Gemüse,resource,Food Raw,guessed,research-2026-09,,
+vegetables,Gemüse,resource,Food Raw,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Food Raw] Vegetables
 grain,Getreide,resource,Food Raw,guessed,research-2026-09,,
 herbs,Kräuter,resource,Food Raw,guessed,research-2026-09,,
 eggs,Eier,resource,Food Raw,guessed,research-2026-09,,
 fish,Fisch,resource,Food Raw,guessed,research-2026-09,,
 algae,Algen,resource,Food Raw,guessed,research-2026-09,,
-coal,Kohle,resource,Crafting/Fuel,guessed,research-2026-09,,
+coal,Kohle,resource,Crafting,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Crafting] Coal
 copper_ore,Kupfererz,resource,Crafting,guessed,research-2026-09,,
-salt,Salz,resource,Crafting/Food,guessed,research-2026-09,,
+salt,Salz,resource,Crafting,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Crafting] Salt
 sea_marrow,Meeresmark,resource,Crafting/Fuel,guessed,research-2026-09,,
 crystallized_dew,Kristalltau,resource,Metal,guessed,research-2026-09,,
 amber,Bernstein,resource,Currency,spec_seed,SPEC.md,,
-parts,Teile,resource,Mechanics,spec_seed,SPEC.md,,
+parts,Teile,resource,,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: Hearth Parts (ohne Kategoriepraefix)
 wildfire_essence,Wildfeueressenz,resource,Hearth Fuel,guessed,research-2026-09,,
-jerky,Dörrfleisch,resource,Food Complex,guessed,research-2026-09,,
-porridge,Brei,resource,Food Complex,guessed,research-2026-09,,
-biscuits,Kekse,resource,Food Complex,guessed,research-2026-09,,
-pie,Pastete,resource,Food Complex,guessed,research-2026-09,,
-skewers,Spieße,resource,Food Complex,guessed,research-2026-09,,
-pickled_goods,Eingelegte Waren,resource,Food Complex,guessed,research-2026-09,,
-paste,Paste,resource,Food Complex,guessed,research-2026-09,,
+jerky,Dörrfleisch,resource,Food Processed,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Food Processed] Jerky
+porridge,Brei,resource,Food Processed,guessed,research-2026-09,,Kategorie aus dem Save korrigiert
+biscuits,Kekse,resource,Food Processed,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Food Processed] Biscuits
+pie,Pastete,resource,Food Processed,guessed,research-2026-09,,Kategorie aus dem Save korrigiert
+skewers,Spieße,resource,Food Processed,guessed,research-2026-09,,Kategorie aus dem Save korrigiert
+pickled_goods,Eingelegte Waren,resource,Food Processed,guessed,research-2026-09,,Kategorie aus dem Save korrigiert
+paste,Paste,resource,Food Processed,save_id,Save.save 2026-09-21,2026-09-21,Save-ID: [Food Processed] Paste
 coats,Mäntel,resource,Needs Goods,screenshot,screenshot-2026-09-21,2026-09-21,Auftrag: Bedürfnis nach Mäntel erfüllt
 ale,Bier,resource,Service Needs,guessed,research-2026-09,,
 wine,Wein,resource,Service Needs,guessed,research-2026-09,,
@@ -124,7 +124,7 @@ ashen_thicket,Aschenes Dickicht,biome,,guessed,research-2026-09,,
 bamboo_flats,Bambusebene,biome,,spec_seed,SPEC.md,,
 rocky_ravine,Felsschlucht,biome,,spec_seed,SPEC.md,,
 fluffbeak,Fluffschnabel,creature,,spec_seed,SPEC.md,,
-oil,Öl,resource,Crafting,screenshot+save,screenshot-2026-09-21 + Save.save,2026-09-21,"Auftrag zeigt 42/25 Öl, Save kennt [Crafting] Oil"
+oil,Öl,resource,Crafting,screenshot+save,screenshot-2026-09-21 + Save.save,2026-09-21,Save-ID: [Crafting] Oil
 trade_routes,Handelswege,concept,Order,screenshot,screenshot-2026-09-21,2026-09-21,Auftrag LIEFERUNG: 4/3 Handelswege
 food_complex,Komplexe Nahrung,category,,screenshot,screenshot-2026-09-21,2026-09-21,Auftrag FESTMAHL; deckt sich mit SPEC.md
 ,Komfort,concept,,observed,screenshot-2026-09-21,2026-09-21,Auftrag HILFE FÜR DIE MENSCHEN-FRAKTION: 4/12 Komfort; englische Entsprechung offen
@@ -133,3 +133,5 @@ food_complex,Komplexe Nahrung,category,,screenshot,screenshot-2026-09-21,2026-09
 ,Stadtgebäude,category,,observed,screenshot-2026-09-21,2026-09-21,Gebäudetyp im Tooltip des Hauptlagers
 ,Lagergebäude,category,,observed,screenshot-2026-09-21,2026-09-21,Gebäudetyp im Seitenfenster
 ,Lagerhaus,concept,,observed,screenshot-2026-09-21,2026-09-21,Abschnittsüberschrift im Gebäudefenster
+flour,,resource,Crafting,save_id,Save.save 2026-09-21,2026-09-21,"Save-ID: [Crafting] Flour, deutscher Name offen"
+blight_fuel,,resource,,save_id,Save.save 2026-09-21,2026-09-21,"Save-ID: Blight Fuel (ohne Praefix), deutscher Name offen"

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from datetime import datetime
@@ -91,7 +92,16 @@ def catalogs(data, min_len: int, max_nodes: int) -> list[dict]:
             found.append(describe(node, path, depth))
         elif isinstance(node, dict) and len(node) >= min_len:
             vals = list(node.values())[:50]
-            if vals and all(isinstance(v, (int, float, str, bool)) for v in vals):
+            if vals and all(isinstance(v, list) for v in vals):
+                found.append(
+                    {
+                        "path": path, "depth": depth, "kind": "Schluesselmenge",
+                        "length": len(node), "entry_keys": [],
+                        "examples": list(node)[:6],
+                        "economic": [], "ids": [k for k in node if isinstance(k, str)],
+                    }
+                )
+            elif vals and all(isinstance(v, (int, float, str, bool)) for v in vals):
                 # Zuordnung ID -> Zahl, z. B. Lagerbestand oder Statistik
                 found.append(
                     {
@@ -149,28 +159,117 @@ def describe(items: list, path: str, depth: int) -> dict:
     }
 
 
+# Felder, an denen eine Instanz kenntlich ist: etwas, das auf der Karte steht
+# und einen Zustand hat. Ein Katalogeintrag hat so etwas nicht.
+INSTANCE_KEYS = ("position", "field", "placed", "lifted", "finished", "rotation",
+                 "buildingprogress", "lastupdate", "isactive", "key", "value")
+
+# Pfadwurzeln, unter denen kein Vokabular steht, sondern Zustand, Verlauf oder
+# Statistik. Die Laufhistorie ist der haeufigste Fehlalarm: sie enthaelt
+# Felder wie buildingsMovedAmount, die nach Gebaeudedaten klingen und keine
+# sind.
+NON_CATALOG_ROOTS = (
+    "$.world", "$.buildings", "$.actors", "$.trends", "$.stats", "$.analytics",
+    "$.gamesHistory", "$.goals", "$.marketing", "$.tutorial", "$.rewards",
+    "$.capitalState", "$.fields", "$.modifiers", "$.worldEvents",
+    "$.gameConditions", "$.gameplay",
+)
+
+
+def classify(c: dict) -> str:
+    """Katalog, Datensatz, Zustand, Verlauf oder Statistik."""
+    path = c["path"]
+    keys_low = " ".join(c.get("entry_keys") or []).lower()
+
+    if c["kind"] == "Schluesselmenge":
+        # Zuordnung ID -> Zeitreihe: der Inhalt ist Verlauf, die SCHLUESSEL
+        # sind Vokabular. goodsTrends liefert so die vollstaendige Warenliste.
+        return "Vokabular"
+    if path.startswith("$.trends"):
+        return "Verlauf"
+    if any(path.startswith(r) for r in ("$.stats", "$.analytics", "$.gamesHistory", "$.goals",
+                                        "$.marketing", "$.tutorial", "$.rewards")):
+        return "Statistik"
+    if c["kind"] == "gemischte Liste":
+        return "Verlauf"
+    if any(path.startswith(r) for r in NON_CATALOG_ROOTS):
+        return "Zustand"
+    if c["kind"] == "Objektliste" and any(k in keys_low for k in INSTANCE_KEYS):
+        return "Zustand"
+    if c["kind"] == "ID-Liste":
+        # Eine reine Namensliste ist Vokabular -- ausser sie steht unter einer
+        # Wurzel, die Zustand oder Historie fuehrt.
+        return "Zustand" if any(path.startswith(r) for r in NON_CATALOG_ROOTS) else "Katalog"
+    if c["kind"] == "Objektliste":
+        return "Datensatz"
+    return "Zuordnung"
+
+
+def leaf(path: str) -> str:
+    """Letztes benanntes Segment eines Pfades, ohne Indizes.
+
+    Gross-/Kleinschreibung bleibt erhalten -- tokens() braucht das camelCase,
+    um seenModifiers in seen + modifiers zu zerlegen.
+    """
+    seg = path.rstrip("]").split(".")[-1]
+    return seg.split("[")[0]
+
+
+def tokens(name: str) -> list[str]:
+    """Zerlegt goodsTrends oder essential_buildings in ihre Woerter."""
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", name)
+    return [t for t in re.split(r"[^A-Za-z0-9]+", spaced.lower()) if t]
+
+
+def hit(name: str, hints: tuple[str, ...]) -> int:
+    """0 = Wort trifft genau, 1 = Wort faengt so an, 2 = kein Treffer."""
+    toks = tokens(name)
+    if any(t == h for t in toks for h in hints):
+        return 0
+    if any(t.startswith(h) for t in toks for h in hints):
+        return 1
+    return 2
+
+
 def verdict(all_catalogs: list[dict]) -> dict:
     """Pro SPEC-Tabelle: Vokabular da? Zahlen da? Sonst Wiki."""
     out: dict = {}
     for table, hints in KB_TABLES.items():
-        matches = [
-            c for c in all_catalogs
-            if any(h in c["path"].lower() for h in hints)
-            or any(h in " ".join(c["entry_keys"]).lower() for h in hints)
-        ]
-        matches.sort(key=lambda c: (-len(c.get("numeric") or []), -len(c["economic"]), -c["length"]))
-        if not matches:
-            out[table] = {"status": "nicht gefunden", "note": "Wiki bleibt noetig", "matches": []}
+        # Der Hinweis muss im letzten Pfadsegment oder in den Feldnamen stehen.
+        # Sonst zieht "$.gamesHistory.records" jede Tabelle an sich, weil
+        # irgendwo darunter ein passendes Wort vorkommt.
+        matches = []
+        for c in all_catalogs:
+            rank = min(hit(leaf(c["path"]), hints),
+                       min((hit(k, hints) for k in c.get("entry_keys") or []), default=2))
+            if rank < 2:
+                c = dict(c, _hit=rank)
+                matches.append(c)
+        for c in matches:
+            c["class"] = classify(c)
+        usable = [c for c in matches if c["class"] in ("Katalog", "Datensatz", "Vokabular")]
+        usable.sort(key=lambda c: (c["_hit"], -len(c.get("numeric") or []), -c["length"]))
+
+        if not usable:
+            other = ", ".join(sorted({c["class"] for c in matches}))
+            reason = (f"nur {other} gefunden, kein Katalog" if other
+                      else "kein passender Eintrag im Save")
+            out[table] = {
+                "status": "nicht gefunden",
+                "note": f"{reason} -- Wiki bleibt noetig",
+                "matches": [{k: v for k, v in m.items() if k != "ids"} for m in matches[:3]],
+            }
             continue
-        best = matches[0]
-        if best.get("numeric"):
+        best = usable[0]
+        if best["class"] == "Datensatz" and best.get("numeric"):
             status = "IDs und Zahlen"
             note = f"Zahlenfelder: {', '.join(best['numeric'][:8])}"
-        elif best.get("attributes"):
+        elif best["class"] == "Datensatz" and best.get("attributes"):
             status = "IDs und Attribute"
             note = f"ohne Zahlen, aber: {', '.join(best['attributes'][:8])}"
         else:
             status, note = "nur IDs", "Vokabular aus dem Save, Zahlen aus dem Wiki"
+        matches = usable
         out[table] = {
             "status": status, "note": note,
             "matches": [{k: v for k, v in m.items() if k != "ids"} for m in matches[:4]],
@@ -220,7 +319,7 @@ def render(report: dict) -> str:
         for c in cats[:25]:
             add("")
             add(f"  {c['path'][:70]}")
-            add(f"    {c['kind']}, {c['length']} Eintraege, Tiefe {c['depth']}")
+            add(f"    {c['kind']} [{classify(c)}], {c['length']} Eintraege, Tiefe {c['depth']}")
             if c["entry_keys"]:
                 add(f"    Felder je Eintrag: {', '.join(c['entry_keys'][:14])}")
             if c["economic"]:

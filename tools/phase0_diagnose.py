@@ -650,6 +650,38 @@ PROBE_LABELS = (
 PROBE_MAX_BYTES = 64 * 1024 * 1024
 
 
+def series_fingerprint(data, max_depth: int = 4) -> dict:
+    """Findet Zeitreihen und merkt sich Laenge und Ende.
+
+    Save.save fuehrt unter trends.goodsTrends je Ware eine Reihe von 180
+    Werten. Wie schnell die weiterrueckt, entscheidet, wie fein
+    food_forecast rechnen kann -- also wird bei jedem Schreibvorgang das
+    Ende der Reihe festgehalten und beim naechsten verglichen.
+    """
+    out: dict = {}
+    stack = [(data, "$", 0)]
+    while stack and len(out) < 4:
+        node, path, depth = stack.pop()
+        if depth > max_depth or not isinstance(node, dict):
+            continue
+        vals = list(node.values())
+        if len(node) >= 3 and vals and all(
+            isinstance(v, list) and len(v) >= 10 and all(isinstance(x, (int, float)) for x in v[:5])
+            for v in vals[:8]
+        ):
+            first_key = next(iter(node))
+            out[path] = {
+                "keys": len(node),
+                "length": len(node[first_key]),
+                "example_key": first_key,
+                "tail": node[first_key][-4:],
+            }
+            continue
+        for k, v in node.items():
+            stack.append((v, f"{path}.{k}", depth + 1))
+    return out
+
+
 def probe_savestate(path: Path, max_nodes: int = 400_000) -> dict:
     """Liest den geschriebenen Spielstand und zieht ein paar Kennzahlen heraus."""
     started = time.time()
@@ -691,6 +723,10 @@ def probe_savestate(path: Path, max_nodes: int = 400_000) -> dict:
                 values["_clock_key"] = orig
                 values["_clock"] = float(val)
                 break
+
+    series = series_fingerprint(data)
+    if series:
+        values["_series"] = series
 
     values["_parse_seconds"] = round(time.time() - started, 2)
     return values
@@ -756,6 +792,9 @@ def cmd_watch(args) -> dict:
                     for k, v in (evt.get("probe") or {}).items():
                         if not k.startswith("_"):
                             print(f"    {k}: {v}")
+                    for spath, s in ((evt.get("probe") or {}).get("_series") or {}).items():
+                        print(f"    Zeitreihe {spath}: {s['keys']} Reihen, Laenge {s['length']}, "
+                              f"Ende von {s['example_key']}: {s['tail']}")
                     last[key] = sig
             time.sleep(args.interval)
     except KeyboardInterrupt:
@@ -964,6 +1003,10 @@ def render(report: dict) -> str:
                     for k, v in (e.get("probe") or {}).items():
                         if k == "_parse_seconds":
                             add(f"        (Spielstand in {v}s gelesen)")
+                        elif k == "_series":
+                            for spath, s in v.items():
+                                add(f"        Zeitreihe {spath}: {s['keys']} Reihen, "
+                                    f"Laenge {s['length']}, Ende von {s['example_key']}: {s['tail']}")
                         else:
                             add(f"        {k}: {v}")
     add("")
