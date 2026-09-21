@@ -111,3 +111,32 @@ def test_leere_zeilen_fallen_weg() -> None:
 def test_br_wird_zu_leerzeichen() -> None:
     html = '<table class="wikitable"><tr><th>X</th></tr><tr><td>a<br/>b</td></tr></table>'
     assert tabellen_aus_html(html)[0].als_dicts[0]["X"] == "a b"
+
+
+def test_symbole_zaehlen_als_zellinhalt() -> None:
+    """Rezeptzellen enthalten nur Icons. Ohne alt-Text gilt die Zeile als leer,
+    und genau so kamen "Complex Food" und "Recipes" mit null Zeilen zurück."""
+    html = """
+    <table class="wikitable">
+    <tr><th>Complex Food</th><th>Ingredients</th></tr>
+    <tr><td><a href="/Jerky"><img src="j.png" alt="Jerky"></a></td>
+        <td><img src="m.png" alt="Meat"> 5</td></tr>
+    </table>
+    """
+    zeile = tabellen_aus_html(html)[0].als_dicts[0]
+    assert zeile["Complex Food"] == "Jerky"
+    assert zeile["Ingredients"] == "Meat 5"
+
+
+def test_dateinamen_gelten_nicht_als_beschriftung() -> None:
+    html = """
+    <table class="wikitable"><tr><th>X</th></tr>
+    <tr><td><img src="a.png" alt="File:Icon_Resource_Meat.png">Fleisch</td></tr></table>
+    """
+    assert tabellen_aus_html(html)[0].als_dicts[0]["X"] == "Fleisch"
+
+
+def test_title_wird_genommen_wenn_alt_fehlt() -> None:
+    html = ('<table class="wikitable"><tr><th>X</th></tr>'
+            '<tr><td><img src="a.png" title="Planks"></td></tr></table>')
+    assert tabellen_aus_html(html)[0].als_dicts[0]["X"] == "Planks"

@@ -382,6 +382,14 @@ def cmd_html(args) -> int:
                             for k, v in list(beispiel.items())[:6]}
                 add(f"    z. B. {gekuerzt}")
 
+    if args.write:
+        L.append("")
+        L.append("=" * 78)
+        L.append("IN DIE WISSENSBASIS UEBERNOMMEN")
+        L.append("=" * 78)
+        for zeile in _schreiben(nach_titel, args.db):
+            L.append(f"  {zeile}")
+
     text = "\n".join(L)
     print(text)
     out = Path(args.out)
@@ -392,6 +400,97 @@ def cmd_html(args) -> int:
     print(f"Bericht geschrieben: {out / f'wiki-html-{stamp}.txt'}")
     print("Schick mir den .txt -- daraus kommt die Zuordnung zu den Tabellen der Spec.")
     return 0
+
+
+# Welche Seite welche Herkunft belegt. Die Ankreuzspalten der grossen Liste
+# heissen alle "Sources" und sind ohne ihre Unterueberschriften nicht zu
+# deuten -- die Zugehoerigkeit zu einer Seite dagegen ist eindeutig.
+HERKUNFT_SEITEN = {
+    "list of annual cornerstones": "jährlich",
+    "list of cornerstones available for purchase from traders": "Händler",
+    "list of cornerstones available from orders": "Auftrag",
+}
+
+REPUTATION_KOPF = re.compile(r"Reputation\s+Points?", re.IGNORECASE)
+
+
+def _hat(kopf: list[str], *begriffe: str) -> bool:
+    text = " ".join(kopf).lower()
+    return all(b.lower() in text for b in begriffe)
+
+
+def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
+    """Die Tabellen, deren Aufbau bekannt ist, in die Wissensbasis uebernehmen."""
+    from ats_assistant.wikihtml import tabellen_aus_datei
+
+    conn = kb.connect(db)
+    meldungen: list[str] = []
+    try:
+        # Spezies: zwei Seiten mit teils verschiedenen Spalten, die sich ergaenzen.
+        for titel in ("resolve", "villagers"):
+            pfad = nach_titel.get(titel)
+            if not pfad:
+                continue
+            for t in tabellen_aus_datei(pfad):
+                # Drei verschiedene Tabellen tragen Spezieswerte: Kennzahlen,
+                # Spezialisierungen und das Reputationsverhaeltnis. Sie
+                # ergaenzen sich, deshalb werden alle drei genommen --
+                # import_species behaelt vorhandene Spalten.
+                if _hat(t.kopf, "species") and (_hat(t.kopf, "base resolve")
+                                                or _hat(t.kopf, "comfort")
+                                                or _hat(t.kopf, "reputation ratio")):
+                    n = kb.import_species(conn, t.als_dicts, source_page=pfad.stem)
+                    if n:
+                        meldungen.append(f"species: {n} Zeilen aus {pfad.stem}")
+
+        pfad = nach_titel.get("difficulty")
+        if pfad:
+            for t in tabellen_aus_datei(pfad):
+                if _hat(t.kopf, "difficulty", "hostility multiplier"):
+                    n = kb.import_difficulty(conn, t.als_dicts, source_page=pfad.stem)
+                    meldungen.append(f"difficulty: {n} Zeilen aus {pfad.stem}")
+
+        # Erst die grosse Liste (Name, Seltenheit, Text), dann die drei
+        # Herkunftslisten -- die tragen nur die Herkunft nach.
+        for titel in ("list of cornerstones and perks", "list of perks"):
+            pfad = nach_titel.get(titel)
+            if not pfad:
+                continue
+            for t in tabellen_aus_datei(pfad):
+                if _hat(t.kopf, "name", "rarity"):
+                    n = kb.import_cornerstones(conn, t.als_dicts, source_page=pfad.stem)
+                    meldungen.append(f"cornerstones: {n} Zeilen aus {pfad.stem}")
+            break
+        for titel, herkunft in HERKUNFT_SEITEN.items():
+            pfad = nach_titel.get(titel)
+            if not pfad:
+                continue
+            for t in tabellen_aus_datei(pfad):
+                if _hat(t.kopf, "name", "rarity"):
+                    n = kb.import_cornerstones(conn, t.als_dicts, origin=herkunft,
+                                               source_page=pfad.stem)
+                    meldungen.append(f"cornerstones: {n} mal Herkunft '{herkunft}'")
+
+        pfad = nach_titel.get("glade events")
+        if pfad:
+            paare: list[tuple[str, str]] = []
+            for t in tabellen_aus_datei(pfad):
+                if len(t.kopf) == 1 and REPUTATION_KOPF.search(t.kopf[0]):
+                    belohnung = t.kopf[0].strip()
+                    for zeile in t.zeilen:
+                        if zeile and zeile[0].strip():
+                            paare.append((zeile[0].strip(), belohnung))
+            if paare:
+                n = kb.import_glade_events(conn, paare, source_page=pfad.stem)
+                meldungen.append(f"glade_events: {n} Ereignisse aus {pfad.stem}")
+
+        meldungen.append("")
+        for bereich, werte in kb.coverage(conn).items():
+            if werte:
+                meldungen.append(f"{bereich}: " + ", ".join(f"{k}={v}" for k, v in sorted(werte.items())))
+    finally:
+        conn.close()
+    return meldungen
 
 
 def cmd_seed(args) -> int:
@@ -568,6 +667,9 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--max-tables", type=int, default=3)
     s.add_argument("--examples", type=int, default=2)
     s.add_argument("--out", default="diagnostics")
+    s.add_argument("--write", action="store_true",
+                   help="die erkannten Tabellen in die Wissensbasis schreiben")
+    s.add_argument("--db", default="kb.sqlite")
     s.set_defaults(func=cmd_html)
 
     s = sub.add_parser("build", help="Wikitext auswerten (noch nicht fertig)")

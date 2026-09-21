@@ -90,6 +90,15 @@ class _TabellenLeser(HTMLParser):
             self._unterdruecken += 1
         elif tag == "br" and self._zelle is not None:
             self._zelle.append(" ")
+        elif tag == "img" and self._zelle is not None:
+            # Viele Zellen des Wikis enthalten nur ein Symbol: die Zutat eines
+            # Rezepts, das Produkt eines Gebaeudes. Der Name steht dann im
+            # alt- oder title-Attribut. Wer nur Text sammelt, haelt solche
+            # Tabellen fuer leer -- "Complex Food" und "Recipes" kamen so mit
+            # null Zeilen zurueck, obwohl sie gefuellt sind.
+            beschriftung = (a.get("alt") or a.get("title") or "").strip()
+            if beschriftung and not beschriftung.lower().startswith("file:"):
+                self._zelle.append(f" {beschriftung} ")
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "table" and self._stapel:

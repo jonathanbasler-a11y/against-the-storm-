@@ -284,3 +284,158 @@ def missing_german(conn: sqlite3.Connection) -> list[dict]:
         "FROM resources r LEFT JOIN name_map n ON n.en = r.en OR n.en = LOWER(r.en) "
         "WHERE n.de IS NULL OR n.confidence IN ('guessed', 'observed') "
         "ORDER BY r.en")]
+
+
+# --------------------------------------------------------------------------
+# Tabellen aus dem gerenderten HTML
+# --------------------------------------------------------------------------
+
+def _spalte(zeile: dict, *namen: str) -> str | None:
+    """Erste passende Spalte, unabhaengig von Gross- und Kleinschreibung.
+
+    Die Seiten benennen dieselbe Sache verschieden: "Hunger threshold" auf
+    einer, "Hunger Tolerance" auf der anderen.
+    """
+    klein = {k.lower().strip(): v for k, v in zeile.items() if isinstance(k, str)}
+    for name in namen:
+        wert = klein.get(name.lower())
+        if wert not in (None, ""):
+            return str(wert).strip()
+    return None
+
+
+def _dauer(wert: str | None) -> float | None:
+    """'02:00' -> 120.0, '120' -> 120.0."""
+    if not wert:
+        return None
+    text = wert.strip()
+    if ":" in text:
+        teile = text.split(":")
+        try:
+            return float(teile[0]) * 60 + float(teile[1])
+        except (ValueError, IndexError):
+            return None
+    return _zahl(text)
+
+
+def import_species(conn: sqlite3.Connection, zeilen: list[dict],
+                   source_page: str | None = None) -> int:
+    n = 0
+    for z in zeilen:
+        name = _spalte(z, "Species")
+        if not name or name.lower() == "species":
+            continue
+        vorhanden = conn.execute("SELECT * FROM species WHERE en = ?", (name,)).fetchone()
+        alt = dict(vorhanden) if vorhanden else {}
+        werte = {
+            "base_resolve": _zahl(_spalte(z, "Base Resolve")) or alt.get("base_resolve"),
+            "break_seconds": _dauer(_spalte(z, "Break Interval", "Break interval"))
+                             or alt.get("break_seconds"),
+            "hunger_tolerance": _zahl(_spalte(z, "Hunger Tolerance", "Hunger threshold"))
+                                or alt.get("hunger_tolerance"),
+            "decadence": _zahl(_spalte(z, "Decadence")) or alt.get("decadence"),
+            "resilience": _spalte(z, "Resilience") or alt.get("resilience"),
+            "demand": _zahl(_spalte(z, "Demand", "Demand (Resolve Threshold)"))
+                      or alt.get("demand"),
+            "comfort": _spalte(z, "Comfort") or alt.get("comfort"),
+            "specialization": _spalte(z, "Proficiency", "Specialization")
+                              or alt.get("specialization"),
+            "reputation_ratio": _zahl(_spalte(z, "Species Resolve to Reputation Ratio"))
+                                or alt.get("reputation_ratio"),
+        }
+        conn.execute(
+            "INSERT OR REPLACE INTO species (en, base_resolve, break_seconds, "
+            "hunger_tolerance, decadence, resilience, demand, comfort, specialization, "
+            "reputation_ratio, source_page) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (name, werte["base_resolve"], werte["break_seconds"], werte["hunger_tolerance"],
+             werte["decadence"], werte["resilience"], werte["demand"], werte["comfort"],
+             werte["specialization"], werte["reputation_ratio"],
+             source_page or alt.get("source_page")),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def import_difficulty(conn: sqlite3.Connection, zeilen: list[dict],
+                      source_page: str | None = None) -> int:
+    n = 0
+    for z in zeilen:
+        name = _spalte(z, "Difficulty")
+        if not name or name.lower() == "difficulty":
+            continue
+        conn.execute(
+            "INSERT OR REPLACE INTO difficulty (en, rewards_multiplier, seal_fragments, "
+            "tile_reach_max, experience_multiplier, score_multiplier, blight_footprint_rate, "
+            "blight_corruption_rate, hostility_multiplier, source_page) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (name, _zahl(_spalte(z, "Rewards Multiplier")),
+             _zahl(_spalte(z, "Seal Fragments Rewarded")),
+             _zahl(_spalte(z, "Tile Reach Max")),
+             _zahl(_spalte(z, "Experience Multiplier")),
+             _zahl(_spalte(z, "Score Multiplier")),
+             _zahl(_spalte(z, "Blight Footprint Rate")),
+             _zahl(_spalte(z, "Blight Corruption Rate")),
+             _zahl(_spalte(z, "Hostility Multiplier")),
+             source_page),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def import_cornerstones(conn: sqlite3.Connection, zeilen: list[dict],
+                        origin: str | None = None,
+                        source_page: str | None = None) -> int:
+    """Grundsteine aus einer Listenseite.
+
+    `origin` kommt aus der Seite, nicht aus einer Spalte: die Ankreuzspalten
+    heissen alle "Sources" und sind ohne ihre Unterueberschriften nicht zu
+    deuten. Welche Liste einen Namen fuehrt, sagt dagegen eindeutig, woher er
+    kommt -- und dafuer gibt es je Herkunft eine eigene Seite.
+    """
+    n = 0
+    for z in zeilen:
+        name = _spalte(z, "Name")
+        if not name or name.lower() == "name":
+            continue      # die Tabellen wiederholen ihre Kopfzeile im Koerper
+        rarity = _spalte(z, "Rarity")
+        if rarity and rarity.lower() in ("rarity", "none"):
+            rarity = None
+        beschreibung = _spalte(z, "Description")
+        vorhanden = conn.execute(
+            "SELECT origin FROM cornerstones WHERE en = ?", (name,)).fetchone()
+        herkunft = origin
+        if vorhanden and vorhanden["origin"] and origin and origin not in vorhanden["origin"]:
+            herkunft = f"{vorhanden['origin']}, {origin}"
+        elif vorhanden and vorhanden["origin"] and not origin:
+            herkunft = vorhanden["origin"]
+        conn.execute(
+            "INSERT OR REPLACE INTO cornerstones (en, rarity, effect_text, origin, source_page) "
+            "VALUES (?,?,?,?,?)",
+            (name, rarity, beschreibung, herkunft, source_page),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def import_glade_events(conn: sqlite3.Connection, zeilen: list[tuple[str, str]],
+                        source_page: str | None = None) -> int:
+    """Lichtungsereignisse samt Reputationsbelohnung.
+
+    Die Seite gruppiert sie in Tabellen, deren Kopfzeile die Belohnung ist
+    ("1 Reputation Points"). Der Kopf ist also der Wert, nicht der Spaltenname.
+    """
+    n = 0
+    for name, belohnung in zeilen:
+        name = (name or "").strip()
+        if not name:
+            continue
+        conn.execute(
+            "INSERT OR REPLACE INTO glade_events (en, reward, source_page) VALUES (?,?,?)",
+            (name, belohnung, source_page),
+        )
+        n += 1
+    conn.commit()
+    return n

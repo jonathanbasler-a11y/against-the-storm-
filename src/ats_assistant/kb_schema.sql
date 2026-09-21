@@ -81,13 +81,33 @@ CREATE TABLE IF NOT EXISTS recipes (
 
 CREATE TABLE IF NOT EXISTS species (
     en            TEXT PRIMARY KEY,
-    specialization TEXT,
+    specialization TEXT,        -- Proficiency
+    comfort       TEXT,
     base_resolve  REAL,
     house_type    TEXT,
     needs         TEXT,         -- JSON
     break_seconds REAL,
     hunger_tolerance INTEGER,
     decadence     REAL,
+    resilience    TEXT,         -- low / medium / high
+    demand        REAL,         -- Resolve Threshold
+    reputation_ratio REAL,      -- Species Resolve to Reputation Ratio
+    source_page   TEXT REFERENCES source_pages(title)
+);
+
+-- Die Seite "Difficulty" fuehrt je Schwierigkeitsgrad Multiplikatoren, unter
+-- anderem den Hostility Multiplier. Das passt nicht in die Tabelle prestige,
+-- die je Stufe einen Modifikatornamen erwartet -- also eine eigene.
+CREATE TABLE IF NOT EXISTS difficulty (
+    en            TEXT PRIMARY KEY,
+    rewards_multiplier REAL,
+    seal_fragments REAL,
+    tile_reach_max REAL,
+    experience_multiplier REAL,
+    score_multiplier REAL,
+    blight_footprint_rate REAL,
+    blight_corruption_rate REAL,
+    hostility_multiplier REAL,
     source_page   TEXT REFERENCES source_pages(title)
 );
 

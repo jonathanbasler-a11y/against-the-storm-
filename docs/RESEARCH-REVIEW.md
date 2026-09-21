@@ -217,3 +217,34 @@ Zwei Punkte gehen dagegen an die Recherche:
 Das Muster bleibt damit über alle Prüfungen hinweg dasselbe: wo die Recherche
 Vokabeln und Mechaniken benennt, liegt sie oft richtig; wo sie Zahlen und
 Größenordnungen angibt, muss jede einzelne nachgemessen werden.
+
+## Die Speziestabelle des Wikis gegen die der Recherche (2026-09-22)
+
+Der HTML-Abzug trägt auf den Seiten *Resolve* und *Villagers* dieselben
+Kennzahlen, die die Recherche in ihrer großen Speziestabelle nennt. Drei
+Abweichungen:
+
+**Die Reputationsformel ist falsch.** Die Recherche gibt eine feste Rate an:
+
+> Reputation Yield Rate = Pop_species × 0,0035 Punkte/Sekunde
+
+Das Wiki führt stattdessen je Spezies ein **Species Resolve to Reputation
+Ratio**: Fledermäuse 0,0000195, Biber 0,000013. Das ist weder für alle Spezies
+gleich, noch hängt es an der Bevölkerung allein — der Name sagt, dass die
+Entschlossenheit eingeht. Und es liegt zwei Größenordnungen unter dem
+behaupteten Wert.
+
+**Die Dekadenz der Fledermäuse stimmt nicht.** Recherche 3, Wiki 4.
+
+**Eine ganze Spalte fehlt in der Recherche: `Resilience`** (niedrig, mittel,
+hoch). Die Seite *Resolve* führt dazu eine eigene Tabelle mit
+Entschlossenheitsabfällen je Widerstandsklasse. Wer nur die Recherche liest,
+weiß nicht, dass es diese Größe gibt.
+
+**Der Feindseligkeitsmultiplikator steht je Schwierigkeitsgrad in einer
+Tabelle.** Die Recherche behauptet pauschal 3,0 für alle Prestige-Stufen. Die
+Seite *Difficulty* führt eine Spalte `Hostility Multiplier` über 24 Zeilen —
+damit ist die Behauptung erstmals überprüfbar, statt geglaubt werden zu müssen.
+
+Das Muster ist dasselbe wie überall: die Mechanik wird meist richtig benannt,
+die Zahlen tragen nicht.

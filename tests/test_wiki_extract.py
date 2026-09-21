@@ -116,3 +116,62 @@ def test_versionswarnung_trifft_die_haeufigen_faelle(tmp_path: Path, version, wa
     warnung = kb.record_page(conn, f"Seite {version}", None, None, version, "1.10.4")
     assert (warnung is not None) is warnt
     conn.close()
+
+
+def test_speziesdaten_aus_mehreren_tabellen_ergaenzen_sich(tmp_path: Path) -> None:
+    """Drei Tabellen tragen Spezieswerte. Die zweite darf die erste nicht
+    leerräumen -- INSERT OR REPLACE tut genau das, wenn man nicht aufpasst."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    kb.import_species(conn, [{"Species": "Beavers", "Base Resolve": "10",
+                              "Break Interval": "02:00", "Decadence": "2"}])
+    kb.import_species(conn, [{"Species": "Beavers", "Comfort": "Engineering",
+                              "Proficiency": "Woodworking"}])
+    kb.import_species(conn, [{"Species": "Beavers",
+                              "Species Resolve to Reputation Ratio": "0.000013"}])
+    zeile = conn.execute("SELECT * FROM species WHERE en='Beavers'").fetchone()
+    assert zeile["base_resolve"] == 10.0          # aus der ersten Tabelle
+    assert zeile["break_seconds"] == 120.0        # "02:00" umgerechnet
+    assert zeile["comfort"] == "Engineering"      # aus der zweiten
+    assert zeile["reputation_ratio"] == 1.3e-05   # aus der dritten
+    conn.close()
+
+
+def test_wiederholte_kopfzeile_im_koerper_wird_uebersprungen(tmp_path: Path) -> None:
+    """Die Grundsteinlisten wiederholen ihre Kopfzeile als erste Datenzeile."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    n = kb.import_cornerstones(conn, [
+        {"Name": "Name", "Rarity": "Rarity", "Description": "Description"},
+        {"Name": "Advanced Herbalism", "Rarity": "Epic", "Description": "+50%"},
+    ])
+    assert n == 1
+    assert conn.execute("SELECT COUNT(*) c FROM cornerstones").fetchone()["c"] == 1
+    conn.close()
+
+
+def test_herkunft_sammelt_sich_statt_sich_zu_ueberschreiben(tmp_path: Path) -> None:
+    """Ein Grundstein kann jährlich UND beim Händler vorkommen."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    zeile = [{"Name": "Dye Extractor", "Rarity": "Epic", "Description": "x"}]
+    kb.import_cornerstones(conn, zeile, origin="jährlich")
+    kb.import_cornerstones(conn, zeile, origin="Auftrag")
+    herkunft = conn.execute("SELECT origin FROM cornerstones WHERE en='Dye Extractor'").fetchone()
+    assert "jährlich" in herkunft["origin"] and "Auftrag" in herkunft["origin"]
+    conn.close()
+
+
+def test_rarity_none_wird_zu_null(tmp_path: Path) -> None:
+    """Effekte ohne Seltenheit stehen mit 'None' in der Tabelle."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    kb.import_cornerstones(conn, [{"Name": "Abyssal Revenge", "Rarity": "None",
+                                   "Description": "x"}])
+    assert conn.execute(
+        "SELECT rarity FROM cornerstones WHERE en='Abyssal Revenge'").fetchone()["rarity"] is None
+    conn.close()
+
+
+def test_bruchteil_einer_minute_wird_umgerechnet(tmp_path: Path) -> None:
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    kb.import_species(conn, [{"Species": "Bats", "Break Interval": "01:40"}])
+    assert conn.execute(
+        "SELECT break_seconds FROM species WHERE en='Bats'").fetchone()["break_seconds"] == 100.0
+    conn.close()
