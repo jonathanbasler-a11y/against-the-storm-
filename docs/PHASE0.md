@@ -320,3 +320,43 @@ Lichtungsereignis oder schlicht die Pausetaste. Abschaltbar mit `--no-probe`.
   Stand vor dem Commit, der sie aufgenommen hat — ein `git pull` fehlt.
 - Der `### Save.save`-Block aus dem ersten Bericht: Sprachprobe, Feldsuche
   über die fünfzehn Felder, die sieben Pfadprüfungen.
+
+## Korrektur: die Spielgeschwindigkeit wurde zwischendurch verändert
+
+Damit sind die Abstände 116 s, 833 s und 26 s **Wanduhrabstände bei
+unbekannter und teils unterschiedlicher Geschwindigkeit**. Sie dürfen nicht
+miteinander verglichen werden, und die Einordnung „Szenario B" von oben steht
+auf schwächeren Füßen, als sie dort klingt.
+
+Was unberührt bleibt: das Bündel. Dass `Save.save`, `MetaSave.save` und
+`MetaSave_Backup.save` auf dieselbe Sekunde schreiben, hängt nicht an der
+Geschwindigkeit.
+
+Was sich ändert: „kein Heartbeat" gilt weiterhin für einen Takt nach
+**Wanduhr** — ein solcher wäre geschwindigkeitsunabhängig und hätte
+regelmäßige Abstände ergeben. Ein Takt nach **Spielzeit** ist dagegen
+weiterhin möglich und würde die Streuung erklären. 26 Sekunden bei
+dreifacher Geschwindigkeit sind 78 Sekunden Spielzeit; 116 Sekunden bei
+einfacher sind 116. Das ist dieselbe Größenordnung, und der Unterschied
+zwischen beiden Lesarten entscheidet Phase 3.
+
+Praktisch heißt das: wer auf x3 spielt, bekommt dreimal so frische Daten wie
+die Wanduhrmessung nahelegt. Das spricht eher für den Parser als gegen ihn.
+
+### Gegenmaßnahme im Skript
+
+Die Sonde liest jetzt zusätzlich eine möglichst monotone Spieluhr aus dem
+Spielstand (`gameTime`, `totalTime`, `playTime`, in dieser Reihenfolge;
+`seasonTimeLeft` zählt rückwärts und springt, taugt also nicht) und die
+Auswertung setzt Spielzeit ins Verhältnis zur Wanduhr:
+
+```
+Save.save   3 Schreibvorgaenge  -> ...
+            Spielzeit je Wanduhrsekunde: 3.0, 2.25 -- Abstaende in Spielzeit
+            umrechnen, bevor sie verglichen werden (Uhr: gameTime)
+```
+
+Damit ist egal, wie oft du die Geschwindigkeit umstellst: der Bericht rechnet
+die Abstände selbst um. `Spielgeschwindigkeit` ist außerdem als gesuchtes
+Feld in der Feldsuche aufgenommen — falls das Spiel die eingestellte Stufe im
+Save ablegt, taucht sie künftig direkt im Bericht auf.

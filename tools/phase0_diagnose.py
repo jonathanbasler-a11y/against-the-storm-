@@ -290,7 +290,13 @@ FIELD_HINTS: dict[str, list[str]] = {
     "Vorkommen + Restladungen": ["deposit", "node", "charges", "resourcedeposit"],
     "Gewaehlte Grundsteine": ["cornerstone", "perk"],
     "Auftraege / Orders": ["order", "quest", "goal"],
+    "Spielgeschwindigkeit": ["speed", "timescale"],
 }
+
+# Eine moeglichst monoton laufende Spieluhr. seasonTimeLeft zaehlt rueckwaerts
+# und springt beim Jahreszeitenwechsel -- als Uhr taugt es nicht, deshalb
+# steht es hinten.
+CLOCK_KEYS = ("gametime", "totalgametime", "totaltime", "playtime", "elapsedtime", "time")
 
 
 def walk_json(obj, max_nodes: int, max_strings: int) -> dict:
@@ -662,6 +668,22 @@ def probe_savestate(path: Path, max_nodes: int = 400_000) -> dict:
         hits = report.get(label) or []
         if hits:
             values[label] = ", ".join(f"{h['key']}={h['preview']}" for h in hits[:3])
+    # Spieluhr als Zahl, damit sich Wanduhr und Spielzeit ins Verhaeltnis
+    # setzen lassen. Ohne das sind Messungen bei verschiedenen
+    # Spielgeschwindigkeiten nicht vergleichbar.
+    lowered = {k.lower(): k for k in walked["key_counts"]}
+    for cand in CLOCK_KEYS:
+        if cand in lowered:
+            orig = lowered[cand]
+            try:
+                val = json.loads(walked["key_example"][orig]["preview"])
+            except (ValueError, TypeError):
+                continue
+            if isinstance(val, (int, float)) and not isinstance(val, bool):
+                values["_clock_key"] = orig
+                values["_clock"] = float(val)
+                break
+
     values["_parse_seconds"] = round(time.time() - started, 2)
     return values
 
@@ -762,6 +784,23 @@ def cmd_watch(args) -> dict:
             entry["verdict"] = "genau ein Schreibvorgang im Messfenster, Intervall nicht bestimmbar"
         else:
             entry["verdict"] = "kein Schreibvorgang im Messfenster"
+
+        # Spielzeit gegen Wanduhr: verraet die effektive Geschwindigkeit und
+        # macht Messungen ueber Geschwindigkeitswechsel hinweg vergleichbar.
+        clocked = [e for e in events if e["file"] == key and (e.get("probe") or {}).get("_clock") is not None]
+        factors = []
+        for prev, cur in zip(clocked, clocked[1:]):
+            d_wall = cur["wall_clock_epoch"] - prev["wall_clock_epoch"]
+            d_game = cur["probe"]["_clock"] - prev["probe"]["_clock"]
+            if d_wall > 0:
+                factors.append(round(d_game / d_wall, 2))
+        if factors:
+            entry["game_seconds_per_wall_second"] = factors
+            entry["clock_key"] = clocked[0]["probe"].get("_clock_key")
+            entry["speed_note"] = (
+                "Spielzeit je Wanduhrsekunde: " + ", ".join(f"{f}" for f in factors)
+                + " -- Abstaende in Spielzeit umrechnen, bevor sie verglichen werden"
+            )
         per_file[Path(key).name] = entry
     out["summary"] = per_file
 
@@ -903,6 +942,8 @@ def render(report: dict) -> str:
                 add(f"  {name:<24} {s['writes']} Schreibvorgaenge  -> {s['verdict']}")
                 if s.get("heartbeat_claim"):
                     add(f"  {'':<24} {s['heartbeat_claim']}")
+                if s.get("speed_note"):
+                    add(f"  {'':<24} {s['speed_note']} (Uhr: {s.get('clock_key')})")
             if w.get("co_writes"):
                 add("  Gemeinsame Schreibvorgaenge (innerhalb von 2s):")
                 for g in w["co_writes"][:20]:
