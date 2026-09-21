@@ -1,0 +1,56 @@
+"""Der Berater-Skill muss die Form einhalten, die die Spec vorgibt."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
+
+SKILL = Path(__file__).resolve().parent.parent / ".claude" / "skills" / "ats-advisor" / "SKILL.md"
+
+
+@pytest.fixture(scope="module")
+def text() -> str:
+    return SKILL.read_text(encoding="utf-8")
+
+
+def test_skill_existiert() -> None:
+    assert SKILL.exists()
+
+
+def test_kopf_hat_name_und_beschreibung(text: str) -> None:
+    kopf = text.split("---")[1]
+    assert re.search(r"^name:\s*ats-advisor", kopf, re.M)
+    assert re.search(r"^description:\s*\S", kopf, re.M)
+
+
+def test_ausgabeformat_steht_drin(text: str) -> None:
+    """Eine Empfehlung, ein Satz Begründung, ein Satz Alternative."""
+    assert "Eine Empfehlung" in text
+    assert "Alternative" in text
+    assert "Keine Aufzählung" in text
+
+
+def test_alle_heuristiken_der_spec_kommen_vor(text: str) -> None:
+    for begriff in ("Nahrung schlägt alles", "Feindseligkeitssenkung",
+                    "wertlos", "Korallenwald", "Bambusebene", "Felsschlucht",
+                    "Legendary", "Rerolls"):
+        assert begriff in text, begriff
+
+
+def test_gemessene_zahlen_statt_behaupteter(text: str) -> None:
+    """Die Sättigungswerte stammen aus den Spieldaten, nicht aus der Recherche."""
+    assert "1,0" in text and "2,0" in text and "3,0" in text
+    assert "300 Spielzeitsekunden" in text
+
+
+def test_werkzeuge_sind_benannt(text: str) -> None:
+    for werkzeug in ("get_state", "food_forecast", "impatience_forecast",
+                     "query_kb", "analyze_runs"):
+        assert werkzeug in text, werkzeug
+
+
+def test_fehlendes_wird_als_fehlend_benannt(text: str) -> None:
+    assert "read_choice" in text and "Phase 3" in text
+    assert "erfundene Zahl" in text
