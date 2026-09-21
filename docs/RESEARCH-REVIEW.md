@@ -140,3 +140,37 @@ ein Bauplan-Auswahlbildschirm, Speziesübersicht. Daraus lassen sich etwa
 zwanzig Begriffe gegen die Tabelle halten. Stimmen achtzehn, ist der Rest
 brauchbares Rohmaterial. Stimmen zwölf, wird die Tabelle verworfen und Phase 3
 sammelt die Namen so ein, wie deine Spec es ohnehin vorsieht.
+
+## Erste Stichprobe an der Namenstabelle (2026-09-21)
+
+Grundlage: ein Screenshot der laufenden Siedlung, Auftragsleiste rechts,
+Speziesleiste links. Daraus waren sieben Behauptungen der Tabelle prüfbar.
+
+| Behauptung | UI zeigt | Ergebnis |
+|---|---|---|
+| `bricks` → Ziegel | „2/10 Ziegel" | richtig |
+| `stonecutters_camp` → Steinmetzlager | „0/1 Steinmetzlager" | richtig |
+| `coats` → Mäntel | „Bedürfnis nach Mäntel erfüllt" | richtig |
+| `human` → Mensch | „MENSCHEN" | richtig (UI im Plural) |
+| `beaver` → Biber | „BIBER" | richtig |
+| `lizard` → Echse | „ECHSEN" | richtig (UI im Plural) |
+| `pack_of_crops` → Erntepaket | „Feldfruchtpaket" | **falsch** |
+
+Sechs von sieben. Dazu vier Begriffe, die im Bild stehen und in der Tabelle
+überhaupt nicht vorkommen: **Öl**, **Komfort**, **Erntelager**,
+**Handelswege**. Öl ist eine Ware und fehlt ersatzlos — die Recherche listet
+über vierzig Ressourcen und hat sie nicht.
+
+Zwei Folgerungen:
+
+1. Die Tabelle ist brauchbares Rohmaterial, aber keine Quelle. Eine
+   Fehlerquote in dieser Größenordnung heißt: jede Zeile, die in eine Ausgabe
+   an den Spieler geht, muss vorher aus einem Screenshot bestätigt sein.
+2. Der Fehler sitzt ausgerechnet in der Paketfamilie. Wenn `pack_of_crops`
+   falsch ist, sind Proviantpaket, Baumaterialpaket, Handelswarenpaket und
+   Luxuswarenpaket erst einmal genauso verdächtig — und die Recherche baut
+   ihre ganze Prestige-9-Handelsstrategie auf Proviantpakete. Diese vier
+   Zeilen sind in `data/name_map_seed.csv` entsprechend markiert.
+
+Stand der Datei: 16 `spec_seed`, 10 `screenshot`, 3 `observed` (im Bild
+gelesen, englische Entsprechung noch offen), 102 `guessed`.
