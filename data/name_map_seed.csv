@@ -49,7 +49,7 @@ pack_of_trade_goods,Handelswarenpaket,resource,Trade Packs,guessed,research-2026
 pack_of_luxury_goods,Luxuswarenpaket,resource,Trade Packs,guessed,research-2026-09,,"gleiche Familie wie das widerlegte Erntepaket, ungeprüft"
 ancient_hearth,Uralte Feuerstelle,building,Hearth,spec_seed,SPEC.md,,
 small_hearth,Kleine Feuerstelle,building,Hearth,guessed,research-2026-09,,
-main_warehouse,Hauptlager,building,Logistics,guessed,research-2026-09,,
+main_warehouse,Hauptlager,building,Logistics,screenshot,screenshot-2026-09-21,2026-09-21,Gebäudefenster: HAUPTLAGER
 small_warehouse,Kleines Lager,building,Logistics,guessed,research-2026-09,,
 crude_workstation,Primitive Werkbank,building,Basic Production,spec_seed,SPEC.md,,
 makeshift_post,Behelfsmäßiger Posten,building,Basic Production,guessed,research-2026-09,,
@@ -130,3 +130,6 @@ food_complex,Komplexe Nahrung,category,,screenshot,screenshot-2026-09-21,2026-09
 ,Komfort,concept,,observed,screenshot-2026-09-21,2026-09-21,Auftrag HILFE FÜR DIE MENSCHEN-FRAKTION: 4/12 Komfort; englische Entsprechung offen
 ,Erntelager,building,,observed,screenshot-2026-09-21,2026-09-21,Auftrag LAGER: 0/1 Erntelager; englische Entsprechung offen
 ,Loyalität,concept,,observed,screenshot-2026-09-21,2026-09-21,Auftrag GESCHENKE FÜR DIE KÖNIGIN; englische Entsprechung offen
+,Stadtgebäude,category,,observed,screenshot-2026-09-21,2026-09-21,Gebäudetyp im Tooltip des Hauptlagers
+,Lagergebäude,category,,observed,screenshot-2026-09-21,2026-09-21,Gebäudetyp im Seitenfenster
+,Lagerhaus,concept,,observed,screenshot-2026-09-21,2026-09-21,Abschnittsüberschrift im Gebäudefenster
