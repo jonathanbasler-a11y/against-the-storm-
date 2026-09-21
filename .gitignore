@@ -12,6 +12,7 @@ cache/
 
 # Spielstände gehören nie ins Repo
 *.save
+snapshots/
 
 # Diagnoseberichte: Verzeichnis bleibt, Inhalt ist lokal
 diagnostics/*
