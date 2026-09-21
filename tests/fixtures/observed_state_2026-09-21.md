@@ -5,6 +5,12 @@ angekündigten Speichervorgang. Alles hier ist vom Bild abgelesen, nicht
 gemessen — die Ziffern im Lagerraster sind klein, also vor Gebrauch gegen den
 Diagnosebericht halten und Abweichungen hier korrigieren.
 
+**Nachtrag:** Dieser Lauf wurde später **gewonnen** — auf Prestige 13, im
+Korallenwald. Die Zahlen unten sind also ein Zwischenstand einer erfolgreich
+beendeten Partie, kein beliebiger Moment. Sobald die nächste Siedlung
+gegründet wird, überschreibt das Spiel `Save.save`; wer diesen Zustand später
+noch parsen können will, braucht eine Kopie (`tools/snapshot_saves.py`).
+
 Zweck: **Abnahmekriterium für Phase 2.** Die Spec verlangt, dass der Parser
 einen Spielstand lädt und Zahlen liefert, die mit dem übereinstimmen, was im
 Spiel steht. Das hier ist die Vergleichsseite.
