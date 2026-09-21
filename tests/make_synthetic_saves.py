@@ -22,13 +22,31 @@ from pathlib import Path
 RESOURCES = ["Amber", "Parts", "Berries", "Jerky", "Wood", "Planks", "Ale", "Incense"]
 RACES = ["Human", "Beaver", "Lizard", "Harpy", "Fox", "Frog"]
 BUILDINGS = ["Sawmill", "Woodcutters Camp", "Trapper Camp", "Makeshift Post", "Manor House"]
+PREFIXED_GOODS = [
+    ("Mat Raw", "Wood"), ("Mat Processed", "Bricks"), ("Food Raw", "Meat"),
+    ("Food Raw", "Vegetables"), ("Food Complex", "Jerky"), ("Metal", "Crystalized Dew"),
+    ("Crafting", "Coal"), ("Trade", "Amber"),
+]
 
 
 def english_state(seed: int = 7) -> dict:
+    """Form nach den Behauptungen der beigelegten Recherche.
+
+    Kategoriepraefixe vor den Waren-IDs, gameObjectives.reputationPenalty fuer
+    die Ungeduld, reputationSources als Vierervektor. Das ist erfunden und
+    belegt nichts ueber das echte Spiel; es sorgt nur dafuer, dass die
+    Gegenprobe im Diagnoseskript beide Ausgaenge zeigt: bestaetigt und
+    nicht gefunden.
+    """
     rng = random.Random(seed)
     return {
         "saveVersion": "1.10.4",
         "gameId": "9f2c1a44-1d0e-4f21-9b6b-7a0b2f3c4d55",
+        "nextGoodsPerMinTick": 4821.5,
+        "gameObjectives": {"reputationPenalty": 8.5, "reputationPoints": 11.0},
+        "reputationSources": [0.5, 2.0, 1.25, 0.0],
+        "racesReputationGains": {"Human": 2.45, "Beaver": 1.1, "Harpy": 3.0},
+        "producedGoods": {"[Mat Processed] Planks": 240, "[Food Complex] Jerky": 180},
         "worldState": {
             "biome": "Coral Forest",
             "year": 2,
@@ -45,9 +63,15 @@ def english_state(seed: int = 7) -> dict:
                 {"race": rng.choice(RACES), "resolve": rng.randint(8, 22), "workplaceId": rng.randint(1, 40)}
                 for _ in range(60)
             ],
-            "storage": {r: rng.randint(0, 250) for r in RESOURCES},
+            "storage": {
+                "goods": [
+                    {"Key": f"[{cat}] {name}", "Value": rng.randint(0, 250)}
+                    for cat, name in PREFIXED_GOODS
+                ]
+            },
             "buildings": [
-                {"model": b, "workers": rng.randint(0, 3), "position": {"x": rng.randint(0, 60), "y": rng.randint(0, 60)}}
+                {"model": b, "workers": rng.randint(0, 3), "buildingProgress": 1.0,
+                 "position": {"x": rng.randint(0, 60), "y": rng.randint(0, 60)}}
                 for b in BUILDINGS
             ],
             "glades": [{"id": i, "type": rng.choice(["Small", "Dangerous", "Forbidden"]), "discovered": i < 5} for i in range(12)],

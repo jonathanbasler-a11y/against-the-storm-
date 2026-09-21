@@ -356,16 +356,22 @@ def field_report(key_counts: Counter, key_example: dict) -> dict:
     for label, hints in FIELD_HINTS.items():
         hits = []
         for low, orig in lowered.items():
-            if any(h in low for h in hints):
-                hits.append(
-                    {
-                        "key": orig,
-                        "count": key_counts[orig],
-                        "path": key_example[orig]["path"],
-                        "preview": key_example[orig]["preview"],
-                    }
-                )
-        hits.sort(key=lambda h: -h["count"])
+            matched = [h for h in hints if h in low]
+            if not matched:
+                continue
+            # Ein Schluessel, der genau so heisst wie der Hinweis, ist
+            # aussagekraeftiger als einer, der ihn nur enthaelt.
+            exact = 0 if low in hints else (1 if any(low.startswith(h) for h in matched) else 2)
+            hits.append(
+                {
+                    "key": orig,
+                    "count": key_counts[orig],
+                    "path": key_example[orig]["path"],
+                    "preview": key_example[orig]["preview"],
+                    "_rank": exact,
+                }
+            )
+        hits.sort(key=lambda h: (h["_rank"], -h["count"]))
         report[label] = hits[:6]
     return report
 
@@ -396,6 +402,108 @@ def language_probe(strings: list[str]) -> dict:
         "id_like_strings": id_like,
         "guid_like_strings": guid_like,
         "sample": strings[:40],
+    }
+
+
+# --------------------------------------------------------------------------
+# Gegenprobe zur Recherche
+# --------------------------------------------------------------------------
+#
+# Die beigelegte Recherche (Bewertung in docs/RESEARCH-REVIEW.md) behauptet
+# konkrete Pfade, ein konkretes Format und einen konkreten Schreibtakt. Das
+# sind Hypothesen, keine Messungen. Der Spielstand kann sie selbst
+# bestaetigen oder widerlegen, also prueft der inspect-Lauf sie gleich mit.
+
+CLAIMED_PATHS: dict[str, str] = {
+    "Ungeduld": "gameObjectives.reputationPenalty",
+    "Reputationskanaele": "reputationSources",
+    "Reputation je Spezies": "racesReputationGains",
+    "Lagerbestand": "storage.goods",
+    "Produktionshistorie": "producedGoods",
+    "Gebaeude": "buildings",
+    "Simulationsuhr": "nextGoodsPerMinTick",
+}
+
+# "250.000 bis 350.000 Zeilen unkomprimiertes UTF-8-JSON, rund 30 MB"
+CLAIMED_LINES = (250_000, 350_000)
+CLAIMED_CONTAINER = "plain-json"
+
+# "rollender Heartbeat alle 120 bis 180 Sekunden"
+CLAIMED_HEARTBEAT = (120.0, 180.0)
+
+# "[Food Raw] Meat", "[Mat Processed] Bricks": Kategoriepraefix vor der ID.
+# Traegt die Behauptung, wird der Parser genau hier ansetzen.
+PREFIX_RE = re.compile(r"^\[([A-Za-z][A-Za-z ]*)\]\s*(\S.*)$")
+
+
+def path_lookup(data, dotted: str) -> tuple[bool, object]:
+    cur = data
+    for part in dotted.split("."):
+        if isinstance(cur, dict) and part in cur:
+            cur = cur[part]
+        else:
+            return False, None
+    return True, cur
+
+
+def prefix_scan(key_counts: Counter, strings: list[str]) -> dict:
+    cats: Counter = Counter()
+    examples: list[str] = []
+    for text in list(key_counts) + strings:
+        m = PREFIX_RE.match(text)
+        if m:
+            cats[m.group(1)] += 1
+            if len(examples) < 12:
+                examples.append(text)
+    return {
+        "matches": sum(cats.values()),
+        "categories": cats.most_common(20),
+        "examples": examples,
+        "verdict": "bestaetigt" if cats else "nicht gefunden",
+    }
+
+
+def check_research_claims(data, walked: dict, info: dict) -> dict:
+    lowered = {k.lower(): k for k in walked["key_counts"]}
+    paths: dict[str, dict] = {}
+    for label, dotted in CLAIMED_PATHS.items():
+        exact, value = path_lookup(data, dotted)
+        leaf = dotted.split(".")[-1]
+        if exact:
+            paths[label] = {"claim": dotted, "status": "bestaetigt", "evidence": preview(value)}
+        elif leaf.lower() in lowered:
+            orig = lowered[leaf.lower()]
+            ex = walked["key_example"][orig]
+            paths[label] = {
+                "claim": dotted,
+                "status": "anderer Pfad",
+                "evidence": f"{ex['path']} = {ex['preview']}",
+            }
+        else:
+            paths[label] = {"claim": dotted, "status": "nicht gefunden", "evidence": ""}
+
+    lines = info.get("payload_lines")
+    if lines is None:
+        size_status = "nicht pruefbar"
+    elif CLAIMED_LINES[0] <= lines <= CLAIMED_LINES[1]:
+        size_status = "bestaetigt"
+    else:
+        size_status = "abweichend"
+
+    container_status = "bestaetigt" if info.get("container") == CLAIMED_CONTAINER else "abweichend"
+
+    confirmed = sum(1 for v in paths.values() if v["status"] == "bestaetigt")
+    return {
+        "paths": paths,
+        "paths_confirmed": confirmed,
+        "paths_total": len(paths),
+        "prefix_convention": prefix_scan(walked["key_counts"], walked["strings"]),
+        "size": {
+            "claim": f"{CLAIMED_LINES[0]:,} bis {CLAIMED_LINES[1]:,} Zeilen",
+            "measured": lines,
+            "status": size_status,
+        },
+        "container": {"claim": CLAIMED_CONTAINER, "measured": info.get("container"), "status": container_status},
     }
 
 
@@ -460,6 +568,7 @@ def inspect_file(path: Path, args) -> dict:
     info["most_common_keys"] = walked["key_counts"].most_common(30)
     info["fields"] = field_report(walked["key_counts"], walked["key_example"])
     info["language"] = language_probe(walked["strings"])
+    info["research"] = check_research_claims(data, walked, info)
     return info
 
 
@@ -561,7 +670,13 @@ def cmd_watch(args) -> dict:
                 "median": round(statistics.median(gaps), 1),
                 "max": max(gaps),
             }
-            entry["verdict"] = f"schreibt etwa alle {round(statistics.median(gaps))}s"
+            median = statistics.median(gaps)
+            entry["verdict"] = f"schreibt etwa alle {round(median)}s"
+            lo, hi = CLAIMED_HEARTBEAT
+            entry["heartbeat_claim"] = (
+                f"Recherche behauptet {lo:.0f} bis {hi:.0f}s: "
+                + ("bestaetigt" if lo <= median <= hi else "abweichend")
+            )
         elif entry["writes"] == 1:
             entry["verdict"] = "genau ein Schreibvorgang im Messfenster, Intervall nicht bestimmbar"
         else:
@@ -653,6 +768,29 @@ def render(report: dict) -> str:
                     else:
                         add(f"    [nein] {label:<28} kein passender Schluessel gefunden")
 
+                r = f.get("research")
+                if r:
+                    add("")
+                    add(f"  Gegenprobe zur Recherche: {r['paths_confirmed']} von {r['paths_total']} "
+                        f"behaupteten Pfaden woertlich bestaetigt")
+                    for label, c in r["paths"].items():
+                        mark = {"bestaetigt": "ja", "anderer Pfad": "teils", "nicht gefunden": "nein"}[c["status"]]
+                        add(f"    [{mark:<5}] {label:<24} {c['claim']}")
+                        if c["evidence"]:
+                            add(f"            -> {c['evidence'][:90]}")
+                    pc = r["prefix_convention"]
+                    add(f"    Kategoriepraefix '[Food Raw] Meat': {pc['verdict']}"
+                        + (f", {pc['matches']} Treffer" if pc["matches"] else ""))
+                    if pc["categories"]:
+                        add("      Kategorien: " + ", ".join(f"{c} x{n}" for c, n in pc["categories"][:10]))
+                        add("      Beispiele : " + ", ".join(pc["examples"][:6]))
+                    add(f"    Container  : behauptet {r['container']['claim']}, gemessen "
+                        f"{r['container']['measured']} -> {r['container']['status']}")
+                    add(f"    Zeilenzahl : behauptet {r['size']['claim']}, gemessen "
+                        f"{r['size']['measured']:,} -> {r['size']['status']}"
+                        if isinstance(r["size"]["measured"], int) else
+                        f"    Zeilenzahl : {r['size']['status']}")
+
     w = report.get("watch")
     if w:
         add("")
@@ -665,6 +803,8 @@ def render(report: dict) -> str:
             add(f"Messdauer: {w.get('observed_minutes')} Minuten, Abtastung alle {w['interval_seconds']}s")
             for name, s in w.get("summary", {}).items():
                 add(f"  {name:<24} {s['writes']} Schreibvorgaenge  -> {s['verdict']}")
+                if s.get("heartbeat_claim"):
+                    add(f"  {'':<24} {s['heartbeat_claim']}")
             if w.get("events"):
                 add("  Ereignisse:")
                 for e in w["events"][:40]:

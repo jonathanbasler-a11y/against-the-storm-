@@ -102,6 +102,12 @@ ohnehin alles anfassen muss:
   bekannten deutschen und englischen Begriffe aus SPEC.md. Stehen im Save
   englische IDs, ist das Lokalisierungsproblem auf die Ausgabeseite beschränkt
   und `name_map` muss nur noch für die Bildschirmauslesung befüllt werden.
+- **Gegenprobe zur Recherche.** Die beigelegte Gemini-Recherche behauptet
+  konkrete JSON-Pfade, eine Kategoriepräfix-Konvention (`[Food Raw] Meat`),
+  unkomprimiertes JSON mit 250.000 bis 350.000 Zeilen und einen Heartbeat alle
+  120 bis 180 Sekunden. Der Bericht prüft jede dieser Behauptungen einzeln und
+  meldet bestätigt, abweichend oder nicht gefunden. Bewertung der Recherche:
+  [RESEARCH-REVIEW.md](RESEARCH-REVIEW.md).
 
 ## Danach
 

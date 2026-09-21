@@ -28,6 +28,12 @@ Nur Standardbibliothek, keine Installation. Liest den Spielordner
 ausschließlich, schreibt nur nach `diagnostics/`. Details und die
 Entscheidungsvorlage: [docs/PHASE0.md](docs/PHASE0.md).
 
+Der Lauf prüft nebenbei die Behauptungen aus der beigelegten Recherche gegen
+den echten Spielstand — Pfade, Kategoriepräfixe, Container, Zeilenzahl und
+Schreibtakt. Bewertung der Recherche:
+[docs/RESEARCH-REVIEW.md](docs/RESEARCH-REVIEW.md), daraus abgeleitetes
+Rohmaterial: `data/name_map_seed.csv` (125 Paare, 109 davon unbestätigt).
+
 Selbsttest ohne echte Spielstände:
 
 ```bash
