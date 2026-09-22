@@ -179,30 +179,78 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
     conn = kb.connect(db)
     try:
         gelesen = namen_match.lies_auswahl(conn, zeilen, arten=arten)
-        angebot = [g for g in gelesen if g["eindeutig"]]
-        for eintrag in angebot:
-            zusatz = conn.execute(
-                "SELECT rarity, effect_text, origin FROM cornerstones WHERE en = ?",
-                (eintrag["en"],)).fetchone()
-            if zusatz:
-                eintrag.update({"seltenheit": zusatz["rarity"],
-                                "wirkung": zusatz["effect_text"],
-                                "herkunft": zusatz["origin"]})
+        getroffen = [g for g in gelesen if g["eindeutig"]]
+        for eintrag in getroffen:
+            eintrag["belegt"] = _belegt(conn, eintrag, arten)
     finally:
         conn.close()
 
+    # Drei Toepfe statt einem. Die Aufnahme nimmt den ganzen Bildschirm, also
+    # steht neben den Karten auch die Oberflaeche darin -- am 22.09.2026 an
+    # einer offenen Grundsteinwahl gemessen: `Fuchs`, `Frosch`, `Biber` (die
+    # Spezies oben links) und `Wucher` mit Guete 0,727. Alle vier standen
+    # gleichberechtigt neben den beiden echten Karten.
+    sicher = [g for g in getroffen if g["guete"] >= SICHER]
+    # Belegtes zuerst, dann nach Guete. Sortiert, nicht gefiltert: die
+    # Wissensbasis kennt 398 Grundsteine bei 2273 Namen, und
+    # "Exportspezialisierung" stand am 22.09. wirklich zur Wahl, ohne
+    # dort zu stehen. Ein harter Filter haette die Karte verschluckt --
+    # und das waere schlimmer als die Spezies daneben.
+    # Stabil und nur nach einem Schluessel: innerhalb der beiden Gruppen
+    # bleibt die Lesereihenfolge von links nach rechts stehen. Der Spieler
+    # sagt "die linke", und die Auskunft muss dieselbe meinen.
+    sicher.sort(key=lambda g: not g["belegt"])
+    unsicher = [g for g in getroffen if g["guete"] < SICHER]
     unklar = [g for g in gelesen if not g["eindeutig"] and g["kandidaten"]]
     return {
-        "verfuegbar": bool(angebot),
+        "verfuegbar": bool(sicher),
         "quelle": quelle,
-        "angebot": angebot,
+        "angebot": sicher,
+        "belegt": [g for g in sicher if g["belegt"]],
+        "sonst_gesehen": [g for g in sicher if not g["belegt"]][:8],
+        "unsicher": unsicher[:5],
         "unklar": unklar[:5],
         "gelesene_zeilen": len(zeilen),
-        "grund": None if angebot else _nichts_erkannt(quelle),
+        "grund": None if sicher else _nichts_erkannt(quelle, [], unsicher),
     }
 
 
-def _nichts_erkannt(quelle: str) -> str:
+# Ab hier ist eine Lesung eine Lesung. Darunter ist sie eine Vermutung ueber
+# den Text und gehoert benannt, nicht behauptet: "Wucher" kam mit Guete 0,727
+# aus einem Bildschirm, auf dem das Wort gar nicht stand.
+SICHER = 0.90
+
+
+def _belegt(conn, eintrag: dict, arten: tuple[str, ...]) -> bool:
+    """Kennt die Wissensbasis das als das, was zur Wahl steht?
+
+    Ein Name allein reicht nicht: `Fuchs` und `Biber` stehen als Effekt in
+    der Namenstabelle, sind aber Spezies in der Oberflaeche. Ein Grundstein
+    hat eine Zeile in `cornerstones`, ein Bauplan eine in `buildings`. Was
+    dort fehlt, ist Bildschirmtext, bis das Gegenteil dasteht.
+    """
+    if "building" in arten:
+        zeile = conn.execute(
+            "SELECT category, purpose, cost FROM buildings WHERE en = ?",
+            (eintrag["en"],)).fetchone()
+        if zeile:
+            eintrag.update({"kategorie": zeile["category"], "zweck": zeile["purpose"],
+                            "kosten": zeile["cost"]})
+            return True
+        return False
+
+    zeile = conn.execute(
+        "SELECT rarity, effect_text, origin FROM cornerstones WHERE en = ?",
+        (eintrag["en"],)).fetchone()
+    if zeile:
+        eintrag.update({"seltenheit": zeile["rarity"], "wirkung": zeile["effect_text"],
+                        "herkunft": zeile["origin"]})
+        return True
+    return False
+
+
+def _nichts_erkannt(quelle: str, sonst: list | None = None,
+                   unsicher: list | None = None) -> str:
     """Warum nichts herauskam -- je nach Weg eine andere Frage.
 
     Am Spielrechner stand im Handfeld `handelsverhandlungen`, und die
@@ -210,6 +258,15 @@ def _nichts_erkannt(quelle: str) -> str:
     winsdk`. Beides gehoert zum Bildweg. Wer tippt, hat kein Bild gemacht
     und braucht keine Texterkennung.
     """
+    if unsicher:
+        namen = ", ".join(f"{u['de']} ({u['guete']})" for u in unsicher[:3])
+        return (f"Gelesen, aber nicht sicher genug: {namen}. "
+                "Stand das so da? Dann von Hand eintippen.")
+    if sonst:
+        namen = ", ".join(s["de"] for s in sonst[:4])
+        return ("Erkannt wurden nur Namen, die die Wissensbasis nicht als "
+                f"Angebot kennt: {namen}. Das ist Oberflaeche, keine Karte -- "
+                "oder die Karte fehlt in der Wissensbasis.")
     if quelle == "hand":
         return ("Keiner der eingetippten Namen kommt einem belegten nahe. "
                 "Grundsteine und Baupläne stehen unter verschiedenen Arten -- "

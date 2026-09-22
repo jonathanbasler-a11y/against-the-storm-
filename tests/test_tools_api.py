@@ -348,3 +348,92 @@ def test_nach_zwei_staenden_sagt_die_nahrungsvorhersage_etwas(tmp_path: Path) ->
     out = tools_api.food_forecast(runs)
     assert out.get("grund") is None, out.get("grund")
     assert out["verfuegbar"] is True
+
+
+def _auswahl_wissensbasis(db: Path) -> None:
+    """Zwei echte Grundsteine, dazu drei Namen, die nur auf dem Bildschirm stehen."""
+    from ats_assistant import localization
+
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Reward_CrystalCathode_Name", "Crystal Cathode",
+                             "Kristallkathode", "effect"),
+        localization.Eintrag("Reward_TradeHub_Name", "Trade Hub",
+                             "Handelsposten", "effect"),
+        localization.Eintrag("Effect_Usury_Name", "Usury", "Wucher", "effect"),
+        localization.Eintrag("Effect_Fox_Name", "Fox", "Fuchs", "effect"),
+        localization.Eintrag("Effect_Beaver_Name", "Beaver", "Biber", "effect"),
+    ])
+    for en, rarity, text in (
+            ("Crystal Cathode", "Legendary", "Produktionsboni in Regenmaschinen …"),
+            ("Trade Hub", "Legendary", "Jedes Mal, wenn du Waren verkaufst …")):
+        conn.execute("INSERT INTO cornerstones (en, rarity, effect_text) VALUES (?, ?, ?)",
+                     (en, rarity, text))
+    conn.commit()
+    conn.close()
+
+
+def test_nur_belegte_grundsteine_gelten_als_angebot(tmp_path: Path) -> None:
+    """Gemessen am 22.09.2026 an einer offenen Grundsteinwahl.
+
+    Die Aufnahme nimmt den ganzen Bildschirm, also steht neben den zwei
+    Karten auch die Oberfläche darin: `Fuchs`, `Biber` -- die Spezies
+    oben links -- und `Wucher` mit Güte 0,727, geraten. Alle vier standen
+    gleichberechtigt im Angebot. Was eine Karte ist, sagt die
+    Wissensbasis: ein Grundstein hat dort Seltenheit und Wirkung.
+    """
+    db = tmp_path / "kb.sqlite"
+    _auswahl_wissensbasis(db)
+
+    out = tools_api.read_choice(
+        text=["KRISTALLKATHODE", "HANDELSPOSTEN", "FUCHS", "BIBER", "WUGHER"],
+        db=db, arten=("effect",))
+
+    # Belegtes zuerst -- was die Wissensbasis als Grundstein kennt, steht oben.
+    assert [a["de"] for a in out["belegt"]] == ["Kristallkathode", "Handelsposten"]
+    sonst = [s["de"] for s in out["sonst_gesehen"]]
+    assert "Fuchs" in sonst and "Biber" in sonst
+    assert [a["de"] for a in out["angebot"][:2]] == ["Kristallkathode", "Handelsposten"]
+    assert out["verfuegbar"] is True
+
+
+def test_eine_karte_ohne_eintrag_faellt_nicht_unter_den_tisch(tmp_path: Path) -> None:
+    """Die Wissensbasis kennt 398 Grundsteine bei 2273 Namen.
+
+    „Exportspezialisierung" stand am 22.09. wirklich zur Wahl, ohne in der
+    Tabelle zu stehen. Ein harter Filter hätte die Karte verschluckt -- und
+    eine fehlende Karte ist schlimmer als eine Spezies daneben. Also
+    sortiert, nicht gefiltert.
+    """
+    db = tmp_path / "kb.sqlite"
+    _auswahl_wissensbasis(db)
+    out = tools_api.read_choice(text=["FUCHS"], db=db, arten=("effect",))
+    assert [a["de"] for a in out["angebot"]] == ["Fuchs"]
+    assert out["belegt"] == []
+    assert [s["de"] for s in out["sonst_gesehen"]] == ["Fuchs"]
+    assert out["verfuegbar"] is True
+
+
+def test_eine_unsichere_lesung_steht_nicht_im_angebot(tmp_path: Path) -> None:
+    """Güte 0,727 ist eine Vermutung über den Text, keine Lesung."""
+    db = tmp_path / "kb.sqlite"
+    _auswahl_wissensbasis(db)
+    out = tools_api.read_choice(text=["KRISTALLKATHODE", "WUCHEX"],
+                                db=db, arten=("effect",))
+    namen = [a["de"] for a in out["angebot"]]
+    assert namen == ["Kristallkathode"]
+    assert any(u["de"] == "Wucher" for u in out["unsicher"])
+
+
+def test_die_lesereihenfolge_bleibt_erhalten(tmp_path: Path) -> None:
+    """„Die linke" muss dieselbe bleiben. Beide Karten haben Güte 1,0 --
+    ein Sortieren nach Namen hätte sie vertauscht."""
+    db = tmp_path / "kb.sqlite"
+    _auswahl_wissensbasis(db)
+    out = tools_api.read_choice(text=["KRISTALLKATHODE", "HANDELSPOSTEN"],
+                                db=db, arten=("effect",))
+    assert [a["de"] for a in out["angebot"]] == ["Kristallkathode", "Handelsposten"]
+
+    andersherum = tools_api.read_choice(text=["HANDELSPOSTEN", "KRISTALLKATHODE"],
+                                        db=db, arten=("effect",))
+    assert [a["de"] for a in andersherum["angebot"]] == ["Handelsposten", "Kristallkathode"]

@@ -137,9 +137,12 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
         auszug["ungeduld"] = sauber(ungeduld, (
             "jetzt", "schwelle", "je_spielzeitsekunde", "sekunden_bis_verlust"))
     if auswahl and auswahl.get("angebot"):
+        # Was die Wissensbasis als Angebot kennt, zuerst -- und die
+        # Kennzeichnung geht mit. Eine Lesung, die nur auf dem Bildschirm
+        # stand, darf nicht als Karte durchgehen.
         auszug["auswahl"] = [
             {k: v for k, v in eintrag.items()
-             if k in ("de", "en", "seltenheit", "wirkung", "guete")}
+             if k in ("de", "en", "seltenheit", "wirkung", "zweck", "guete", "belegt")}
             for eintrag in auswahl["angebot"]
         ]
     if frage:
