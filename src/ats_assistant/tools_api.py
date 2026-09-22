@@ -17,10 +17,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import analysis, kb, nahrung, namen_match, screen
+from . import analysis, kb, nahrung, namen_match, screen, watcher
 from .forecast import food_forecast as _food_forecast
 from .forecast import impatience_forecast as _impatience_forecast
-from .save_reader import GameState, append_run_log, read_state
+from .save_reader import GameState, read_state
 
 log = logging.getLogger(__name__)
 
@@ -108,11 +108,16 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
         }
 
     state, notes = read_state(ordner, wait=auf_ruhe_warten)
+    kennung = None
     if protokollieren and state.game_time is not None:
-        kennung = run_id or f"{state.biome or 'lauf'}-{int(state.game_time)}"
-        append_run_log(state, kennung, Path(runs_dir))
+        # Die Kennung darf die Spielzeit nicht enthalten -- sonst bekommt
+        # jeder Aufruf seine eigene Datei, und alles, was zwei Staende
+        # braucht, bleibt stumm. Genau das war auf dem Spielrechner der Fall.
+        kennung, _ = watcher.mitschreiben(state, Path(runs_dir), run_id)
     fehlend = [n.field for n in notes if n.how == "fehlt"]
     out = _zustand_als_dict(state)
+    if kennung:
+        out["mitschrift"] = kennung
     out["verfuegbar"] = state.game_time is not None
     if fehlende_dateien:
         out["fehlende_dateien"] = fehlende_dateien

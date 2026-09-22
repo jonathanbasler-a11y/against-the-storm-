@@ -103,3 +103,32 @@ def test_der_rat_reicht_die_lage_weiter_ohne_bild(tmp_path: Path) -> None:
     assert antwort["ok"] is False
     assert antwort["auszug"]["siedlung"]["jahr"] == 3
     assert "bild" not in json.dumps(antwort["auszug"]).lower()
+
+
+# --------------------------------------------------------------------------
+# Feindseligkeit
+#
+# Am Spielrechner stand im Feld: {'level': 3, 'points': 72, 'sources':
+# -- abgeschnitten am rechten Rand. Das Fenster suchte nach 'current', ein
+# Schlüssel aus der erfundenen Testvorlage; das Spiel schreibt 'level' und
+# 'points'. Die Vorlage war die Quelle des Irrtums, nicht das Fenster.
+# --------------------------------------------------------------------------
+
+
+def test_feindseligkeit_wird_zum_satz() -> None:
+    assert rechner.feindseligkeit({"level": 3, "points": 72,
+                                   "sources": {"a": 1}}) == "Stufe 3 · 72 Punkte"
+
+
+def test_feindseligkeit_ohne_stufe_zeigt_die_punkte() -> None:
+    assert rechner.feindseligkeit({"points": 180}) == "180 Punkte"
+
+
+def test_feindseligkeit_kennt_auch_die_alte_form() -> None:
+    assert rechner.feindseligkeit({"current": 180}) == "180 Punkte"
+
+
+def test_feindseligkeit_zeigt_nie_ein_dictionary() -> None:
+    """Was auch kommt -- eine geschweifte Klammer im Fenster ist ein Fehler."""
+    for wert in ({"unbekannt": 7}, {}, None, 4, "hoch"):
+        assert "{" not in rechner.feindseligkeit(wert)

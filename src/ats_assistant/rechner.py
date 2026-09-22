@@ -37,6 +37,30 @@ def minuten(sekunden: float | None) -> str:
     return f"{sekunden / 60:.0f} min"
 
 
+def feindseligkeit(wert) -> str:
+    """Die Feindseligkeit als Satz -- nie als Dictionary.
+
+    Gemessen im laufenden Spiel: `{"level": 3, "points": 72, "sources": {...}}`.
+    Die Testvorlage dieses Projekts hatte `{"current": 180}` -- erfunden, nicht
+    gemessen, und deshalb stand am Spielrechner das rohe Dictionary im Fenster,
+    rechts abgeschnitten. Beide Formen werden gelesen; was keine ist, wird zur
+    Zeichenkette, aber nie zu geschweiften Klammern.
+    """
+    if wert is None:
+        return "–"
+    if not isinstance(wert, dict):
+        return str(wert)
+    stufe = wert.get("level")
+    punkte = wert.get("points", wert.get("current"))
+    teile = []
+    if stufe is not None:
+        teile.append(f"Stufe {stufe}")
+    if punkte is not None:
+        teile.append(f"{punkte:g} Punkte" if isinstance(punkte, (int, float))
+                     else f"{punkte} Punkte")
+    return " · ".join(teile) or "–"
+
+
 def alter(zeitpunkt: str | None) -> str:
     """Wie alt die Zahlen sind. Ohne das wird aus einem fünf Minuten alten
     Bestand eine Behauptung über jetzt."""

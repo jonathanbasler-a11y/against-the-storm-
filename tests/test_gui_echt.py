@@ -40,7 +40,7 @@ BEISPIELE = {
     "zustand": {"jahr": 3, "biom": "Coastal Grove", "prestige": 13,
                 "bevoelkerung": 24, "reputation": 8.0, "reputation_ziel": 18,
                 "ungeduld": 4.0, "ungeduld_schwelle": 14,
-                "feindseligkeit": {"current": 180},
+                "feindseligkeit": {"level": 3, "points": 72},
                 "zeitpunkt": "2026-09-22T10:00:00+00:00"},
     "nahrung": {"reichweite_sekunden": 340.0, "warnung": "Nahrung reicht 340 s"},
     "ungeduld": {"sekunden_bis_verlust": 1200.0},
@@ -75,7 +75,9 @@ def test_nach_dem_anzeigen_steht_auch_etwas_da(app) -> None:
     kopf = app.kopf.cget("text")
     assert "Jahr 3" in kopf and "Coastal Grove" in kopf and "Prestige 13" in kopf
     assert app.felder["bevoelkerung"].cget("text") == "24"
-    assert app.felder["feindseligkeit"].cget("text") == "180"
+    # Nicht das rohe Dictionary: am Spielrechner stand hier
+    # {'level': 3, 'points': 72, 'sources': -- rechts abgeschnitten.
+    assert app.felder["feindseligkeit"].cget("text") == "Stufe 3 · 72 Punkte"
     assert "8.0 von 18" in app.felder["reputation"].cget("text")
     # 8 von 18 sind rund 44 Prozent.
     assert 43 < float(app.balken["reputation"]["value"]) < 46

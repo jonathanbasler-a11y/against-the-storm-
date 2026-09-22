@@ -17,7 +17,9 @@ nennt watchdog, aber ein fehlendes Paket soll den Assistenten nicht aufhalten.
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 import signal
 import time
 from datetime import datetime, timezone
@@ -44,6 +46,115 @@ def run_id_fuer(state: GameState) -> str:
     # zurueck -- was jede Auswertung ueber den Verlauf unbrauchbar macht.
     teile.append(datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S"))
     return "-".join(t.replace(" ", "_") for t in teile)
+
+
+def _letzte_zeile(pfad: Path, fenster: int = 1 << 18) -> str | None:
+    """Die letzte Zeile einer Datei, ohne sie ganz zu lesen.
+
+    Eine Zeile ist ein ganzer Zustand samt Zeitreihen -- gut 200 kB. Eine
+    lange Mitschrift ganz einzulesen, nur um ihr Ende zu sehen, waere bei
+    jedem Schreibvorgang des Spiels neu bezahlt.
+    """
+    try:
+        with pfad.open("rb") as fh:
+            fh.seek(0, os.SEEK_END)
+            ende = fh.tell()
+            gelesen = b""
+            while ende > 0:
+                schritt = min(fenster, ende)
+                ende -= schritt
+                fh.seek(ende)
+                gelesen = fh.read(schritt) + gelesen
+                teile = gelesen.strip(b"\n").rsplit(b"\n", 1)
+                if len(teile) == 2:
+                    return teile[1].decode("utf-8", "replace")
+            text = gelesen.strip().decode("utf-8", "replace")
+            return text or None
+    except OSError:
+        return None
+
+
+def _neueste_mitschrift(runs_dir: Path) -> Path | None:
+    if not runs_dir.is_dir():
+        return None
+    dateien = sorted(runs_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime,
+                     reverse=True)
+    return dateien[0] if dateien else None
+
+
+def _setzt_fort(letzter: dict, state: GameState) -> bool:
+    """Gehoert der neue Zustand zu derselben Siedlung wie der letzte?
+
+    Drei Merkmale, und alle drei muessen stimmen: dasselbe Biom, dieselbe
+    Stufe, und eine Spieluhr, die nicht zurueckgesprungen ist. Der
+    Ruecksprung ist das verlaessliche Zeichen fuer eine neue Siedlung --
+    daran erkennt der Mitschreiber sie seit jeher.
+    """
+    uhr = letzter.get("game_time")
+    if uhr is None or state.game_time is None or state.game_time < uhr:
+        return False
+    return (letzter.get("biome") == state.biome
+            and letzter.get("prestige") == state.prestige)
+
+
+def lauf_kennung(state: GameState, runs_dir: Path) -> str:
+    """Welche Mitschrift dieser Zustand fortschreibt -- die laufende oder eine neue.
+
+    Gemessen auf dem Spielrechner: 22 Dateien in `runs/`, jede mit genau
+    einem Eintrag, und `food_forecast` meldete dauerhaft "Es braucht zwei
+    Spielstaende". Die Kennung von `get_state` enthielt die Spielzeit, also
+    bekam jeder Aufruf eine eigene Datei. Ausgerechnet die Nahrungsvorhersage
+    -- der Grund, aus dem es dieses Programm gibt -- lief damit ins Leere.
+    """
+    letzte = _neueste_mitschrift(Path(runs_dir))
+    if letzte is not None:
+        zeile = _letzte_zeile(letzte)
+        try:
+            letzter = json.loads(zeile) if zeile else None
+        except json.JSONDecodeError:
+            letzter = None
+        if isinstance(letzter, dict) and _setzt_fort(letzter, state):
+            return letzte.stem
+    return _freie_kennung(run_id_fuer(state), Path(runs_dir))
+
+
+def _freie_kennung(name: str, runs_dir: Path) -> str:
+    """Eine neue Siedlung darf keine vorhandene Datei verlaengern.
+
+    Die Kennung hat sekundengenaue Aufloesung. Beginnt eine Siedlung in
+    derselben Sekunde, in der eine andere begann -- im Test der Regelfall,
+    im Spiel selten --, stuenden beide in einer Datei, und die Spieluhr
+    spraenge mittendrin zurueck.
+    """
+    kennung, n = name, 2
+    while (runs_dir / f"{kennung}.jsonl").exists():
+        kennung = f"{name}-{n}"
+        n += 1
+    return kennung
+
+
+def mitschreiben(state: GameState, runs_dir: Path,
+                 run_id: str | None = None) -> tuple[str, bool]:
+    """Einen Zustand an die richtige Mitschrift haengen.
+
+    Liefert (Kennung, ob geschrieben wurde). Nicht geschrieben wird, was
+    schon dasteht: zwei Aufrufe auf demselben Spielstand sind ein Zustand,
+    kein zweiter. Sonst rechnete die Vorhersage eine Steigung ueber null
+    Sekunden.
+    """
+    runs_dir = Path(runs_dir)
+    kennung = run_id or lauf_kennung(state, runs_dir)
+    datei = runs_dir / f"{kennung}.jsonl"
+    if datei.exists():
+        zeile = _letzte_zeile(datei)
+        try:
+            letzter = json.loads(zeile) if zeile else None
+        except json.JSONDecodeError:
+            letzter = None
+        if isinstance(letzter, dict) and letzter.get("game_time") == state.game_time:
+            return kennung, False
+    append_run_log(state, kennung, runs_dir)
+    return kennung, True
 
 
 class Mitschreiber:
@@ -81,8 +192,11 @@ class Mitschreiber:
                 self._letzte_uhr = None
 
         if self._run_id is None:
-            self._run_id = run_id_fuer(state)
-            log.info("Neuer Lauf: %s", self._run_id)
+            # Nicht blind einen neuen Lauf beginnen: wer `ats-watch` neu
+            # startet, soll die laufende Mitschrift verlaengern. Sonst fehlt
+            # der Vorhersage nach jedem Neustart wieder der zweite Stand.
+            self._run_id = lauf_kennung(state, self.runs_dir)
+            log.info("Lauf: %s", self._run_id)
 
         append_run_log(state, self._run_id, self.runs_dir)
         self._letzte_uhr = state.game_time

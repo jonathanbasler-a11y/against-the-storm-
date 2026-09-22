@@ -28,7 +28,8 @@ from tkinter import ttk
 from . import berater
 from .mcp_server import aufloesen
 from .orte import finde_spielordner
-from .rechner import ABHOLEN_MS, Rechner, alter as _alter, minuten as _minuten
+from .rechner import (ABHOLEN_MS, Rechner, alter as _alter,
+                      feindseligkeit as _feindseligkeit, minuten as _minuten)
 
 log = logging.getLogger(__name__)
 
@@ -290,10 +291,8 @@ class App:
             text=f"Jahr {z.get('jahr', '?')} · {z.get('biom') or '?'} · "
                  f"Prestige {z.get('prestige', '?')} · {_alter(z.get('zeitpunkt'))}")
         self.felder["bevoelkerung"].configure(text=str(z.get("bevoelkerung") or "–"))
-        feind = z.get("feindseligkeit")
-        if isinstance(feind, dict):
-            feind = feind.get("current", feind)
-        self.felder["feindseligkeit"].configure(text=str(feind or "–"))
+        self.felder["feindseligkeit"].configure(
+            text=_feindseligkeit(z.get("feindseligkeit")))
 
         for schluessel, jetzt, ziel in (
                 ("reputation", z.get("reputation"), z.get("reputation_ziel")),

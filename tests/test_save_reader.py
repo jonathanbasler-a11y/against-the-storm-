@@ -1,7 +1,8 @@
 """Tests des Save-Parsers gegen einen nachgebauten Spielstand.
 
 Die Struktur folgt dem, was Phase 0 im echten Spielstand gemessen hat:
-Spieluhr `time`, Ungeduld `reputationPenalty`, `hostility` als Dictionary,
+Spieluhr `time`, Ungeduld `reputationPenalty`, `hostility` als Dictionary
+(am 22.09.2026 im laufenden Spiel gesehen: level, points, sources),
 `difficulty` als String, gestapelte Kategoriepraefixe, Zeitreihen unter
 `trends`. Die Zahlen sind erfunden, die Form nicht.
 """
@@ -27,7 +28,7 @@ def schreibe_buendel(tmp_path: Path, **abweichungen) -> Path:
         "time": 8746.994,
         "year": 13,
         "season": 0,
-        "hostility": {"current": 180, "tier": 3, "sources": {}},
+        "hostility": {"level": 3, "points": 72, "sources": {}},
         "reputation": 18.0,
         "reputationToWin": 18,
         "reputationPenalty": 6.636307,
