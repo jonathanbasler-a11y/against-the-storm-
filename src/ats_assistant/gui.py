@@ -413,13 +413,32 @@ class App:
                               "ganz ohne Texterkennung.")
             self._schreiben(self.auswahl_text, "\n".join(zeilen))
             return
-        for eintrag in a["angebot"]:
+        belegt = [e for e in a["angebot"] if e.get("belegt", True)]
+        sonst = [e for e in a["angebot"] if not e.get("belegt", True)]
+        for eintrag in belegt:
             kopf = f"{eintrag['de']}  ({eintrag['en']}"
             if eintrag.get("seltenheit"):
                 kopf += f", {eintrag['seltenheit']}"
             zeilen.append(kopf + f", Güte {eintrag['guete']})")
-            if eintrag.get("wirkung"):
-                zeilen.append(f"    {eintrag['wirkung']}")
+            for feld in ("wirkung", "zweck"):
+                if eintrag.get(feld):
+                    zeilen.append(f"    {eintrag[feld]}")
+            zeilen.append("")
+
+        # Die Aufnahme nimmt den ganzen Bildschirm. Was die Wissensbasis
+        # nicht als Angebot kennt, ist meist Oberfläche -- am Spielrechner
+        # die Spezies oben links. Weggeworfen wird es trotzdem nicht: die
+        # Tabelle kennt 398 Grundsteine bei 2273 Namen.
+        if sonst:
+            zeilen.append("Auch erkannt, aber nicht als Angebot belegt "
+                          "(meist Oberfläche):")
+            zeilen.append("    " + ", ".join(
+                f"{e['de']} ({e['guete']})" for e in sonst))
+            zeilen.append("")
+        if a.get("unsicher"):
+            zeilen.append("Unsicher gelesen – stand das so da?")
+            zeilen.append("    " + ", ".join(
+                f"{e['de']} ({e['guete']})" for e in a["unsicher"]))
             zeilen.append("")
         self._schreiben(self.auswahl_text, "\n".join(zeilen))
 

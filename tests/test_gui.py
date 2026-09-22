@@ -314,3 +314,29 @@ def test_eine_antwort_ueberschreibt_den_hinweis_nicht_rueckwaerts(gui, tmp_path:
     app._anzeigen("rat", {"ok": True, "text": "Nimm die Räucherei.", "fuss": "claude-opus-5"})
     app._anzeigen("anmeldung", False)
     assert app.rat_fuss.protokoll[-1] == "claude-opus-5"
+
+
+def test_die_spezies_stehen_getrennt_vom_angebot(gui, tmp_path: Path) -> None:
+    """Am Spielrechner standen Fuchs, Frosch und Biber gleichberechtigt
+    neben den zwei echten Karten -- es sind die Symbole oben links."""
+    app = _vorbereitet(gui, tmp_path)
+    geschrieben: list[str] = []
+    app._schreiben = lambda feld, text: geschrieben.append(text)
+
+    app._anzeigen("auswahl", {
+        "verfuegbar": True, "quelle": "/tmp/x.png", "gelesene_zeilen": 54,
+        "angebot": [
+            {"de": "Kristallkathode", "en": "Crystal Cathode", "guete": 1.0,
+             "belegt": True, "seltenheit": "Legendary", "wirkung": "Regenmaschinen …"},
+            {"de": "Biber", "en": "Beaver", "guete": 1.0, "belegt": False},
+        ],
+        "belegt": [{"de": "Kristallkathode"}],
+        "sonst_gesehen": [{"de": "Biber", "en": "Beaver", "guete": 1.0, "belegt": False}],
+        "unsicher": [{"de": "Wucher", "en": "Usury", "guete": 0.727, "belegt": False}],
+    })
+
+    text = geschrieben[-1]
+    kopf, rest = text.split("Biber", 1)
+    assert "Kristallkathode" in kopf
+    assert "Wissensbasis" in text or "belegt" in text
+    assert "Wucher" in text and "0.727" in text
