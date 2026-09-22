@@ -721,6 +721,11 @@ def food_amplification(conn: sqlite3.Connection) -> list[dict]:
             eingesetzt.append(f"{zutat['menge']:.0f} {zutat['ware']}")
         if rein <= 0:
             continue
+        if any(z["ware"] == r["product"] for gruppe in json.loads(r["inputs"] or "[]")
+               for z in gruppe):
+            # "3 Fleisch -> 30 Fleisch": eine Zutatenliste, die als Rezept
+            # gelesen wurde. Kein Umwandlungsschritt.
+            continue
         belegt = conn.execute(
             "SELECT building, stars FROM production WHERE product = ? "
             "ORDER BY stars DESC, building LIMIT 1", (r["product"],)).fetchone()

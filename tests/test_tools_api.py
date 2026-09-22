@@ -175,6 +175,8 @@ def test_food_advice_rechnet_gegen_den_lagerbestand(tmp_path: Path) -> None:
         "INSERT INTO recipes (id, building, inputs, stars, seconds, product, "
         " product_amount) VALUES (1, 'Smokehouse', ?, 1, 60, 'Jerky', 10)",
         (json.dumps([[{"menge": 5, "ware": "Meat"}]]),))
+    conn.execute("INSERT INTO production (product, building, stars) "
+                 "VALUES ('Jerky', 'Smokehouse', 3)")
     conn.commit()
     conn.close()
 

@@ -148,12 +148,21 @@ def _deutsch(conn: sqlite3.Connection) -> dict[str, str]:
 
 def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
                 verbrauch_pro_sekunde: float | None = None,
-                mindestgewinn: float = 1.0) -> list[Vorschlag]:
+                mindestgewinn: float = 1.0,
+                nur_belegt: bool = True) -> list[Vorschlag]:
     """Jedes Rezept gegen den Bestand rechnen, nach Gewinn sortiert.
 
     `verbrauch_pro_sekunde` kommt aus `food_forecast().rate_per_second` --
     als positive Zahl. Fehlt er, bleibt die Reichweite offen; die Rangfolge
     steht auch ohne ihn.
+
+    `nur_belegt` laesst nur Erzeugnisse zu, die die Produktionstabelle
+    kennt. Das ist keine Vorsicht, sondern eine Sortierung nach Art: die
+    Tabelle fuehrt genau die verarbeiteten Waren, und nur um deren
+    Herstellung geht es hier. Was von den Gebaeudeseiten kam und dort
+    fehlt, sind Rohnahrung -- Fleisch, Fisch, Eier -- und die kommt aus
+    Lagern und Vorkommen, nicht aus einem Rezept. Ein "Rezept", das aus
+    3 Fleisch 30 Fleisch macht, ist ein Lesefehler und kein Rat.
     """
     saettigung = {
         r["en"]: float(r["eating_fullness"] or 0.0)
@@ -170,6 +179,8 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
         je_stueck = saettigung.get(r["product"])
         if not je_stueck:
             continue                      # das Rezept macht keine Nahrung
+        if nur_belegt and r["product"] not in zustaendig:
+            continue
 
         zutaten: list[Zutat] = []
         rein_je_zyklus = 0.0
@@ -192,6 +203,10 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
         if not vollstaendig or not zutaten:
             continue
 
+        if any(z.ware == r["product"] for z in zutaten):
+            # Aus Fleisch wird kein Fleisch. Solche Zeilen entstehen, wenn
+            # die Gebaeudeseite eine Zutatenliste als Rezept fuehrt.
+            continue
         zyklen = min(z.zyklen for z in zutaten)
         if zyklen < 1:
             continue

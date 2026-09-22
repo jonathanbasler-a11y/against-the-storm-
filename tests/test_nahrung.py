@@ -40,6 +40,12 @@ def wissensbasis(tmp_path: Path):
     # Eingelegte Nahrung: 5 Beeren -> 10 Stueck (Faktor 6), aber langsamer
     rezept(2, "Cellar", [[{"menge": 5, "ware": "Berries"}]],
            "Pickled Goods", 10, 120)
+    # Die Produktionstabelle fuehrt die verarbeiteten Waren. Ohne sie gilt
+    # ein Erzeugnis als nicht belegt und faellt aus dem Rat.
+    for produkt, gebaeude, sterne in (("Jerky", "Smokehouse", 3),
+                                      ("Pickled Goods", "Cellar", 3)):
+        conn.execute("INSERT INTO production (product, building, stars) VALUES (?,?,?)",
+                     (produkt, gebaeude, sterne))
     conn.commit()
     return conn
 
@@ -88,7 +94,9 @@ def test_engpass_ist_die_knappste_zutat(tmp_path: Path) -> None:
          2, 30, "Pickled Goods", 6))
     conn.commit()
     liste = nahrung.vorschlaege(conn, {"[Food Raw] Meat": 40, "[Food Raw] Berries": 16})
-    kochhaus = [v for v in liste if v.gebaeude == "Cookhouse"][0]
+    # Das Gebaeude im Vorschlag kommt aus der Produktionstabelle; welche
+    # Seite das Rezept lieferte, steht daneben.
+    kochhaus = [v for v in liste if v.gebaeude_laut_seite == "Cookhouse"][0]
     assert kochhaus.engpass == "Berries"           # 16/8 = 2 gegen 40/2 = 20
     assert kochhaus.zyklen == 2
     conn.close()
@@ -147,7 +155,7 @@ def test_produktionstabelle_schlaegt_den_seitentitel(tmp_path: Path) -> None:
     conn = wissensbasis(tmp_path)
     conn.execute("UPDATE recipes SET building = 'Flawless Smelter' WHERE product = 'Jerky'")
     conn.execute("INSERT INTO production (product, building, stars) "
-                 "VALUES ('Jerky', 'Smokehouse', 3), ('Jerky', 'Butcher', 1)")
+                 "VALUES ('Jerky', 'Butcher', 1)")
     conn.commit()
     v = [x for x in nahrung.vorschlaege(conn, {"[Food Raw] Meat": 20})][0]
     assert v.gebaeude == "Smokehouse"            # drei Sterne gewinnen
@@ -161,11 +169,36 @@ def test_dasselbe_rezept_auf_mehreren_seiten_steht_nur_einmal_im_rat(tmp_path: P
     conn.execute("INSERT INTO recipes (id, building, inputs, stars, seconds, product, "
                  " product_amount) VALUES (9, 'Butcher', ?, 1, 90, 'Jerky', 10)",
                  (json.dumps([[{"menge": 5, "ware": "Meat"}]]),))
-    conn.execute("INSERT INTO production (product, building, stars) "
-                 "VALUES ('Jerky', 'Smokehouse', 3)")
     conn.commit()
     doerr = [v for v in nahrung.vorschlaege(conn, {"[Food Raw] Meat": 20})
              if v.produkt == "Jerky"]
     assert len(doerr) == 1
     assert doerr[0].sekunden == 60               # der schnellere Eintrag gewinnt
+    conn.close()
+
+
+def test_rohnahrung_und_scheinrezepte_fallen_heraus(tmp_path: Path) -> None:
+    """Zwei Arten von Zeilen, die kein Rat sind."""
+    conn = wissensbasis(tmp_path)
+    # Rohnahrung: die Produktionstabelle kennt sie nicht, weil sie aus
+    # Lagern und Vorkommen kommt, nicht aus einem Rezept.
+    conn.execute("INSERT INTO recipes (id, building, inputs, seconds, product, "
+                 " product_amount) VALUES (20, 'Trappers Camp', ?, 60, 'Meat', 30)",
+                 (json.dumps([[{"menge": 3, "ware": "Berries"}]]),))
+    # Ein Erzeugnis unter seinen eigenen Zutaten: Lesefehler, kein Rezept.
+    conn.execute("INSERT INTO recipes (id, building, inputs, seconds, product, "
+                 " product_amount) VALUES (21, 'Flawless Smelter', ?, 60, 'Jerky', 30)",
+                 (json.dumps([[{"menge": 3, "ware": "Jerky"}]]),))
+    conn.commit()
+    produkte = [v.produkt for v in nahrung.vorschlaege(
+        conn, {"[Food Raw] Berries": 40, "[Food Processed] Jerky": 40})]
+    assert "Meat" not in produkte
+    assert produkte.count("Jerky") == 0 or all(
+        v.zutaten[0].ware != "Jerky"
+        for v in nahrung.vorschlaege(conn, {"[Food Processed] Jerky": 40}))
+    # Mit nur_belegt=False kommt die Rohnahrung zurueck -- fuer die Nachschau,
+    # nicht fuer den Rat.
+    ohne = [v.produkt for v in nahrung.vorschlaege(
+        conn, {"[Food Raw] Berries": 40}, nur_belegt=False)]
+    assert "Meat" in ohne
     conn.close()
