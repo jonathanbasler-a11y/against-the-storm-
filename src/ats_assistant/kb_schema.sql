@@ -134,16 +134,37 @@ CREATE TABLE IF NOT EXISTS glade_events (
     source_page  TEXT REFERENCES source_pages(title)
 );
 
--- Die deutschen Namen stehen nirgends öffentlich. confidence sagt, wie weit
--- eine Zeile trägt: screenshot und save_id sind belegt, guessed ist geraten.
+-- Die deutschen Namen standen nirgends öffentlich -- bis auf das Spiel selbst.
+-- resources.assets traegt je Schluessel eine englische und eine deutsche
+-- Zeichenkette; was daher kommt, ist nachgeschlagen statt geraten und traegt
+-- confidence = localization. Darunter erst das Beobachtete, zuletzt das Geratene.
 CREATE TABLE IF NOT EXISTS name_map (
     en           TEXT,
     de           TEXT,
     kind         TEXT,          -- resource, building, concept, biome, species
     category     TEXT,
-    confidence   TEXT NOT NULL, -- screenshot | save_id | spec_seed | observed | guessed
+    confidence   TEXT NOT NULL, -- localization | screenshot | save_id | spec_seed | observed | guessed
     source       TEXT,
     verified_at  TEXT,
+    note         TEXT,
+    loc_key      TEXT,          -- Lokalisierungsschluessel, z. B. Good_PickledGoods_Name
+    en_id        TEXT,          -- "Pickled Goods" -> pickled_goods, fuer den Nachschlag
+    PRIMARY KEY (en, de, kind)
+);
+
+CREATE INDEX IF NOT EXISTS name_map_en_id ON name_map(en_id);
+
+-- Was die Lokalisierung widerlegt hat, wird nicht still geloescht. Eine
+-- geratene Zeile, die sich als falsch erweist, ist ein Befund: sie sagt,
+-- wie weit der Recherche zu trauen war.
+CREATE TABLE IF NOT EXISTS retired_names (
+    en           TEXT,
+    de           TEXT,          -- der widerlegte deutsche Name
+    kind         TEXT,
+    confidence   TEXT,          -- womit die Zeile angetreten war
+    source       TEXT,
+    replaced_by  TEXT,          -- der belegte deutsche Name
+    retired_at   TEXT,
     note         TEXT,
     PRIMARY KEY (en, de, kind)
 );

@@ -97,9 +97,9 @@ manorial_court,Gutsgericht,building,Nightwatchers,spec_seed,SPEC.md,,
 smoldering_city,Schwelende Stadt,concept,Meta,spec_seed,SPEC.md,,
 resolve,Entschlossenheit,concept,Core,spec_seed,SPEC.md,,
 impatience,Ungeduld,concept,Core,spec_seed,SPEC.md,,
-hostility,Feindseligkeit,concept,Core,guessed,research-2026-09,,
+hostility,Feindseligkeit,concept,Core,observed,resources.assets,2026-09-22,Kein eigener Schlüssel; aus Building_HearthBuildable_Description ("Verringert die Feindseligkeit")
 cornerstone,Grundstein,concept,Core,spec_seed,SPEC.md,,
-blueprint,Bauplan,concept,Core,guessed,research-2026-09,,
+blueprint,Entwurf,concept,Core,observed,resources.assets,2026-09-22,Nicht Bauplan: News_RandomBlueprint_Name "Neuer Entwurf: {0}"; als Vokabel nur im Plural (Label_MetaReward_Blueprint)
 dangerous_glade,Gefährliche Lichtung,concept,Expansion,spec_seed,SPEC.md,,
 forbidden_glade,Verbotene Lichtung,concept,Expansion,guessed,research-2026-09,,
 blightrot_cyst,Fäulniszyste,concept,Rainpunk,guessed,research-2026-09,,
@@ -123,7 +123,7 @@ sealed_forest,Versiegelter Wald,biome,,guessed,research-2026-09,,
 ashen_thicket,Aschenes Dickicht,biome,,guessed,research-2026-09,,
 bamboo_flats,Bambusebene,biome,,spec_seed,SPEC.md,,
 rocky_ravine,Felsschlucht,biome,,spec_seed,SPEC.md,,
-fluffbeak,Fluffschnabel,creature,,spec_seed,SPEC.md,,
+fluffbeak,Fluffschnabel,creature,,observed,resources.assets,2026-09-22,Aus Deed_WinPoroBiome_Impossible_Name "Fluffschnabel-Paradies"; einzeln führt das Spiel nur Giant Fluffbeak
 oil,Öl,resource,Crafting,screenshot+save,screenshot-2026-09-21 + Save.save,2026-09-21,Save-ID: [Crafting] Oil
 trade_routes,Handelswege,concept,Order,screenshot,screenshot-2026-09-21,2026-09-21,Auftrag LIEFERUNG: 4/3 Handelswege
 food_complex,Komplexe Nahrung,category,,screenshot,screenshot-2026-09-21,2026-09-21,Auftrag FESTMAHL; deckt sich mit SPEC.md

@@ -300,7 +300,7 @@ Endgültig ist das erst, wenn der Auslöser feststeht. Deshalb die Sonde.
 `watch` liest den Spielstand jetzt bei jeder erkannten Änderung und
 protokolliert Jahr, Jahreszeit, Restzeit, Feindseligkeit, Ungeduld,
 Reputation und Bevölkerung mit. Aus „hat um 19:31:56 geschrieben" wird damit
-„hat beim Wechsel in die Auslichtung geschrieben" — und erst das beantwortet,
+„hat beim Wechsel in den Sommer geschrieben" — und erst das beantwortet,
 ob der Auslöser der Jahreszeitenwechsel ist, ein Auftrag, ein
 Lichtungsereignis oder schlicht die Pausetaste. Abschaltbar mit `--no-probe`.
 

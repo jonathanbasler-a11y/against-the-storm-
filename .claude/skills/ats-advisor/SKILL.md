@@ -53,8 +53,8 @@ Situation ohne Ausweichweg. Vor jeder Empfehlung prüfen, ob die Versorgung für
 zwei Jahreszeiten steht.
 
 **Verarbeitete Nahrung sättigt zwei- bis dreimal so viel wie rohe.** Gemessen
-aus den Spieldaten: Rohnahrung 1,0, Brei/Dörrfleisch/Kekse/Paste 2,0,
-Eingelegte Waren/Pastete/Spieße 3,0. Ein Rezept, das aus 5 roh 10 verarbeitet
+aus den Spieldaten: Rohnahrung 1,0, Haferbrei/Dörrfleisch/Kekse/Paste 2,0,
+Eingelegte Nahrung/Pastete/Fleischspieße 3,0. Ein Rezept, das aus 5 roh 10 verarbeitet
 macht, vervierfacht damit die Sättigung. Das ist der stärkste Hebel gegen das
 Kernproblem — und größer, als gemeinhin angenommen.
 

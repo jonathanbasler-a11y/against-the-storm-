@@ -21,8 +21,11 @@ log = logging.getLogger(__name__)
 SCHEMA = Path(__file__).with_name("kb_schema.sql")
 
 # Reihenfolge nach Belastbarkeit: eine bestätigte Zeile darf nie von einer
-# geratenen überschrieben werden.
+# geratenen überschrieben werden. `localization` steht obenauf, weil es die
+# Zeichenkette selbst ist, die das Spiel anzeigt -- ein Screenshot ist eine
+# Aufnahme davon und kann sich verlesen, die Tabelle nicht.
 CONFIDENCE_RANK = {
+    "localization": 6,
     "screenshot+save": 5,
     "screenshot": 4,
     "save_id": 3,
@@ -30,6 +33,15 @@ CONFIDENCE_RANK = {
     "observed": 1,
     "guessed": 0,
 }
+
+
+_NICHT_WORT = re.compile(r"[^a-z0-9]+")
+
+
+def _normalform(name: str) -> str:
+    """"Alchemist's Hut" -> alchemists_hut. Siehe localization.normalisieren."""
+    ohne = (name or "").lower().replace("'", "").replace("’", "")
+    return _NICHT_WORT.sub("_", ohne).strip("_")
 
 
 # CREATE TABLE IF NOT EXISTS legt nur neue Tabellen an. Kommt spaeter eine
@@ -95,6 +107,9 @@ def connect(path: Path | str = "kb.sqlite") -> sqlite3.Connection:
     """
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
+    # Damit auch SQL auf der Normalform vergleichen kann: "Pickled Goods"
+    # und pickled_goods sind derselbe Eintrag.
+    conn.create_function("normalform", 1, _normalform)
     schema = SCHEMA.read_text(encoding="utf-8")
 
     indizes = INDEX_RE.findall(schema)
@@ -125,10 +140,13 @@ def seed_name_map(conn: sqlite3.Connection, csv_path: Path) -> dict[str, int]:
                 continue
             conn.execute(
                 "INSERT OR REPLACE INTO name_map "
-                "(en, de, kind, category, confidence, source, verified_at, note) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "(en, de, kind, category, confidence, source, verified_at, note, "
+                " loc_key, en_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (en, de, kind, row.get("category"), conf, row.get("source"),
-                 row.get("verified_at"), row.get("note")),
+                 row.get("verified_at"), row.get("note"),
+                 (row.get("loc_key") or "").strip() or None,
+                 (row.get("en_id") or "").strip() or _normalform(en)),
             )
             zaehler[conf] = zaehler.get(conf, 0) + 1
     conn.commit()
@@ -194,14 +212,27 @@ def record_page(conn: sqlite3.Connection, title: str, revision_id: int | None,
 
 
 def lookup(conn: sqlite3.Connection, name: str) -> list[dict]:
-    """Nachschlag, der deutsche und englische Namen akzeptiert."""
+    """Nachschlag, der deutsche und englische Namen akzeptiert.
+
+    Auch der Bezeichner trifft: die Saat-Tabelle fuehrt `pickled_goods`, die
+    Lokalisierung "Pickled Goods". Gesucht wird deshalb zusaetzlich auf der
+    Normalform in en_id.
+    """
+    # Die Saat-Tabelle fuehrt Bezeichner, die es im Spiel nicht gibt --
+    # `reeds` heisst dort "Reed". Der Nachschlag muss beide Wege kennen,
+    # sonst findet der alte Bezeichner seine eigene Zeile nicht mehr.
+    from . import localization      # lokal: kb ist die untere Schicht
+    kennung = _normalform(name)
+    kennung = _normalform(localization.ALIASE.get(kennung, kennung))
     treffer = conn.execute(
-        "SELECT en, de, kind, category, confidence, source, note FROM name_map "
-        "WHERE de = ? COLLATE NOCASE OR en = ? COLLATE NOCASE "
+        "SELECT en, de, kind, category, confidence, source, note, loc_key, en_id "
+        "FROM name_map "
+        "WHERE de = ? COLLATE NOCASE OR en = ? COLLATE NOCASE OR en_id = ? "
         "ORDER BY CASE confidence "
-        "  WHEN 'screenshot+save' THEN 0 WHEN 'screenshot' THEN 1 WHEN 'save_id' THEN 2 "
-        "  WHEN 'spec_seed' THEN 3 WHEN 'observed' THEN 4 ELSE 5 END",
-        (name, name),
+        "  WHEN 'localization' THEN 0 WHEN 'screenshot+save' THEN 1 "
+        "  WHEN 'screenshot' THEN 2 WHEN 'save_id' THEN 3 "
+        "  WHEN 'spec_seed' THEN 4 WHEN 'observed' THEN 5 ELSE 6 END",
+        (name, name, kennung),
     ).fetchall()
     return [dict(r) for r in treffer]
 
@@ -214,7 +245,8 @@ def coverage(conn: sqlite3.Connection) -> dict:
     for row in conn.execute("SELECT kind, COUNT(*) n FROM save_ids GROUP BY kind"):
         out["save_ids"][row["kind"]] = row["n"]
     for tabelle in ("resources", "biomes", "cornerstones", "buildings",
-                    "recipes", "species", "prestige", "glade_events", "source_pages"):
+                    "recipes", "species", "prestige", "glade_events",
+                    "source_pages", "retired_names"):
         out["tabellen"][tabelle] = conn.execute(f"SELECT COUNT(*) n FROM {tabelle}").fetchone()["n"]
     return out
 
@@ -226,7 +258,7 @@ def unmatched_save_ids(conn: sqlite3.Connection, kind: str | None = None) -> lis
     nicht geliefert.
     """
     sql = ("SELECT s.id FROM save_ids s "
-           "LEFT JOIN name_map n ON n.en = s.id "
+           "LEFT JOIN name_map n ON n.en = s.id OR n.en_id = normalform(s.id) "
            "LEFT JOIN buildings b ON b.en = s.id "
            "WHERE n.en IS NULL AND b.en IS NULL")
     params: tuple = ()
@@ -349,7 +381,8 @@ def missing_german(conn: sqlite3.Connection) -> list[dict]:
     """
     return [dict(r) for r in conn.execute(
         "SELECT r.en, r.save_id, r.display_key, n.de, n.confidence "
-        "FROM resources r LEFT JOIN name_map n ON n.en = r.en OR n.en = LOWER(r.en) "
+        "FROM resources r LEFT JOIN name_map n "
+        "  ON n.en = r.en OR n.en = LOWER(r.en) OR n.en_id = normalform(r.en) "
         "WHERE n.de IS NULL OR n.confidence IN ('guessed', 'observed') "
         "ORDER BY r.en")]
 

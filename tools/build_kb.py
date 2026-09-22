@@ -9,6 +9,8 @@ Drei Unterbefehle:
              gegen Belege, nicht gegen Vermutungen.
     seed     Namenstabelle aus data/name_map_seed.csv und das Vokabular aus
              kb_probe.py --dump-ids in kb.sqlite uebernehmen. Braucht kein Wiki.
+    namen    Deutsche Namen aus der Lokalisierungstabelle des Spiels uebernehmen
+             und die geratenen dagegen halten. Braucht kein Wiki.
     build    Wikitext auswerten und die Sachtabellen fuellen. Erst sinnvoll,
              wenn survey gelaufen ist.
 
@@ -30,7 +32,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from ats_assistant import kb  # noqa: E402
+from ats_assistant import kb, localization  # noqa: E402
 
 GESPIELTE_VERSION = "1.10.4"
 
@@ -715,6 +717,63 @@ def cmd_build(args) -> int:
     return 0
 
 
+def cmd_namen(args) -> int:
+    """Deutsche Namen aus der Lokalisierung des Spiels uebernehmen.
+
+    Ohne --write wird nur gezeigt, was sich aendern wuerde. Das ist kein
+    Selbstzweck: der Lauf sagt, wie viele der geratenen Namen falsch waren,
+    und das ist die Antwort auf die Frage, wie weit der Recherche zu trauen
+    war.
+    """
+    if args.dir:
+        posten = localization.lade(Path(args.dir))
+        herkunft = str(Path(args.dir))
+    else:
+        csv_pfad = Path(args.csv)
+        if not csv_pfad.exists():
+            print(f"Weder --dir noch {csv_pfad} -- nichts zu tun.")
+            return 1
+        posten = localization.lade_csv(csv_pfad)
+        herkunft = str(csv_pfad)
+
+    print(f"Namen aus {herkunft}: {len(posten)}")
+    nach_art = Counter(e.kind for e in posten)
+    for art, n in sorted(nach_art.items(), key=lambda kv: -kv[1]):
+        print(f"  {art:<16} {n}")
+
+    conn = kb.connect(args.db)
+    try:
+        # Trockenlauf: dieselbe Rechnung, nur wird sie am Ende zurueckgedreht.
+        bericht = localization.import_localization(
+            conn, posten, quelle=localization.QUELLE if args.dir else herkunft,
+            commit=args.write)
+        print()
+        for zeile in bericht.zusammenfassung():
+            print(zeile)
+
+        if bericht.widerlegt:
+            print(f"\nWiderlegte Namen ({len(bericht.widerlegt)}):")
+            for en, falsch, richtig, conf in sorted(bericht.widerlegt)[:args.zeigen]:
+                print(f"  {en:<26} {falsch:<28} -> {richtig}   ({conf})")
+            if len(bericht.widerlegt) > args.zeigen:
+                print(f"  ... und {len(bericht.widerlegt) - args.zeigen} weitere")
+
+        if args.write:
+            if args.dir:
+                n = localization.schreibe_csv(posten, Path(args.csv))
+                print(f"\n{args.csv}: {n} Zeilen")
+            print("\nAbdeckung:")
+            for bereich, werte in kb.coverage(conn).items():
+                if werte:
+                    print(f"  {bereich}: " + ", ".join(f"{k}={v}" for k, v in sorted(werte.items())))
+        else:
+            conn.rollback()
+            print("\n(Trockenlauf -- nichts geschrieben. Mit --write uebernehmen.)")
+    finally:
+        conn.close()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -756,6 +815,15 @@ def main(argv: list[str] | None = None) -> int:
                    help="die erkannten Tabellen in die Wissensbasis schreiben")
     s.add_argument("--db", default="kb.sqlite")
     s.set_defaults(func=cmd_html)
+
+    s = sub.add_parser("namen", help="deutsche Namen aus der Spiel-Lokalisierung")
+    s.add_argument("--dir", help="Verzeichnis mit de_translations.json und de_en_mapping.json")
+    s.add_argument("--csv", default="data/name_map_localized.csv",
+                   help="Ablage im Repo; ohne --dir wird von hier gelesen")
+    s.add_argument("--db", default="kb.sqlite")
+    s.add_argument("--zeigen", type=int, default=25, help="wie viele Widerlegungen auflisten")
+    s.add_argument("--write", action="store_true", help="uebernehmen statt nur zeigen")
+    s.set_defaults(func=cmd_namen)
 
     s = sub.add_parser("status", help="Inhalt der Wissensbasis zeigen")
     s.add_argument("--db", default="kb.sqlite")
