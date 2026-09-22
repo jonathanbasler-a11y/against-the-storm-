@@ -143,6 +143,74 @@ def _produktionsgebaeude(conn: sqlite3.Connection) -> dict[str, tuple[str, int |
     return out
 
 
+@dataclass
+class Rohquelle:
+    """Ein Gebaeude, dessen Erzeugnis jemand essen kann."""
+
+    gebaeude: str
+    waren: list[str]
+    kosten: dict[str, float]
+    plaetze: int | None = None
+    gebaeude_de: str | None = None
+    waren_de: list[str] = field(default_factory=list)
+
+    @property
+    def preis(self) -> float:
+        return sum(self.kosten.values()) if self.kosten else 0.0
+
+    def satz(self) -> str:
+        namen = self.gebaeude_de or self.gebaeude
+        waren = ", ".join(self.waren_de or self.waren)
+        kosten = " ".join(f"{m:.0f} {w}" for w, m in sorted(self.kosten.items()))
+        return f"{namen} ({waren}" + (f", {kosten}" if kosten else "") + ")"
+
+
+def rohquellen(conn: sqlite3.Connection, grenze: int = 4) -> list[Rohquelle]:
+    """Gebaeude, die Essbares liefern -- das Billigste zuerst.
+
+    Die Auskunft "erst Rohware sammeln" sagt nicht, womit. Das steht hier:
+    jedes Gebaeude, dessen `products` eine Ware nennt, die `resources` als
+    essbar fuehrt. Beides ist gemessen -- `eatable` kommt aus den Spieldaten,
+    nicht aus einer Vermutung darueber, was Nahrung ist.
+
+    Nichts wird erfunden: fehlen die Gebaeudeseiten in der Wissensbasis,
+    kommt eine leere Liste zurueck, und der Rat sagt dann weniger statt
+    falsches.
+    """
+    try:
+        essbar = {r["en"] for r in conn.execute(
+            "SELECT en FROM resources WHERE eatable = 1")}
+        zeilen = conn.execute(
+            "SELECT en, cost, products, worker_slots FROM buildings "
+            "WHERE products IS NOT NULL").fetchall()
+    except sqlite3.DatabaseError:
+        return []
+    if not essbar:
+        return []
+
+    namen = _deutsch(conn)
+    bekannt = sorted(essbar | {r["en"] for r in conn.execute(
+        "SELECT en FROM resources")}, key=len, reverse=True)
+    out: list[Rohquelle] = []
+    for z in zeilen:
+        from .kb import zerlege_waren
+
+        waren = [w for w in zerlege_waren(z["products"], bekannt) if w in essbar]
+        if not waren:
+            continue
+        try:
+            kosten = {k: float(v) for k, v in json.loads(z["cost"] or "{}").items()}
+        except (json.JSONDecodeError, TypeError, ValueError):
+            kosten = {}
+        out.append(Rohquelle(
+            gebaeude=z["en"], waren=waren, kosten=kosten,
+            plaetze=z["worker_slots"], gebaeude_de=namen.get(z["en"]),
+            waren_de=[namen.get(w, w) for w in waren]))
+    # Das Billigste zuerst: in Jahr 1 entscheidet, was sofort steht.
+    out.sort(key=lambda q: (q.preis or 1e9, q.gebaeude))
+    return out[:grenze]
+
+
 def _deutsch(conn: sqlite3.Connection) -> dict[str, str]:
     return {
         r["en"]: r["de"]
@@ -289,6 +357,23 @@ def rat(conn: sqlite3.Connection, bestand: dict[str, float],
         verbrauch_pro_sekunde: float | None = None,
         reichweite_sekunden: float | None = None) -> Rat:
     """Aus den Vorschlaegen die Ausgabe bauen, die die Spec verlangt."""
+    if not bestand:
+        # Leer gelesen heisst nicht leer. Am 22.09.2026 kam `lager: {}` aus
+        # einem Spielstand mit vollem Lagerhaus -- und die Auskunft "kein
+        # Verarbeitungsschritt lohnt sich" war dann eine Aussage ueber ein
+        # leeres Dictionary, nicht ueber die Siedlung. Der Unterschied
+        # gehoert hingeschrieben.
+        return Rat(
+            empfehlung="Der Lagerbestand kam leer aus dem Spielstand.",
+            begruendung=("Entweder ist das Lager wirklich leer, oder die Stelle "
+                         "im Spielstand wurde nicht gefunden. Gerechnet werden "
+                         "kann auf beidem nicht."),
+            alternative=("`python tools/lage.py` zeigt unter „nicht "
+                         "gefunden“, welche Felder fehlen; `python "
+                         "tools/kb_probe.py --dump-ids` zeigt, wie die "
+                         "Warenschluessel in diesem Spielstand heissen."),
+        )
+
     huerden: list[dict] = []
     liste = vorschlaege(conn, bestand, verbrauch_pro_sekunde, huerden=huerden)
     if not liste:
@@ -315,6 +400,13 @@ def rat(conn: sqlite3.Connection, bestand: dict[str, float],
                            "bereit — es fehlt an Rohware, nicht an Verarbeitung.")
             alternative = ("Sammellager erweitern oder eine Farm setzen; verarbeiten "
                            "lohnt erst, wenn ein Rezept einen Durchlauf trägt.")
+
+        # "Erst Rohware sammeln" sagt nicht, womit. Das steht in der
+        # Wissensbasis -- und wenn nicht, wird nichts erfunden.
+        quellen = rohquellen(conn)
+        if quellen:
+            alternative += (" Rohnahrung liefern: "
+                            + "; ".join(q.satz() for q in quellen[:3]) + ".")
         return Rat(
             empfehlung="Kein Verarbeitungsschritt lohnt sich mit diesem Lager.",
             begruendung=begruendung, alternative=alternative,

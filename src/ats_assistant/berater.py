@@ -129,7 +129,11 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             "jahr", "jahreszeit", "biom", "prestige", "bevoelkerung", "spezies",
             "feindseligkeit", "ungeduld", "ungeduld_schwelle", "reputation",
             "reputation_ziel", "lager", "gebaeude", "lichtungen", "vorkommen",
-            "grundsteine", "spielzeit"))
+            "grundsteine", "spielzeit",
+            # Was nicht gelesen werden konnte, geht mit. Sonst sieht ein
+            # nicht gefundenes Lager aus wie ein leeres -- und das ist der
+            # Unterschied zwischen "nichts da" und "nichts gewusst".
+            "nicht_gefunden", "fehlende_dateien"))
     if nahrung:
         auszug["nahrung"] = sauber(nahrung, (
             "bestand", "rate_je_spielzeitsekunde", "reichweite_sekunden", "warnung"))

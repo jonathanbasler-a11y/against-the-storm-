@@ -340,3 +340,16 @@ def test_die_spezies_stehen_getrennt_vom_angebot(gui, tmp_path: Path) -> None:
     assert "Kristallkathode" in kopf
     assert "Wissensbasis" in text or "belegt" in text
     assert "Wucher" in text and "0.727" in text
+
+
+def test_nicht_gefundene_felder_stehen_in_der_warnung(gui, tmp_path: Path) -> None:
+    """Ein stiller Ausfall ist schlimmer als ein lauter: `lager: {}` sah aus
+    wie ein leeres Lager und war ein nicht gefundenes Feld."""
+    app = _vorbereitet(gui, tmp_path)
+    gesagt: list[str] = []
+    app.warnung = Wurzel()
+    app.warnung.configure = lambda **kw: gesagt.append(kw.get("text", ""))
+
+    app._anzeigen("zustand", {"verfuegbar": True, "jahr": 1, "biom": "Royal Woodlands",
+                              "lager": {}, "nicht_gefunden": ["storage", "buildings"]})
+    assert any("storage" in z and "nicht gefunden" in z.lower() for z in gesagt)

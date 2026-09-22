@@ -239,3 +239,95 @@ def test_huerden_bleiben_aus_wenn_niemand_danach_fragt(tmp_path: Path) -> None:
     assert huerden                                   # mit Liste: gefüllt
     assert nahrung.vorschlaege(conn, {"[Food Raw] Meat": 2}) == []   # ohne: still
     conn.close()
+
+
+# --------------------------------------------------------------------------
+# Wenn die Rohware fehlt: womit beschaffen?
+#
+# Am Spielrechner, Jahr 1, Prestige 15, Nahrung für 103 Spielzeitsekunden:
+# "Kein Verarbeitungsschritt lohnt sich. Kekse scheitert an einer Zutat: es
+# fehlt 6 Mehl. Dasselbe gilt für Dörrfleisch, Paste, Pastete — erst Rohware
+# sammeln, dann verarbeiten."
+#
+# Richtig, und genau dort hört die Auskunft auf. *Womit* sammeln steht in der
+# Wissensbasis: Gebäude, deren Erzeugnis essbar ist, mit ihren Baukosten.
+# --------------------------------------------------------------------------
+
+
+def mit_sammelgebaeuden(conn):
+    for en, kosten, produkte, plaetze in (
+            ("Forager's Camp", '{"Wood": 3}', "Berries", 2),
+            ("Trappers' Camp", '{"Wood": 5, "Planks": 3}', "Meat Leather", 2),
+            ("Herbalists' Camp", '{"Planks": 6}', "Roots Herbs", 3),
+            ("Woodcutters' Camp", '{"Wood": 3}', "Wood", 2)):
+        conn.execute(
+            "INSERT INTO buildings (en, cost, products, worker_slots, category) "
+            "VALUES (?,?,?,?,'Gathering')", (en, kosten, produkte, plaetze))
+    for en, essbar in (("Roots", 1), ("Herbs", 0), ("Leather", 0)):
+        conn.execute("INSERT INTO resources (en, eatable, eating_fullness) "
+                     "VALUES (?,?,?)", (en, essbar, 1.0 if essbar else 0.0))
+    conn.commit()
+    return conn
+
+
+def test_rohquellen_nennt_nur_gebaeude_mit_essbarem_erzeugnis(tmp_path: Path) -> None:
+    conn = mit_sammelgebaeuden(wissensbasis(tmp_path))
+    quellen = nahrung.rohquellen(conn)
+    namen = [q.gebaeude for q in quellen]
+
+    assert "Forager's Camp" in namen and "Trappers' Camp" in namen
+    assert "Woodcutters' Camp" not in namen        # Holz sättigt niemanden
+    # Das Billigste zuerst: drei Holz vor fünf Holz und drei Brettern.
+    assert namen[0] == "Forager's Camp"
+    conn.close()
+
+
+def test_rohquellen_traegt_waren_und_kosten_mit(tmp_path: Path) -> None:
+    conn = mit_sammelgebaeuden(wissensbasis(tmp_path))
+    quelle = {q.gebaeude: q for q in nahrung.rohquellen(conn)}["Trappers' Camp"]
+
+    assert quelle.waren == ["Meat"]                # Leder ist nicht essbar
+    assert quelle.kosten == {"Wood": 5.0, "Planks": 3.0}
+    assert quelle.plaetze == 2
+    conn.close()
+
+
+def test_ohne_rohware_steht_im_rat_womit_sie_zu_holen_ist(tmp_path: Path) -> None:
+    """Der eigentliche Fund: „erst Rohware sammeln" sagt nicht, womit."""
+    conn = mit_sammelgebaeuden(wissensbasis(tmp_path))
+    r = nahrung.rat(conn, {"[Food Raw] Meat": 2})
+
+    assert "Kein Verarbeitungsschritt" in r.empfehlung
+    assert "Sammellager" in r.alternative or "Forager" in r.alternative or \
+           "Sammler" in r.alternative
+    # Ein Name, eine Ware, ein Preis -- keine Gattungsbegriffe.
+    assert "3 Wood" in r.alternative or "3 Holz" in r.alternative
+    conn.close()
+
+
+def test_ohne_sammelgebaeude_in_der_wissensbasis_bleibt_der_satz_ehrlich(
+        tmp_path: Path) -> None:
+    """Keine erfundenen Gebäude. Steht nichts da, wird nichts genannt."""
+    conn = wissensbasis(tmp_path)
+    r = nahrung.rat(conn, {"[Food Raw] Meat": 2})
+    assert "Forager" not in r.alternative
+    assert r.alternative                            # aber ein Satz steht da
+    conn.close()
+
+
+def test_ein_leer_gelesenes_lager_ist_kein_urteil(tmp_path: Path) -> None:
+    """Der Fund vom 22.09.2026, Jahr 1, Prestige 15.
+
+    Der Auszug trug `"lager": {}` und `"gebaeude": 0` — bei 600
+    Spielzeitsekunden und einem vollen Lagerhaus auf dem Bildschirm. Die
+    Auskunft „Kein Verarbeitungsschritt lohnt sich" war also gar keine
+    Aussage über das Lager, sondern über ein leeres Dictionary. Das muss
+    dastehen, statt als Urteil durchzugehen.
+    """
+    conn = mit_sammelgebaeuden(wissensbasis(tmp_path))
+    r = nahrung.rat(conn, {})
+
+    assert "gelesen" in r.empfehlung or "leer" in r.empfehlung
+    assert "Verarbeitungsschritt" not in r.empfehlung
+    assert "kb_probe" in r.alternative or "lage.py" in r.alternative
+    conn.close()
