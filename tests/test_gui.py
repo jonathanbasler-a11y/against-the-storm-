@@ -99,11 +99,11 @@ def test_das_fenster_laesst_sich_aufbauen(gui, tmp_path: Path) -> None:
 
 
 ALLE_ARTEN = ("zustand", "nahrung", "ungeduld", "ketten", "auswahl",
-              "nachschlag", "rat", "umgebung", "fehler")
+              "nachschlag", "rat", "umgebung", "anmeldung", "fehler")
 
 
 def test_jede_nachrichtenart_wird_angezeigt(gui, tmp_path: Path) -> None:
-    """Der Arbeits-Thread schickt neun Arten. Fehlt eine Zuordnung, fällt die
+    """Der Arbeits-Thread schickt zehn Arten. Fehlt eine Zuordnung, fällt die
     Antwort lautlos unter den Tisch."""
     app = gui.App(tmp_path / "save", tmp_path / "runs", tmp_path / "kb.sqlite")
     app.rechner.stoppen()
@@ -128,6 +128,7 @@ def test_jede_nachrichtenart_wird_angezeigt(gui, tmp_path: Path) -> None:
             {"de": "Holz", "en": "Wood", "kind": "resource", "confidence": "localization"}]},
         "rat": {"ok": True, "text": "Nimm die Räucherei.", "fuss": "claude-opus-5"},
         "umgebung": {"fehlt": [], "namen": 2266, "mitschriften_da": 2},
+        "anmeldung": False,
         "fehler": "irgendwas ist schiefgegangen",
     }
     assert set(beispiele) == set(ALLE_ARTEN)
@@ -273,3 +274,43 @@ def test_handweg_versteckt_nichts(gui, tmp_path: Path) -> None:
 
     assert app.root.protokoll == []
     assert app.rechner.gebeten[0][1]["text"] == ["pilzfuehrer"]
+
+
+def test_ohne_anmeldung_steht_es_im_reiter_bevor_jemand_fragt(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app.rat_fuss = Wurzel()
+    app.rat_fuss.configure = lambda **kw: app.rat_fuss.protokoll.append(kw.get("text", ""))
+
+    app._anzeigen("anmeldung", False)
+    assert any("ANTHROPIC_API_KEY" in z for z in app.rat_fuss.protokoll)
+    assert any("Lage kopieren" in z for z in app.rat_fuss.protokoll)
+
+
+def test_ohne_sdk_steht_der_installationsbefehl_da(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app.rat_fuss = Wurzel()
+    app.rat_fuss.configure = lambda **kw: app.rat_fuss.protokoll.append(kw.get("text", ""))
+
+    app._anzeigen("anmeldung", None)
+    assert any("pip install anthropic" in z for z in app.rat_fuss.protokoll)
+
+
+def test_eine_vorhandene_anmeldung_schreibt_nichts_hin(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app.rat_fuss = Wurzel()
+    app.rat_fuss.configure = lambda **kw: app.rat_fuss.protokoll.append(kw.get("text", ""))
+
+    app._anzeigen("anmeldung", True)
+    assert app.rat_fuss.protokoll == [""]
+
+
+def test_eine_antwort_ueberschreibt_den_hinweis_nicht_rueckwaerts(gui, tmp_path: Path) -> None:
+    """Nach einer echten Antwort gehört dort die Fußzeile der Antwort hin,
+    nicht wieder der Anmeldehinweis des nächsten Durchlaufs."""
+    app = _vorbereitet(gui, tmp_path)
+    app.rat_fuss = Wurzel()
+    app.rat_fuss.configure = lambda **kw: app.rat_fuss.protokoll.append(kw.get("text", ""))
+
+    app._anzeigen("rat", {"ok": True, "text": "Nimm die Räucherei.", "fuss": "claude-opus-5"})
+    app._anzeigen("anmeldung", False)
+    assert app.rat_fuss.protokoll[-1] == "claude-opus-5"

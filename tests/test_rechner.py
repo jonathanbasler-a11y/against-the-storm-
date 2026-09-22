@@ -47,7 +47,8 @@ def test_ein_auftrag_legt_jede_antwort_in_die_warteschlange(tmp_path: Path) -> N
     arten = []
     while not ausgang.empty():
         arten.append(ausgang.get_nowait()[0])
-    assert arten == ["zustand", "nahrung", "ungeduld", "ketten", "umgebung"]
+    assert arten == ["zustand", "nahrung", "ungeduld", "ketten", "umgebung",
+                     "anmeldung"]
 
 
 def test_ein_fehler_bringt_den_thread_nicht_um(tmp_path: Path) -> None:
@@ -192,3 +193,14 @@ def test_der_handweg_fasst_den_bildschirm_nie_an(tmp_path: Path, monkeypatch) ->
     art, wert = ausgang.get_nowait()
     assert art == "auswahl"
     assert wert["quelle"] == "hand"
+
+
+def test_die_lage_sagt_auch_ob_eine_anmeldung_da_ist(tmp_path: Path, monkeypatch) -> None:
+    """Damit der Reiter „Rat" es sagen kann, bevor jemand fragt."""
+    monkeypatch.setattr(rechner.berater, "anmeldung_gefunden", lambda: False)
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(tmp_path / "save", tmp_path / "runs",
+                        tmp_path / "kb.sqlite", ausgang)
+    r._ausfuehren(rechner.Auftrag("lage"))
+    arten = {art: wert for art, wert in list(ausgang.queue)}
+    assert arten["anmeldung"] is False

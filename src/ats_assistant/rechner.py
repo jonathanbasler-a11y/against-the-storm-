@@ -144,6 +144,9 @@ class Rechner(threading.Thread):
             self.ausgang.put(("ungeduld", tools_api.impatience_forecast(self.runs_dir)))
             self.ausgang.put(("ketten", tools_api.food_advice(self.runs_dir, self.db)))
             self.ausgang.put(("umgebung", umgebungslage(self.save_dir, self.runs_dir, self.db)))
+            # Ob der Reiter "Rat" ueberhaupt fragen kann -- gepruft, bevor
+            # jemand fragt. Kostet keine Anfrage, nur einen Blick.
+            self.ausgang.put(("anmeldung", berater.anmeldung_gefunden()))
         elif auftrag.art == "auswahl":
             self.ausgang.put(("auswahl", tools_api.read_choice(
                 db=self.db, arten=auftrag.daten.get("arten", ("effect",)),

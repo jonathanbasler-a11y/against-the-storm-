@@ -45,6 +45,22 @@ log = logging.getLogger(__name__)
 # --------------------------------------------------------------------------
 
 
+def _anmeldehinweis(gefunden: bool | None) -> str:
+    """Was im Reiter „Rat" steht, bevor jemand fragt.
+
+    Am Spielrechner kam die Auskunft erst nach „Fragen" -- eine Runde zu
+    spät. Sie lässt sich vorher haben, ohne eine einzige Anfrage.
+    """
+    if gefunden is None:
+        return ("Für Antworten hier: pip install anthropic. "
+                "Alles andere im Fenster läuft ohne.")
+    if gefunden is False:
+        return ("Keine Anmeldung gefunden – ANTHROPIC_API_KEY setzen "
+                "(`setx ANTHROPIC_API_KEY ...`, danach neues Fenster), oder "
+                "„Lage kopieren“ und in Claude einfügen.")
+    return ""
+
+
 def _herkunft(a: dict) -> str:
     """Welcher Weg diese Zeilen geliefert hat.
 
@@ -303,7 +319,13 @@ class App:
             self._zeige_auswahl(wert)
         elif art == "nachschlag":
             self._zeige_nachschlag(wert)
+        elif art == "anmeldung":
+            # Nur solange noch nichts Besseres dasteht: nach einer Antwort
+            # gehoert dort deren Fusszeile hin, nicht wieder ein Hinweis.
+            if not getattr(self, "_rat_gefragt", False):
+                self.rat_fuss.configure(text=_anmeldehinweis(wert))
         elif art == "rat":
+            self._rat_gefragt = True
             self._schreiben(self.rat_text, wert.get("text", ""))
             if wert.get("ok"):
                 fuss = wert.get("fuss", "")

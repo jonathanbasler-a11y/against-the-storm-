@@ -194,6 +194,31 @@ def _fehlerklassen():
             anthropic.APIConnectionError, anthropic.APIStatusError)
 
 
+def anmeldung_gefunden() -> bool | None:
+    """Ob eine Anmeldung bereitliegt -- ohne eine einzige Anfrage zu senden.
+
+    `True` ja, `False` nein, `None` nicht feststellbar (kein SDK da).
+    Ungeprueftes wird nicht behauptet: ohne das Paket laesst es sich nicht
+    sagen, und `False` waere dann eine Behauptung.
+
+    Gemessen in anthropic 1.7.0: das SDK zieht die Anmeldung aus drei
+    Quellen -- `api_key`, `auth_token` und dem Zwischenspeicher aus
+    `ant auth login`. Genau die drei prueft es beim Bauen der Kopfzeilen.
+    Hier dieselbe Frage, nur ohne Netz -- damit das Fenster es sagen kann,
+    bevor jemand auf "Fragen" drueckt.
+    """
+    try:
+        import anthropic
+    except ImportError:
+        return None
+    try:
+        client = anthropic.Anthropic()
+    except Exception:
+        return False
+    return any(getattr(client, name, None) is not None
+               for name in ("api_key", "auth_token", "_token_cache"))
+
+
 def _client():
     """Der SDK loest die Anmeldung selbst auf -- Variable, Token oder Profil."""
     try:
