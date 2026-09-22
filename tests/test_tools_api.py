@@ -248,3 +248,25 @@ def test_jedes_werkzeug_hat_ein_schema(tmp_path: Path) -> None:
     for w in werkzeuge(tmp_path, tmp_path, tmp_path / "kb.sqlite"):
         assert w["inputSchema"]["type"] == "object"
         assert w["description"]
+
+
+def test_get_state_sagt_wenn_kein_spielstand_da_ist(tmp_path: Path) -> None:
+    """Ein leerer Zustand sieht aus wie eine Siedlung ohne Bevölkerung.
+
+    `read_state` wirft absichtlich nicht, wenn Dateien fehlen -- ein halbes
+    Bündel ist besser als ein Absturz. Beim leeren Ordner ist das aber kein
+    halbes Bündel, sondern gar keins, und das muss dastehen.
+    """
+    out = tools_api.get_state(tmp_path / "leer", tmp_path / "runs",
+                              auf_ruhe_warten=False)
+    assert out["verfuegbar"] is False
+    assert "kein Spielstand" in out["grund"]
+
+
+def test_get_state_meldet_ein_halbes_buendel(tmp_path: Path) -> None:
+    save_dir = buendel(tmp_path / "save")
+    (save_dir / "MetaSave.save").unlink()
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    assert out["verfuegbar"] is True            # Save.save reicht fuer den Kern
+    assert out["fehlende_dateien"] == ["MetaSave.save"]
+    assert out["jahr"] == 13
