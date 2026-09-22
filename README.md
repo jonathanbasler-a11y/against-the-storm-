@@ -61,3 +61,25 @@ Selbsttest ohne echte Spielstände:
 python tests/make_synthetic_saves.py /tmp/fake-saves
 python tools/phase0_diagnose.py inspect --dir /tmp/fake-saves
 ```
+
+## Tests
+
+Das Projekt verlangt **Python 3.12** (`requires-python` in `pyproject.toml`).
+`tests/test_laufzeit.py` besteht darauf: läuft die Suite auf einer älteren
+Version, wird **dieser** Test rot statt alle anderen grün zu schweigen.
+
+```
+python -m pytest tests/ -q                 # ohne Anzeige: Fenstertests werden übersprungen
+xvfb-run -a python -m pytest tests/ -q     # unter Linux mit echtem Tk
+```
+
+Die Fenstertests gibt es zweimal, mit Absicht:
+
+| | |
+|---|---|
+| `test_gui.py` | mit eingesetztem tkinter — läuft überall, auch ohne Anzeige und ohne tcl/tk. Prüft die Verdrahtung: kommt jede Nachrichtenart an, wirft keine |
+| `test_gui_echt.py` | mit echtem Tk unter `xvfb-run`. Prüft, was ein Stub nicht kann: ob `ttk` jede Option annimmt, ob die Rasteraufteilung aufgeht, ob nach dem Anzeigen auch etwas dasteht |
+
+Der Stub-Test räumt am Ende nicht nur aus `sys.modules` auf, sondern auch das
+Attribut am Paket — sonst prüfte die echte Fassung in Wahrheit dieselben
+Attrappen und wäre grün, ohne etwas zu zeigen. Genau das war einmal der Fall.

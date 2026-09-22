@@ -305,15 +305,18 @@ def food_advice(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
                 "gebaeude_de": v.gebaeude_de,
                 "produkt": v.produkt,
                 "produkt_de": v.produkt_de,
-                "einsatz": [{"menge": z.menge * v.zyklen, "ware": z.ware}
-                            for z in v.zutaten],
+                # Deutsch nach aussen, englische ID daneben -- so verlangt
+                # es SPEC.md, und dafuer wurden die 2266 Namen belegt.
+                "einsatz": [{"menge": z.menge * v.zyklen, "ware": z.name,
+                             "ware_en": z.ware} for z in v.zutaten],
                 "durchlaeufe": round(v.zyklen, 1),
                 "saettigung_rein": round(v.saettigung_rein, 1),
                 "saettigung_raus": round(v.saettigung_raus, 1),
                 "gewinn": round(v.gewinn, 1),
                 "faktor": round(v.faktor, 2) if v.faktor else None,
                 "sekunden": v.dauer,
-                "engpass": v.engpass,
+                "engpass": v.engpass_de or v.engpass,
+                "engpass_en": v.engpass,
                 "reichweite_plus_sekunden": (round(v.reichweite_plus)
                                              if v.reichweite_plus else None),
             }

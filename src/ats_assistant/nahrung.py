@@ -28,6 +28,11 @@ class Zutat:
     menge: float
     ware: str
     bestand: float
+    de: str | None = None        # der Name, den die Oberflaeche anzeigt
+
+    @property
+    def name(self) -> str:
+        return self.de or self.ware
 
     @property
     def zyklen(self) -> float:
@@ -50,6 +55,7 @@ class Vorschlag:
 
     gebaeude_de: str | None = None
     produkt_de: str | None = None
+    engpass_de: str | None = None
     verbrauch: float | None = None   # Saettigung je Spielzeitsekunde
     # Was die Gebaeudeseite behauptet hat. Weicht es von `gebaeude` ab, hat
     # die Produktionstabelle widersprochen -- und die gilt, denn sie fuehrt
@@ -86,7 +92,7 @@ class Vorschlag:
         name = self.gebaeude_de or self.gebaeude or "?"
         produkt = self.produkt_de or self.produkt
         eingesetzt = ", ".join(
-            f"{z.menge * self.zyklen:.0f} {z.ware}" for z in self.zutaten)
+            f"{z.menge * self.zyklen:.0f} {z.name}" for z in self.zutaten)
         text = (f"{name}: {eingesetzt} werden zu {produkt}, "
                 f"{self.gewinn:.0f} Sättigung mehr")
         if self.faktor:
@@ -209,7 +215,8 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
                            key=lambda z: (saettigung.get(z["ware"], 0.0) * z["menge"],
                                           -lager.get(z["ware"], 0.0)))
             zutaten.append(Zutat(float(gewaehlt["menge"]), gewaehlt["ware"],
-                                 lager.get(gewaehlt["ware"], 0.0)))
+                                 lager.get(gewaehlt["ware"], 0.0),
+                                 namen.get(gewaehlt["ware"])))
             rein_je_zyklus += saettigung.get(gewaehlt["ware"], 0.0) * gewaehlt["menge"]
         if not vollstaendig or not zutaten:
             continue
@@ -234,7 +241,8 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
             sterne=grad if grad is not None else r["stars"],
             sekunden=r["seconds"], engpass=engpass,
             gebaeude_de=namen.get(gebaeude or ""),
-            produkt_de=namen.get(r["product"]), verbrauch=verbrauch,
+            produkt_de=namen.get(r["product"]), engpass_de=namen.get(engpass),
+            verbrauch=verbrauch,
             gebaeude_laut_seite=(r["building"]
                                  if r["building"] and r["building"] != gebaeude
                                  else None),
@@ -320,7 +328,7 @@ def rat(conn: sqlite3.Connection, bestand: dict[str, float],
         f"Roh verzehrt sättigt der Einsatz {bester.saettigung_rein:.0f}, "
         f"verarbeitet {bester.saettigung_raus:.0f}"
         + (f" — Faktor {bester.faktor:.1f}" if bester.faktor else "")
-        + f"; {bester.engpass} geht zuerst aus.")
+        + f"; {bester.engpass_de or bester.engpass} geht zuerst aus.")
     if reichweite_sekunden is not None and bester.reichweite_plus:
         begruendung += (f" Das verschiebt das Ende von {reichweite_sekunden / 60:.0f} "
                         f"auf {(reichweite_sekunden + bester.reichweite_plus) / 60:.0f} Minuten.")
@@ -338,6 +346,6 @@ def rat(conn: sqlite3.Connection, bestand: dict[str, float],
         alternative = (
             f"{zweiter.gebaeude_de or zweiter.gebaeude} bringt "
             f"{zweiter.gewinn:.0f} Sättigung — besser, wenn "
-            f"{bester.engpass} anderswo gebraucht wird.")
+            f"{bester.engpass_de or bester.engpass} anderswo gebraucht wird.")
 
     return Rat(empfehlung, begruendung, alternative, liste)
