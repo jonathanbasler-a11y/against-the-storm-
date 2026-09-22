@@ -182,3 +182,94 @@ def test_der_stub_laeuft_nicht_in_andere_tests_aus() -> None:
 
     assert "ats_assistant.gui" not in sys.modules
     assert not hasattr(ats_assistant, "gui")
+
+
+# --------------------------------------------------------------------------
+# Der Bildweg darf nicht das eigene Fenster fotografieren
+#
+# Am Spielrechner lag der Assistent über dem Auswahldialog. `aufnehmen()`
+# nimmt den ganzen Bildschirm -- ein Stück weiter rechts, und die
+# Texterkennung liest sauber die eigene Oberfläche statt der Karten.
+# --------------------------------------------------------------------------
+
+
+class Wurzel(Egal):
+    """Ein Fenster, das mitschreibt, was mit ihm geschieht."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.protokoll: list[str] = []
+        self.auftraege: list = []
+
+    def withdraw(self):
+        self.protokoll.append("withdraw")
+
+    def deiconify(self):
+        self.protokoll.append("deiconify")
+
+    def after(self, ms, fn=None):
+        if fn is not None:
+            self.auftraege.append((ms, fn))
+        return f"nach-{len(self.auftraege)}"
+
+    def after_cancel(self, kennung):
+        self.protokoll.append(f"abbruch {kennung}")
+
+
+class Rechner:
+    def __init__(self):
+        self.gebeten: list = []
+
+    def bitte(self, art, **daten):
+        self.gebeten.append((art, daten))
+
+    def stoppen(self):
+        pass
+
+
+def _vorbereitet(gui, tmp_path: Path):
+    app = gui.App(tmp_path / "save", tmp_path / "runs", tmp_path / "kb.sqlite")
+    app.rechner.stoppen()
+    app.root = Wurzel()
+    app.rechner = Rechner()
+    return app
+
+
+def test_bildweg_versteckt_das_fenster(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app._auswahl_lesen()
+
+    assert "withdraw" in app.root.protokoll
+    # Der Auftrag geht erst los, wenn das Fenster weg ist -- nicht sofort.
+    assert app.rechner.gebeten == []
+    verzoegert = [fn for _, fn in app.root.auftraege]
+    assert verzoegert, "kein verzögerter Auftrag"
+    for fn in verzoegert:
+        fn()
+    assert [a for a, _ in app.rechner.gebeten] == ["auswahl"]
+
+
+def test_das_ergebnis_holt_das_fenster_zurueck(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app._auswahl_lesen()
+    app._anzeigen("auswahl", {"verfuegbar": False, "quelle": "/tmp/x.png",
+                              "gelesene_zeilen": 0, "grund": "Nichts erkannt."})
+    assert "deiconify" in app.root.protokoll
+
+
+def test_auch_ein_fehler_holt_das_fenster_zurueck(gui, tmp_path: Path) -> None:
+    """Ein Fenster, das nach einem Fehler unsichtbar bleibt, ist schlimmer
+    als eines, das im Bild steht."""
+    app = _vorbereitet(gui, tmp_path)
+    app._auswahl_lesen()
+    app._anzeigen("fehler", "Aufnahme gescheitert")
+    assert "deiconify" in app.root.protokoll
+
+
+def test_handweg_versteckt_nichts(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app.hand = Variable(value="pilzfuehrer")
+    app._auswahl_lesen(von_hand=True)
+
+    assert app.root.protokoll == []
+    assert app.rechner.gebeten[0][1]["text"] == ["pilzfuehrer"]

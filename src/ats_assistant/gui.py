@@ -31,6 +31,12 @@ from .orte import finde_spielordner
 from .rechner import (ABHOLEN_MS, Rechner, alter as _alter,
                       feindseligkeit as _feindseligkeit, minuten as _minuten)
 
+# Wie lange das Fenster weg ist, bevor der Bildschirm aufgenommen wird --
+# lang genug, dass Windows es wirklich aus dem Bild genommen hat.
+VERSTECKT_MS = 250
+# Und wann es spaetestens zurueckkommt, auch wenn keine Antwort kaeme.
+SICHERUNG_MS = 8000
+
 log = logging.getLogger(__name__)
 
 
@@ -197,14 +203,40 @@ class App:
     # -- Ereignisse --------------------------------------------------------
 
     def _auswahl_lesen(self, von_hand: bool = False) -> None:
-        text = None
         if von_hand:
             roh = self.hand.get().strip()
             text = [t.strip() for t in roh.split(",") if t.strip()] or None
             if not text:
                 return
+            self._schreiben(self.auswahl_text, "wird abgeglichen …")
+            self.rechner.bitte("auswahl", arten=(self.art.get(),), text=text)
+            return
+
+        # Bildweg. `aufnehmen()` nimmt den ganzen Bildschirm -- mit diesem
+        # Fenster darauf. Am Spielrechner lag es über dem Auswahldialog; ein
+        # Stück weiter rechts, und die Texterkennung läse sauber die eigene
+        # Oberfläche statt der Karten. Also geht es kurz aus dem Weg.
         self._schreiben(self.auswahl_text, "wird gelesen …")
-        self.rechner.bitte("auswahl", arten=(self.art.get(),), text=text)
+        self.root.withdraw()
+        self._sicherung = self.root.after(SICHERUNG_MS, self._fenster_zurueck)
+        self.root.after(VERSTECKT_MS, lambda: self.rechner.bitte(
+            "auswahl", arten=(self.art.get(),), text=None))
+
+    def _fenster_zurueck(self) -> None:
+        """Zurückholen, was der Bildweg versteckt hat -- auch nach einem Fehler.
+
+        Ein Fenster, das unsichtbar bleibt, weil die Aufnahme scheiterte,
+        wäre schlimmer als eines, das im Bild steht. Deshalb hängt das
+        Zurückholen an jedem Ausgang: am Ergebnis, an der Fehlermeldung und
+        an einer Zeitschranke.
+        """
+        kennung, self._sicherung = getattr(self, "_sicherung", None), None
+        if kennung is not None:
+            try:
+                self.root.after_cancel(kennung)
+            except Exception:          # eine abgelaufene Kennung ist kein Fehler
+                pass
+        self.root.deiconify()
 
     def _rat_holen(self) -> None:
         self._schreiben(self.rat_text, "wird gefragt …")
@@ -267,6 +299,7 @@ class App:
             self._zeige_ketten(wert)
         elif art == "auswahl":
             self.auswahl = wert
+            self._fenster_zurueck()
             self._zeige_auswahl(wert)
         elif art == "nachschlag":
             self._zeige_nachschlag(wert)
@@ -295,6 +328,7 @@ class App:
             self.status.configure(text=text)
             self.status_alles = "\n".join(offen)
         elif art == "fehler":
+            self._fenster_zurueck()
             self.status.configure(text=f"Fehler: {wert}")
 
     def _zeige_zustand(self, z: dict) -> None:

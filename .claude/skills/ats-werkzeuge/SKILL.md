@@ -131,7 +131,15 @@ beieinander, kommt **keine** Auskunft, sondern die Kandidatenliste — eine
 unentschiedene Lesung ist keine Empfehlung.
 
 Fehlt die Erkennung unter Windows: `pip install winsdk` nutzt die, die in
-Windows schon steckt — lokal, ohne Konto, ohne Netz.
+Windows schon steckt — lokal, ohne Konto, ohne Netz. **Ab Python 3.13** gibt es
+`winsdk` nicht mehr (Wheels bis 3.12); dort die Nachfolgepakete
+`winrt-Windows.Media.Ocr`, `-Graphics.Imaging`, `-Storage`, `-Globalization`.
+`screen._ocr_herkunft()` nimmt, was da ist; `screen.verfuegbar()["rat"]` nennt
+den Befehl, der zur laufenden Fassung passt.
+
+Beim Bildweg versteckt sich das Fenster für einen Augenblick selbst: die
+Aufnahme nimmt den ganzen Bildschirm, und ein Assistent über den Karten wäre
+das, was die Texterkennung dann liest.
 
 ## Prüfen, ob noch alles hält
 

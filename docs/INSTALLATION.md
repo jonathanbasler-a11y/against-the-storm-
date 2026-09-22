@@ -52,9 +52,19 @@ python -m pip install anthropic     # für den Reiter "Rat"
 python -m pip install winsdk        # für "Bildschirm lesen" im Reiter "Auswahl"
 ```
 
-`winsdk` nutzt die Texterkennung, die in Windows schon eingebaut ist — lokal,
+Beide nutzen die Texterkennung, die in Windows schon eingebaut ist — lokal,
 ohne Konto, ohne Netz. Ohne sie bleibt der Handweg: Namen eintippen und
 „Abgleichen" drücken.
+
+**Auf Python 3.13 und neuer** gibt es `winsdk` nicht mehr (letzte Fassung
+1.0.0b10 von 2023, Wheels bis 3.12). Dort die aufgeteilten Nachfolgepakete:
+
+```powershell
+python -m pip install winrt-Windows.Media.Ocr winrt-Windows.Graphics.Imaging winrt-Windows.Storage winrt-Windows.Globalization
+```
+
+Der Assistent nimmt, was da ist, und nennt im Reiter „Auswahl" den Befehl, der
+zur laufenden Python-Fassung passt.
 
 ## 4. Die Wissensbasis bauen
 
