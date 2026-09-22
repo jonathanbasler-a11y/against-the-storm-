@@ -361,6 +361,13 @@ class App:
         self.kopf.configure(
             text=f"Jahr {z.get('jahr', '?')} · {z.get('biom') or '?'} · "
                  f"Prestige {z.get('prestige', '?')} · {_alter(z.get('zeitpunkt'))}")
+        # Ein stiller Ausfall ist schlimmer als ein lauter: `lager: {}` sah
+        # aus wie ein leeres Lager und war ein nicht gefundenes Feld.
+        fehlend = z.get("nicht_gefunden") or []
+        if fehlend:
+            self.warnung.configure(
+                text="Im Spielstand nicht gefunden: " + ", ".join(fehlend[:6])
+                     + " – was darauf rechnet, rechnet auf nichts.")
         self.felder["bevoelkerung"].configure(text=str(z.get("bevoelkerung") or "–"))
         self.felder["feindseligkeit"].configure(
             text=_feindseligkeit(z.get("feindseligkeit")))

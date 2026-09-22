@@ -284,3 +284,16 @@ def test_ohne_sdk_laesst_es_sich_nicht_sagen(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "anthropic", None)
     monkeypatch.setattr(builtins, "__import__", ohne)
     assert berater.anmeldung_gefunden() is None
+
+
+def test_nicht_gefundene_felder_gehen_mit(tmp_path: Path) -> None:
+    """`lager: {}` heißt entweder leer oder nicht gefunden.
+
+    Am 22.09.2026 kam genau das aus einem Spielstand mit vollem Lagerhaus.
+    Ein leeres Lager als Tatsache weiterzugeben, wäre eine Behauptung über
+    etwas Ungeprüftes — die Liste der fehlenden Felder gehört daneben.
+    """
+    auszug = berater.kontext(zustand={
+        "jahr": 1, "biom": "Royal Woodlands", "lager": {}, "gebaeude": 0,
+        "nicht_gefunden": ["storage", "buildings"]})
+    assert auszug["siedlung"]["nicht_gefunden"] == ["storage", "buildings"]
