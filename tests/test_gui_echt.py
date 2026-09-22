@@ -207,3 +207,18 @@ def test_der_handweg_weist_nicht_auf_sich_selbst(app) -> None:
     app._anzeigen("auswahl", {"verfuegbar": False, "quelle": "hand",
                               "gelesene_zeilen": 1, "grund": "Nichts getroffen."})
     assert "Abgleichen" not in _auswahlfeld(app)
+
+
+def test_das_fenster_geht_wirklich_weg_und_kommt_wieder(app) -> None:
+    """Am echten Tk, nicht am Stub: `withdraw` und `deiconify` greifen.
+
+    Der Bildweg nimmt den ganzen Bildschirm auf. Läge dieses Fenster dabei
+    über den Karten, läse die Texterkennung die eigene Oberfläche.
+    """
+    app._auswahl_lesen()
+    app.root.update_idletasks()
+    assert app.root.state() == "withdrawn"
+
+    app._fenster_zurueck()
+    app.root.update_idletasks()
+    assert app.root.state() == "normal"

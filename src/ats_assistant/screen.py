@@ -95,6 +95,39 @@ def _hat(modul: str) -> bool:
         return False
 
 
+# Die Texterkennung von Windows gibt es unter zwei Namen. Gemessen auf PyPI
+# am 22.09.2026, nicht erinnert:
+#
+#   winsdk 1.0.0b10 (2023)        Python 3.8-3.12, ein Paket
+#   winrt-Windows.* 3.2.1         Python 3.9-3.13, aufgeteilt
+#
+# Die Modulpfade sind bis auf den Stamm gleich. Wer auf 3.13 aktualisiert,
+# verliert `winsdk` -- ohne etwas geaendert zu haben. Also beide.
+OCR_STAEMME = ("winsdk", "winrt")
+
+WINRT_PAKETE = ("winrt-Windows.Media.Ocr", "winrt-Windows.Graphics.Imaging",
+                "winrt-Windows.Storage", "winrt-Windows.Globalization")
+
+
+def _ocr_herkunft() -> str | None:
+    """Welcher der beiden Namensraeume da ist -- das aeltere zuerst.
+
+    `winsdk` gewinnt bei Gleichstand, weil es das getestete ist; `winrt` ist
+    der Weg nach vorn und der einzige ab 3.13.
+    """
+    for stamm in OCR_STAEMME:
+        if _hat(stamm):
+            return stamm
+    return None
+
+
+def _ocr_befehl() -> str:
+    """Der Installationsbefehl, der auf *dieser* Python-Fassung etwas findet."""
+    if sys.version_info >= (3, 13):
+        return "pip install " + " ".join(WINRT_PAKETE)
+    return "pip install winsdk"
+
+
 def verfuegbar() -> dict:
     """Welche Wege offenstehen -- und welche fehlen, mit dem Befehl dazu.
 
@@ -110,7 +143,9 @@ def verfuegbar() -> dict:
             "gdi": windows,             # ctypes gegen die Windows-API
         },
         "erkennung": {
+            "herkunft": _ocr_herkunft() if windows else None,
             "winsdk": windows and _hat("winsdk"),
+            "winrt": windows and _hat("winrt"),
             "pytesseract": _hat("pytesseract") and bool(shutil.which("tesseract")),
         },
         "rat": _rat(windows),
@@ -118,8 +153,8 @@ def verfuegbar() -> dict:
 
 
 def _rat(windows: bool) -> str:
-    if windows and not _hat("winsdk"):
-        return ("Fuer die Texterkennung: pip install winsdk. Das nutzt die "
+    if windows and _ocr_herkunft() is None:
+        return (f"Fuer die Texterkennung: {_ocr_befehl()}. Das nutzt die "
                 "Texterkennung, die in Windows schon eingebaut ist -- lokal, "
                 "ohne Konto, ohne Netz.")
     if not windows and not _hat("pytesseract"):
@@ -191,23 +226,34 @@ def erkenne(bild: Path | str, sprache: str = "de") -> list[Zeile]:
     bild = Path(bild)
     if not bild.exists():
         raise FileNotFoundError(bild)
-    if sys.platform.startswith("win") and _hat("winsdk"):
-        return _erkenne_windows(bild, sprache)
+    stamm = _ocr_herkunft() if sys.platform.startswith("win") else None
+    if stamm:
+        return _erkenne_windows(bild, sprache, stamm)
     if _hat("pytesseract") and shutil.which("tesseract"):
         return _erkenne_tesseract(bild, sprache)
     raise RuntimeError(_rat(sys.platform.startswith("win")))
 
 
-def _erkenne_windows(bild: Path, sprache: str) -> list[Zeile]:
+def _erkenne_windows(bild: Path, sprache: str, stamm: str = "winsdk") -> list[Zeile]:
     """Die Texterkennung, die in Windows eingebaut ist.
 
     Lokal, ohne Konto, ohne Netz -- und damit das einzige, was zum
     Leitprinzip der Spec passt, ohne ein weiteres Programm zu verlangen.
+
+    `stamm` ist `winsdk` oder `winrt`. Die Modulpfade dahinter sind gleich;
+    nur der Stamm wechselt, deshalb `import_module` statt vier festen
+    `from`-Zeilen.
     """
-    from winsdk.windows.globalization import Language            # type: ignore
-    from winsdk.windows.graphics.imaging import BitmapDecoder    # type: ignore
-    from winsdk.windows.media.ocr import OcrEngine               # type: ignore
-    from winsdk.windows.storage import FileAccessMode, StorageFile  # type: ignore
+    from importlib import import_module
+
+    def hol(pfad: str, *namen: str):
+        modul = import_module(f"{stamm}.windows.{pfad}")
+        return [getattr(modul, n) for n in namen]
+
+    (Language,) = hol("globalization", "Language")
+    (BitmapDecoder,) = hol("graphics.imaging", "BitmapDecoder")
+    (OcrEngine,) = hol("media.ocr", "OcrEngine")
+    FileAccessMode, StorageFile = hol("storage", "FileAccessMode", "StorageFile")
 
     async def lauf() -> list[Zeile]:
         datei = await StorageFile.get_file_from_path_async(str(bild.resolve()))
