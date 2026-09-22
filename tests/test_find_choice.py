@@ -102,3 +102,29 @@ def test_deutsche_namen_kommen_aus_der_wissensbasis(tmp_path: Path, capsys) -> N
     ausgabe = capsys.readouterr().out
     assert "Beanery = Imbiss" in ausgabe
     assert "Cellar = Weinkeller" in ausgabe
+
+
+def test_find_zeigt_jede_stelle_mit_dem_namen(tmp_path: Path, capsys) -> None:
+    """Die Gegenrichtung zu `scan`: nicht die Form suchen, sondern den Namen.
+
+    `scan` sucht eine Gestalt und findet nichts, wenn die Gestalt anders
+    ist -- und sagt dann nicht, warum. `find` nimmt einen Namen, von dem
+    feststeht, dass er zur Wahl stand, und zeigt jede Fundstelle.
+    """
+    daten = zustand([], [])
+    daten["reputationRewards"] = {
+        "pending": {"slot1": {"effect": "Fungal Guide", "taken": False}},
+    }
+    pfad = schreibe(tmp_path / "Save.save", daten)
+    assert find_choice.main(["find", "--save", str(pfad), "--term", "Fungal Guide",
+                             "--db", str(tmp_path / "fehlt.sqlite")]) == 0
+    ausgabe = capsys.readouterr().out
+    assert "reputationRewards.pending.slot1.effect" in ausgabe
+
+
+def test_find_sagt_klar_wenn_der_name_gar_nicht_vorkommt(tmp_path: Path, capsys) -> None:
+    pfad = schreibe(tmp_path / "Save.save", zustand(["Beanery"], []))
+    assert find_choice.main(["find", "--save", str(pfad), "--term", "Fungal Guide",
+                             "--db", str(tmp_path / "fehlt.sqlite")]) == 0
+    ausgabe = capsys.readouterr().out
+    assert "Phase 3 braucht" in ausgabe        # die andere Antwort, aber eine

@@ -254,6 +254,111 @@ def cmd_diff(args) -> int:
     return 0
 
 
+def wege(obj, pfad: str = "", tiefe: int = 0, grenze: int = 30):
+    """Jeden Pfad im Baum mit seinem Wert. Ohne Filter, ohne Tiefenbeschraenkung."""
+    if tiefe > grenze:
+        return
+    if isinstance(obj, dict):
+        for schluessel, wert in obj.items():
+            unten = f"{pfad}.{schluessel}" if pfad else str(schluessel)
+            yield unten, wert
+            yield from wege(wert, unten, tiefe + 1, grenze)
+    elif isinstance(obj, list):
+        for i, wert in enumerate(obj):
+            unten = f"{pfad}[{i}]"
+            yield unten, wert
+            yield from wege(wert, unten, tiefe + 1, grenze)
+
+
+def skizze(wert, breite: int = 5) -> str:
+    """Ein Wert in einer Zeile -- genug, um ihn wiederzuerkennen."""
+    if isinstance(wert, dict):
+        teile = []
+        for k, v in list(wert.items())[:breite]:
+            kurz = v if isinstance(v, (str, int, float, bool, type(None))) else type(v).__name__
+            teile.append(f"{k}={kurz}")
+        rest = f", +{len(wert) - breite}" if len(wert) > breite else ""
+        return "{" + ", ".join(str(t)[:40] for t in teile) + rest + "}"
+    if isinstance(wert, list):
+        return f"[{len(wert)} Eintraege] " + ", ".join(str(w)[:30] for w in wert[:3])
+    return str(wert)[:120]
+
+
+def cmd_find(args) -> int:
+    """Gezielt nach Namen suchen, die nachweislich auf dem Bildschirm standen.
+
+    Die Heuristik in `scan` sucht eine Form. Wenn die Form nicht stimmt,
+    findet sie nichts und man weiss nicht, warum. Diese Suche geht den
+    anderen Weg: sie nimmt einen Namen, von dem feststeht, dass er gerade
+    zur Wahl stand, und zeigt jede Stelle im Spielstand, an der er
+    vorkommt. Daraus faellt die Form heraus, statt sie zu raten.
+
+    Deutsche Namen werden ueber die Wissensbasis in die englische Seite
+    und den Lokalisierungsschluessel uebersetzt -- ein Spielstand fuehrt
+    englische Bezeichner.
+    """
+    pfad = Path(args.save)
+    if not pfad.exists():
+        print(f"Kein Spielstand unter {pfad}")
+        return 1
+
+    begriffe: list[str] = []
+    for roh in args.term:
+        begriffe.append(roh)
+        if args.db and Path(args.db).exists():
+            conn = kb.connect(args.db)
+            try:
+                for treffer in kb.lookup(conn, roh):
+                    for zusatz in (treffer.get("en"), treffer.get("loc_key")):
+                        if not zusatz:
+                            continue
+                        begriffe.append(zusatz)
+                        # Aus "Reward_MushroomSpecialization_Name" wird der
+                        # Kern: so heisst der Bezeichner im Spielstand oft.
+                        teile = zusatz.split("_")
+                        if len(teile) >= 3:
+                            begriffe.append("_".join(teile[1:-1]))
+            finally:
+                conn.close()
+    begriffe = list(dict.fromkeys(b for b in begriffe if b and len(b) > 2))
+    print(f"Spielstand: {pfad}  ({pfad.stat().st_size / 1e6:.1f} MB)")
+    print(f"Gesucht wird nach: {', '.join(begriffe)}\n")
+
+    roh = pfad.read_text(encoding="utf-8", errors="replace")
+    vorhanden = [b for b in begriffe if b.lower() in roh.lower()]
+    if not vorhanden:
+        print("Keiner dieser Namen steht im Spielstand -- auch nicht als Text.")
+        print("Dann fuehrt das Spiel die Auswahl nicht mit, und Phase 3 braucht")
+        print("den Bildschirm. Das ist die Antwort, nur die andere.")
+        return 0
+    print(f"Als Text vorhanden: {', '.join(vorhanden)}\n")
+
+    daten = lade(pfad)
+    treffer = 0
+    for ort, wert in wege(daten):
+        if isinstance(wert, (dict, list)):
+            continue
+        text = str(wert)
+        if any(b.lower() in text.lower() for b in vorhanden):
+            print(f"  {ort}")
+            print(f"      = {text[:140]}")
+            treffer += 1
+            if treffer >= args.zeigen:
+                print(f"\n  ... abgebrochen nach {args.zeigen} Fundstellen.")
+                break
+    # Auch Schluesselnamen koennen den Begriff tragen.
+    for ort, wert in wege(daten):
+        if any(b.lower() in ort.lower() for b in vorhanden):
+            print(f"  (als Schluessel) {ort}")
+            print(f"      {skizze(wert)}")
+            treffer += 1
+            break
+    if not treffer:
+        print("Im Text vorhanden, aber an keiner Stelle als eigener Wert --")
+        print("vermutlich in einem laengeren Text, nicht als Bezeichner.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -273,6 +378,14 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--db", default="kb.sqlite")
     s.add_argument("--zeigen", type=int, default=10)
     s.set_defaults(func=cmd_diff)
+
+    s = sub.add_parser("find", help="gezielt nach bekannten Namen im Spielstand suchen")
+    s.add_argument("--save", required=True)
+    s.add_argument("--term", nargs="+", required=True,
+                   help="Namen, die gerade zur Wahl standen -- deutsch oder englisch")
+    s.add_argument("--db", default="kb.sqlite")
+    s.add_argument("--zeigen", type=int, default=20)
+    s.set_defaults(func=cmd_find)
 
     args = ap.parse_args(argv)
     return args.func(args)
