@@ -78,11 +78,20 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
 
 
 def read_choice() -> dict:
-    """Auswahlbildschirm -- kommt aus Phase 3 und ist noch nicht gebaut."""
+    """Auswahlbildschirm -- noch nicht gebaut, und die Frage ist offen.
+
+    Die Spec sieht dafuer Bildschirmauslesung vor. Ob es die braucht, ist
+    aber nicht geprueft: das Spiel muss die angebotenen Grundsteine
+    irgendwo im Zustand halten, sonst ueberstuende eine offene Auswahl
+    kein Laden. `tools/find_choice.py` beantwortet das an einem echten
+    Spielstand, statt es zu vermuten.
+    """
     return {
         "verfuegbar": False,
-        "grund": ("Auswahlbildschirme stehen nicht im Spielstand. Sie kommen aus "
-                  "Phase 3 (Bildschirmauslesung), die noch nicht gebaut ist."),
+        "grund": ("Noch nicht gebaut. Ob der Spielstand die Auswahl mitfuehrt, "
+                  "klaert `python tools/find_choice.py scan --save <Save.save>` "
+                  "bei offenem Auswahlbildschirm -- erst danach steht fest, ob "
+                  "Phase 3 Bildschirmauslesung braucht."),
     }
 
 

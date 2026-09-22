@@ -153,8 +153,10 @@ def test_query_kb_sagt_wenn_nichts_da_ist(tmp_path: Path) -> None:
 
 
 def test_read_choice_sagt_klar_dass_phase_3_fehlt() -> None:
+    """Und nennt den Weg, auf dem sich klaeren laesst, was Phase 3 braucht."""
     out = tools_api.read_choice()
     assert out["verfuegbar"] is False and "Phase 3" in out["grund"]
+    assert "find_choice.py" in out["grund"]
 
 
 def test_werkzeugliste_entspricht_der_spec(tmp_path: Path) -> None:
