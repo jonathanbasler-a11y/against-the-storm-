@@ -14,9 +14,12 @@ dependencies = [
 ats-mcp = "ats_assistant.mcp_server:main"
 ats-watch = "ats_assistant.watcher:main"
 ats-lage = "ats_assistant.cli:main"
+ats-gui = "ats_assistant.gui:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "anthropic>=1.0"]
+# Nur fuer den Reiter "Rat". Alles andere im Fenster laeuft ohne.
+rat = ["anthropic>=1.0"]
 
 [build-system]
 requires = ["hatchling"]

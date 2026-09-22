@@ -1,0 +1,375 @@
+"""Das Fenster.
+
+Es rechnet nichts. Jede Zahl kommt aus `tools_api`, jeder Satz aus
+`nahrung.rat` oder `berater`. Hier steht nur, wie es aussieht und wann es
+sich erneuert.
+
+**Nebenlaeufigkeit.** Tkinter ist nicht threadsicher. Ein einzelner
+Arbeits-Thread rechnet, legt Ergebnisse in eine Warteschlange, und der
+UI-Thread holt sie ueber `after()` ab. Kein Werkzeugaufruf im UI-Thread:
+`get_state` wartet bis zu drei Sekunden auf Ruhe, das Fenster wuerde
+sichtbar haengen.
+
+**Selbstaktualisierung.** Der Arbeits-Thread vergleicht die Signatur des
+Spielordners. Aendert sie sich, wird auf Ruhe gewartet -- das Buendel ist
+nicht atomar, 2,02 s Versatz gemessen -- und neu gerechnet. Das Spiel
+schreibt etwa alle 300 Spielzeitsekunden; dazwischen steht im Fenster, wie
+alt die Zahlen sind.
+"""
+
+from __future__ import annotations
+
+import logging
+import queue
+import tkinter as tk
+from pathlib import Path
+from tkinter import ttk
+
+from . import berater
+from .mcp_server import aufloesen
+from .orte import finde_spielordner
+from .rechner import ABHOLEN_MS, Rechner, alter as _alter, minuten as _minuten
+
+log = logging.getLogger(__name__)
+
+
+# --------------------------------------------------------------------------
+# Das Fenster
+# --------------------------------------------------------------------------
+
+
+class App:
+    def __init__(self, save_dir: Path, runs_dir: Path, db: Path) -> None:
+        self.save_dir, self.runs_dir, self.db = save_dir, runs_dir, db
+        self.zustand: dict = {}
+        self.nahrung: dict = {}
+        self.ungeduld: dict = {}
+        self.auswahl: dict = {}
+
+        self.root = tk.Tk()
+        self.root.title("Against the Storm – Assistent")
+        self.root.geometry("980x640")
+        self.root.minsize(760, 520)
+
+        self.ausgang: queue.Queue = queue.Queue()
+        self.rechner = Rechner(save_dir, runs_dir, db, self.ausgang)
+
+        self._bauen()
+        self.rechner.start()
+        self.root.after(ABHOLEN_MS, self._abholen)
+        self.root.protocol("WM_DELETE_WINDOW", self._schliessen)
+
+    # -- Aufbau ------------------------------------------------------------
+
+    def _bauen(self) -> None:
+        self.reiter = ttk.Notebook(self.root)
+        self.reiter.pack(fill="both", expand=True, padx=8, pady=(8, 0))
+        self._reiter_lage()
+        self._reiter_nahrung()
+        self._reiter_auswahl()
+        self._reiter_rat()
+
+        leiste = ttk.Frame(self.root)
+        leiste.pack(fill="x", padx=8, pady=6)
+        self.status = ttk.Label(leiste, text="wird gelesen …", anchor="w")
+        self.status.pack(side="left", fill="x", expand=True)
+        ttk.Button(leiste, text="Neu lesen",
+                   command=lambda: self.rechner.bitte("lage")).pack(side="right")
+        self.suche = ttk.Entry(leiste, width=22)
+        self.suche.pack(side="right", padx=(0, 6))
+        self.suche.bind("<Return>", lambda e: self._nachschlagen())
+        ttk.Button(leiste, text="Nachschlagen",
+                   command=self._nachschlagen).pack(side="right", padx=(0, 4))
+
+    def _reiter_lage(self) -> None:
+        rahmen = ttk.Frame(self.reiter, padding=12)
+        self.reiter.add(rahmen, text="Lage")
+
+        self.kopf = ttk.Label(rahmen, text="–", font=("", 14, "bold"))
+        self.kopf.grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 10))
+
+        self.felder: dict[str, ttk.Label] = {}
+        self.balken: dict[str, ttk.Progressbar] = {}
+        zeilen = [("Bevölkerung", "bevoelkerung"), ("Feindseligkeit", "feindseligkeit"),
+                  ("Reputation", "reputation"), ("Ungeduld", "ungeduld"),
+                  ("Nahrung reicht", "reichweite"), ("Niederlage in", "verlust")]
+        for i, (titel, schluessel) in enumerate(zeilen, start=1):
+            ttk.Label(rahmen, text=titel).grid(row=i, column=0, sticky="w", pady=3)
+            wert = ttk.Label(rahmen, text="–", width=28, anchor="w")
+            wert.grid(row=i, column=1, sticky="w", padx=12)
+            self.felder[schluessel] = wert
+            if schluessel in ("reputation", "ungeduld", "reichweite"):
+                balken = ttk.Progressbar(rahmen, length=260, maximum=100)
+                balken.grid(row=i, column=2, sticky="w")
+                self.balken[schluessel] = balken
+        rahmen.columnconfigure(2, weight=1)
+
+        self.warnung = ttk.Label(rahmen, text="", foreground="#b00020", wraplength=880)
+        self.warnung.grid(row=len(zeilen) + 1, column=0, columnspan=3,
+                          sticky="w", pady=(12, 0))
+
+    def _reiter_nahrung(self) -> None:
+        rahmen = ttk.Frame(self.reiter, padding=12)
+        self.reiter.add(rahmen, text="Nahrung")
+        self.nahrung_text = tk.Text(rahmen, height=5, wrap="word", relief="flat",
+                                    background=self.root.cget("background"))
+        self.nahrung_text.pack(fill="x")
+        self.nahrung_text.configure(state="disabled")
+
+        spalten = ("gebaeude", "einsatz", "gewinn", "faktor", "engpass", "dauer", "plus")
+        titel = ("Gebäude", "Einsatz", "+Sättigung", "Faktor", "Engpass",
+                 "Arbeit", "+Reichweite")
+        self.ketten = ttk.Treeview(rahmen, columns=spalten, show="headings", height=12)
+        for s, t in zip(spalten, titel):
+            self.ketten.heading(s, text=t)
+            self.ketten.column(s, width=110 if s != "einsatz" else 200, anchor="w")
+        self.ketten.pack(fill="both", expand=True, pady=(10, 0))
+
+    def _reiter_auswahl(self) -> None:
+        rahmen = ttk.Frame(self.reiter, padding=12)
+        self.reiter.add(rahmen, text="Auswahl")
+
+        oben = ttk.Frame(rahmen)
+        oben.pack(fill="x")
+        self.art = tk.StringVar(value="effect")
+        ttk.Radiobutton(oben, text="Grundsteine", variable=self.art,
+                        value="effect").pack(side="left")
+        ttk.Radiobutton(oben, text="Baupläne", variable=self.art,
+                        value="building").pack(side="left", padx=(8, 16))
+        ttk.Button(oben, text="Bildschirm lesen",
+                   command=self._auswahl_lesen).pack(side="left")
+
+        hand = ttk.Frame(rahmen)
+        hand.pack(fill="x", pady=(8, 0))
+        ttk.Label(hand, text="oder von Hand (mit Komma trennen):").pack(side="left")
+        self.hand = ttk.Entry(hand)
+        self.hand.pack(side="left", fill="x", expand=True, padx=6)
+        self.hand.bind("<Return>", lambda e: self._auswahl_lesen(von_hand=True))
+        ttk.Button(hand, text="Abgleichen",
+                   command=lambda: self._auswahl_lesen(von_hand=True)).pack(side="left")
+
+        self.auswahl_text = tk.Text(rahmen, wrap="word", height=18)
+        self.auswahl_text.pack(fill="both", expand=True, pady=(10, 0))
+        self.auswahl_text.configure(state="disabled")
+
+    def _reiter_rat(self) -> None:
+        rahmen = ttk.Frame(self.reiter, padding=12)
+        self.reiter.add(rahmen, text="Rat")
+
+        oben = ttk.Frame(rahmen)
+        oben.pack(fill="x")
+        ttk.Label(oben, text="Frage (frei lassen für die Lage):").pack(side="left")
+        self.rat_frage = ttk.Entry(oben)
+        self.rat_frage.pack(side="left", fill="x", expand=True, padx=6)
+        self.rat_frage.bind("<Return>", lambda e: self._rat_holen())
+        self.modell = tk.StringVar(value=berater.MODELL)
+        ttk.Combobox(oben, textvariable=self.modell, values=list(berater.MODELLE),
+                     width=18, state="readonly").pack(side="left", padx=(0, 6))
+        ttk.Button(oben, text="Fragen", command=self._rat_holen).pack(side="left")
+        ttk.Button(oben, text="Lage kopieren",
+                   command=self._lage_kopieren).pack(side="left", padx=(6, 0))
+
+        self.rat_text = tk.Text(rahmen, wrap="word", height=18)
+        self.rat_text.pack(fill="both", expand=True, pady=(10, 0))
+        self.rat_text.configure(state="disabled")
+        self.rat_fuss = ttk.Label(rahmen, text="", anchor="w")
+        self.rat_fuss.pack(fill="x")
+
+    # -- Ereignisse --------------------------------------------------------
+
+    def _auswahl_lesen(self, von_hand: bool = False) -> None:
+        text = None
+        if von_hand:
+            roh = self.hand.get().strip()
+            text = [t.strip() for t in roh.split(",") if t.strip()] or None
+            if not text:
+                return
+        self._schreiben(self.auswahl_text, "wird gelesen …")
+        self.rechner.bitte("auswahl", arten=(self.art.get(),), text=text)
+
+    def _rat_holen(self) -> None:
+        self._schreiben(self.rat_text, "wird gefragt …")
+        self.rechner.bitte("rat", zustand=self.zustand, nahrung=self.nahrung,
+                           ungeduld=self.ungeduld, auswahl=self.auswahl,
+                           frage=self.rat_frage.get().strip() or None,
+                           modell=self.modell.get())
+
+    def _lage_kopieren(self) -> None:
+        import json
+        auszug = berater.kontext(zustand=self.zustand, nahrung=self.nahrung,
+                                 ungeduld=self.ungeduld, auswahl=self.auswahl,
+                                 frage=self.rat_frage.get().strip() or None)
+        self.root.clipboard_clear()
+        self.root.clipboard_append(json.dumps(auszug, ensure_ascii=False, indent=1))
+        self.rat_fuss.configure(text="Lage in der Zwischenablage – in Claude einfügen.")
+
+    def _nachschlagen(self) -> None:
+        name = self.suche.get().strip()
+        if name:
+            self.rechner.bitte("nachschlag", name=name)
+
+    def _schliessen(self) -> None:
+        self.rechner.stoppen()
+        self.root.destroy()
+
+    # -- Anzeige -----------------------------------------------------------
+
+    def _schreiben(self, feld: tk.Text, text: str) -> None:
+        feld.configure(state="normal")
+        feld.delete("1.0", "end")
+        feld.insert("1.0", text)
+        feld.configure(state="disabled")
+
+    def _abholen(self) -> None:
+        try:
+            while True:
+                art, wert = self.ausgang.get_nowait()
+                self._anzeigen(art, wert)
+        except queue.Empty:
+            pass
+        self.root.after(ABHOLEN_MS, self._abholen)
+
+    def _anzeigen(self, art: str, wert) -> None:
+        if art == "zustand":
+            self.zustand = wert
+            self._zeige_zustand(wert)
+        elif art == "nahrung":
+            self.nahrung = wert
+            self._zeige_nahrung(wert)
+        elif art == "ungeduld":
+            self.ungeduld = wert
+            self.felder["verlust"].configure(
+                text=_minuten(wert.get("sekunden_bis_verlust")))
+        elif art == "ketten":
+            self._zeige_ketten(wert)
+        elif art == "auswahl":
+            self.auswahl = wert
+            self._zeige_auswahl(wert)
+        elif art == "nachschlag":
+            self._zeige_nachschlag(wert)
+        elif art == "rat":
+            self._schreiben(self.rat_text, wert.get("text", ""))
+            if wert.get("ok"):
+                fuss = wert.get("fuss", "")
+            elif not wert.get("zugang"):
+                fuss = "Ohne Anmeldung: „Lage kopieren“ und in Claude einfügen."
+            else:
+                fuss = ""
+            self.rat_fuss.configure(text=fuss)
+        elif art == "umgebung":
+            offen = wert.get("fehlt") or []
+            self.status.configure(
+                text="  ·  ".join(offen) if offen
+                else f"Alles bereit – {wert.get('namen', 0)} Namen, "
+                     f"{wert.get('mitschriften_da', 0)} Mitschriften")
+        elif art == "fehler":
+            self.status.configure(text=f"Fehler: {wert}")
+
+    def _zeige_zustand(self, z: dict) -> None:
+        if z.get("verfuegbar") is False:
+            self.kopf.configure(text="Kein Spielstand")
+            self.warnung.configure(text=z.get("grund") or z.get("fehler", ""))
+            return
+        self.kopf.configure(
+            text=f"Jahr {z.get('jahr', '?')} · {z.get('biom') or '?'} · "
+                 f"Prestige {z.get('prestige', '?')} · {_alter(z.get('zeitpunkt'))}")
+        self.felder["bevoelkerung"].configure(text=str(z.get("bevoelkerung") or "–"))
+        feind = z.get("feindseligkeit")
+        if isinstance(feind, dict):
+            feind = feind.get("current", feind)
+        self.felder["feindseligkeit"].configure(text=str(feind or "–"))
+
+        for schluessel, jetzt, ziel in (
+                ("reputation", z.get("reputation"), z.get("reputation_ziel")),
+                ("ungeduld", z.get("ungeduld"), z.get("ungeduld_schwelle"))):
+            if jetzt is None:
+                continue
+            self.felder[schluessel].configure(
+                text=f"{jetzt:.1f} von {ziel}" if ziel else f"{jetzt:.1f}")
+            if ziel:
+                self.balken[schluessel].configure(value=min(jetzt / ziel * 100, 100))
+
+    def _zeige_nahrung(self, n: dict) -> None:
+        self.felder["reichweite"].configure(text=_minuten(n.get("reichweite_sekunden")))
+        reichweite = n.get("reichweite_sekunden")
+        if reichweite:
+            # Eine Jahreszeit dauert grob 300 Spielzeitsekunden je Speicherlauf;
+            # voll ist der Balken bei einer Stunde Reichweite.
+            self.balken["reichweite"].configure(value=min(reichweite / 3600 * 100, 100))
+        self.warnung.configure(text=n.get("warnung") or n.get("grund") or "")
+
+    def _zeige_ketten(self, rat: dict) -> None:
+        saetze = [rat.get(k) for k in ("empfehlung", "begruendung", "alternative")]
+        self._schreiben(self.nahrung_text, "\n".join(s for s in saetze if s)
+                        or rat.get("grund") or rat.get("fehler", ""))
+        self.ketten.delete(*self.ketten.get_children())
+        for k in rat.get("ketten", []):
+            einsatz = ", ".join(f"{e['menge']:.0f} {e['ware']}" for e in k["einsatz"])
+            self.ketten.insert("", "end", values=(
+                k.get("gebaeude_de") or k.get("gebaeude") or "?", einsatz,
+                f"{k['gewinn']:.0f}", k.get("faktor") or "–", k.get("engpass") or "–",
+                _minuten(k.get("sekunden")),
+                _minuten(k.get("reichweite_plus_sekunden"))))
+
+    def _zeige_auswahl(self, a: dict) -> None:
+        if not a.get("verfuegbar"):
+            zeilen = [a.get("grund") or a.get("fehler", "Nichts erkannt.")]
+            for u in a.get("unklar", []):
+                nahe = ", ".join(f"{k['de']} ({k['guete']})" for k in u["kandidaten"])
+                zeilen.append(f"  gelesen {u['gelesen']!r} → {nahe}")
+            self._schreiben(self.auswahl_text, "\n".join(zeilen))
+            return
+        zeilen = []
+        for eintrag in a["angebot"]:
+            kopf = f"{eintrag['de']}  ({eintrag['en']}"
+            if eintrag.get("seltenheit"):
+                kopf += f", {eintrag['seltenheit']}"
+            zeilen.append(kopf + f", Güte {eintrag['guete']})")
+            if eintrag.get("wirkung"):
+                zeilen.append(f"    {eintrag['wirkung']}")
+            zeilen.append("")
+        self._schreiben(self.auswahl_text, "\n".join(zeilen))
+
+    def _zeige_nachschlag(self, out: dict) -> None:
+        fenster = tk.Toplevel(self.root)
+        fenster.title(f"Nachschlag: {out.get('gesucht', '')}")
+        text = tk.Text(fenster, wrap="word", width=90, height=20)
+        text.pack(fill="both", expand=True)
+        zeilen = []
+        for n in out.get("namen", []):
+            zeilen.append(f"{n['de']:<28} {n['en']:<28} {n.get('kind') or '':<12} "
+                          f"{n['confidence']}")
+        for schluessel in ("ware", "gebaeude", "grundstein", "hinweis", "fehler"):
+            if out.get(schluessel):
+                zeilen.append(f"\n{schluessel}: {out[schluessel]}")
+        text.insert("1.0", "\n".join(zeilen) or "Nichts gefunden.")
+        text.configure(state="disabled")
+
+    def laufen(self) -> None:
+        self.root.mainloop()
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--save-dir", default=None)
+    ap.add_argument("--runs", default="runs")
+    ap.add_argument("--db", default="kb.sqlite")
+    args = ap.parse_args(argv)
+
+    protokoll = aufloesen("logs")
+    protokoll.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        handlers=[logging.FileHandler(protokoll / "gui.log", encoding="utf-8")])
+
+    save_dir = Path(args.save_dir) if args.save_dir else finde_spielordner()
+    if save_dir is None:
+        save_dir = Path("kein-spielordner")
+    App(save_dir, aufloesen(args.runs), aufloesen(args.db)).laufen()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
