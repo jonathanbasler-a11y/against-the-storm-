@@ -90,7 +90,8 @@ def werkzeuge(save_dir: Path, runs_dir: Path, db: Path) -> list[dict]:
                             "Jahreszeit, Bevölkerung, Feindseligkeit, Ungeduld, Reputation, "
                             "Lagerbestand, Grundsteine. Zahlen und Namen, keine Zeitreihen."),
             "inputSchema": {"type": "object", "properties": {}},
-            "handler": lambda **kw: tools_api.get_state(save_dir, runs_dir),
+            "handler": lambda protokollieren=True, **kw: tools_api.get_state(
+                save_dir, runs_dir, protokollieren=protokollieren),
         },
         {
             "name": "read_choice",
@@ -220,7 +221,17 @@ def funktion_aus_schema(werkzeug: dict):
     def aufruf(**kwargs):
         # Was nicht gesetzt wurde, gar nicht erst weiterreichen: die
         # Werkzeuge haben eigene Vorgaben, und None ist nicht dasselbe.
-        return werkzeug["handler"](**{k: v for k, v in kwargs.items() if v is not None})
+        gesetzt = {k: v for k, v in kwargs.items() if v is not None}
+        try:
+            return werkzeug["handler"](**gesetzt)
+        except Exception as exc:
+            # Dieselbe Absicherung wie im 1.x-Weg: ein Werkzeugfehler darf
+            # den Server nicht beenden. Zwei Wege, eine Absicherung -- sonst
+            # haengt es an der installierten Fassung, ob ein Fehler eine
+            # Antwort oder einen Abbruch ergibt.
+            log.exception("Werkzeug %s ist gescheitert", werkzeug["name"])
+            return {"fehler": f"{type(exc).__name__}: {exc}",
+                    "werkzeug": werkzeug["name"]}
 
     aufruf.__name__ = werkzeug["name"]
     aufruf.__doc__ = werkzeug["description"]
@@ -298,6 +309,10 @@ async def _serve_alt(liste: list[dict]) -> None:
 # Lauf nur heraus, dass query_kb einen Namen braucht -- was im Schema steht.
 PRUEFARGUMENTE: dict[str, dict] = {
     "query_kb": {"name": "Holz"},
+    # Der Prueflauf fragt, er spielt nicht mit. `get_state` schriebe sonst
+    # eine Mitschrift -- dieselbe Nebenwirkung, wegen der `log_event`
+    # uebersprungen wird.
+    "get_state": {"protokollieren": False},
     # Ohne Text wuerde read_choice ein Bildschirmfoto aufnehmen. Beim
     # Pruefen geht es um die Kette dahinter, nicht um den Bildschirm.
     "read_choice": {"text": ["PILZFÜHRER"]},

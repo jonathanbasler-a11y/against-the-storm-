@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+from functools import wraps
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,30 @@ from .forecast import impatience_forecast as _impatience_forecast
 from .save_reader import GameState, append_run_log, read_state
 
 log = logging.getLogger(__name__)
+
+
+def _wall(fn):
+    """Jede Ausnahme wird ein Dictionary, nie ein Abbruch.
+
+    Diese Funktionen werden aus drei Richtungen gerufen: vom MCP-Server, von
+    der Kommandozeile und kuenftig aus dem Fenster. Wer wirft, reisst den
+    jeweiligen Aufrufer mit -- beim Fenster hiesse das einen toten
+    Arbeits-Thread und eine Oberflaeche, die stehenbleibt, ohne zu sagen
+    warum. Ein Dictionary mit `fehler` kommt ueberall an.
+
+    Die Absicherung im MCP-Server bleibt trotzdem: sie faengt auch, was
+    ausserhalb dieser Funktionen schiefgeht.
+    """
+    @wraps(fn)
+    def gehuellt(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as exc:
+            log.exception("Werkzeug %s ist gescheitert", fn.__name__)
+            return {"verfuegbar": False,
+                    "fehler": f"{type(exc).__name__}: {exc}",
+                    "werkzeug": fn.__name__}
+    return gehuellt
 
 
 def _zustand_als_dict(state: GameState) -> dict:
@@ -57,6 +82,7 @@ def _zustand_als_dict(state: GameState) -> dict:
     }
 
 
+@_wall
 def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
               run_id: str | None = None, protokollieren: bool = True,
               auf_ruhe_warten: bool = True) -> dict:
@@ -98,6 +124,7 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
     return out
 
 
+@_wall
 def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
                 db: str | Path = "kb.sqlite", arten: tuple[str, ...] = ("effect",),
                 aufnehmen: bool = False) -> dict:
@@ -168,6 +195,7 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
     }
 
 
+@_wall
 def query_kb(name: str, entity: str | None = None, db: str | Path = "kb.sqlite") -> dict:
     """Nachschlag in der Wissensbasis, deutsch oder englisch."""
     conn = kb.connect(db)
@@ -210,6 +238,7 @@ def query_kb(name: str, entity: str | None = None, db: str | Path = "kb.sqlite")
         conn.close()
 
 
+@_wall
 def food_forecast(runs_dir: str | Path = "runs", run_id: str | None = None,
                   kategorie: str = "Food", jahreszeit_sekunden: float | None = None) -> dict:
     """Nahrungsreichweite aus den letzten beiden Mitschriften."""
@@ -233,6 +262,7 @@ def food_forecast(runs_dir: str | Path = "runs", run_id: str | None = None,
     }
 
 
+@_wall
 def food_advice(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
                 run_id: str | None = None, kategorie: str = "Food") -> dict:
     """Was gegen den Nahrungsmangel zu bauen waere -- nicht nur, wann er kommt.
@@ -292,6 +322,7 @@ def food_advice(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
     }
 
 
+@_wall
 def impatience_forecast(runs_dir: str | Path = "runs", run_id: str | None = None,
                         sekunden: float = 300.0) -> dict:
     """Ungeduldsvorhersage -- das Modell ist gegen Messungen geprueft."""
@@ -311,6 +342,7 @@ def impatience_forecast(runs_dir: str | Path = "runs", run_id: str | None = None
     }
 
 
+@_wall
 def log_event(text: str, runs_dir: str | Path = "runs", run_id: str | None = None) -> dict:
     """Freitextnotiz in den Lauf schreiben."""
     runs = Path(runs_dir)
@@ -323,6 +355,7 @@ def log_event(text: str, runs_dir: str | Path = "runs", run_id: str | None = Non
     return {"geschrieben": str(ziel), "eintrag": eintrag}
 
 
+@_wall
 def analyze_runs(n: int = 10, save_dir: str | Path | None = None,
                  runs_dir: str | Path = "runs") -> dict:
     """Die letzten n Laeufe gegenueberstellen."""

@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 from . import tools_api
+from .mcp_server import aufloesen
 
 
 def _minuten(sekunden: float | None) -> str:
@@ -30,6 +31,12 @@ def _zeile(titel: str, wert) -> str:
 
 def cmd_lage(args) -> int:
     zustand = tools_api.get_state(args.save_dir, args.runs, auf_ruhe_warten=not args.sofort)
+    if zustand.get("verfuegbar") is False:
+        # Sonst stuende hier "Jahr None, ?, Prestige None" -- das sieht aus
+        # wie eine Siedlung ohne Eigenschaften statt wie ein fehlender
+        # Spielstand.
+        print(zustand.get("grund", "Kein Spielstand lesbar."))
+        return 1
     print(f"Jahr {zustand.get('jahr')}, {zustand.get('biom') or '?'}, "
           f"Prestige {zustand.get('prestige')}")
     print(_zeile("Bevölkerung", zustand.get("bevoelkerung")))
@@ -67,7 +74,14 @@ def cmd_lage(args) -> int:
 def cmd_nahrung(args) -> int:
     rat = tools_api.food_advice(args.runs, args.db)
     if not rat.get("verfuegbar"):
-        print(rat.get("grund") or rat.get("empfehlung", "Nichts zu sagen."))
+        if rat.get("grund"):
+            print(rat["grund"])
+            return 0
+        # Auch ohne tragende Kette gibt es etwas zu sagen -- und der zweite
+        # Satz ist der, der weiterhilft.
+        for schluessel in ("empfehlung", "begruendung", "alternative"):
+            if rat.get(schluessel):
+                print(rat[schluessel])
         return 0
     for satz in (rat["empfehlung"], rat["begruendung"], rat["alternative"]):
         print(satz)
@@ -94,24 +108,49 @@ def cmd_nachschlag(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Die gemeinsamen Optionen kommen als Elternteil an jeden Unterbefehl:
+    # sonst nimmt argparse sie nur vor dem Unterbefehl an, und
+    # "lage.py nachschlag Holz --db andere.sqlite" scheitert an einer
+    # Stelle, an der niemand einen Fehler erwartet.
+    # Und zwar ohne Vorgaben: haette der Unterbefehl welche, wuerden sie die
+    # Angabe vor dem Unterbefehl ueberschreiben -- argparse setzt die
+    # Vorgaben des Unterparsers, nachdem der Hauptparser seine Werte schon
+    # eingetragen hat. "lage.py --db andere.sqlite nachschlag Holz" haette
+    # dann still die falsche Wissensbasis gelesen. SUPPRESS heisst: nur was
+    # wirklich dasteht, landet im Ergebnis.
+    gemeinsam = argparse.ArgumentParser(add_help=False)
+    gemeinsam.add_argument("--save-dir", default=argparse.SUPPRESS,
+                           help="Spielordner; ohne Angabe wird gesucht")
+    gemeinsam.add_argument("--runs", default=argparse.SUPPRESS)
+    gemeinsam.add_argument("--db", default=argparse.SUPPRESS)
+    gemeinsam.add_argument("--sofort", action="store_true",
+                           default=argparse.SUPPRESS,
+                           help="nicht auf Ruhe warten -- nur wenn gerade "
+                                "nicht gespeichert wird")
+
     ap = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--save-dir", default=None,
-                    help="Spielordner; ohne Angabe wird gesucht")
-    ap.add_argument("--runs", default="runs")
-    ap.add_argument("--db", default="kb.sqlite")
-    ap.add_argument("--sofort", action="store_true",
-                    help="nicht auf Ruhe warten -- nur wenn gerade nicht gespeichert wird")
+        description=__doc__, parents=[gemeinsam],
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd")
 
-    s = sub.add_parser("nahrung", help="alle Nahrungsketten, ausführlich")
+    s = sub.add_parser("nahrung", parents=[gemeinsam],
+                       help="alle Nahrungsketten, ausführlich")
     s.set_defaults(func=cmd_nahrung)
 
-    s = sub.add_parser("nachschlag", help="einen Namen nachschlagen")
+    s = sub.add_parser("nachschlag", parents=[gemeinsam],
+                       help="einen Namen nachschlagen")
     s.add_argument("name", nargs="+")
     s.set_defaults(func=cmd_nachschlag)
 
     args = ap.parse_args(argv)
+    for name, vorgabe in (("save_dir", None), ("runs", "runs"),
+                          ("db", "kb.sqlite"), ("sofort", False)):
+        if not hasattr(args, name):
+            setattr(args, name, vorgabe)
+    # Wie beim Server: ein relatives "kb.sqlite" soll die Wissensbasis des
+    # Projekts meinen, nicht eine leere im Arbeitsverzeichnis.
+    args.runs = aufloesen(args.runs)
+    args.db = aufloesen(args.db)
     if getattr(args, "func", None) is None:
         args.func = cmd_lage
     if args.func is cmd_lage and not args.save_dir:

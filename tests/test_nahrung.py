@@ -202,3 +202,40 @@ def test_rohnahrung_und_scheinrezepte_fallen_heraus(tmp_path: Path) -> None:
         conn, {"[Food Raw] Berries": 40}, nur_belegt=False)]
     assert "Meat" in ohne
     conn.close()
+
+
+def test_ohne_tragende_kette_wird_die_fehlende_zutat_genannt(tmp_path: Path) -> None:
+    """Der Fall vom Spielrechner: "lohnt sich nicht" und sonst nichts.
+
+    Dörrfleisch braucht Fleisch **und** einen Brennstoff. Liegt nur Fleisch
+    da, ist die Auskunft nicht "verarbeiten lohnt nicht", sondern welche
+    Zutat fehlt — alles andere schickt den Spieler in dieselbe Sackgasse
+    zurück.
+    """
+    conn = wissensbasis(tmp_path)
+    for w in ("Coal", "Oil"):
+        conn.execute("INSERT INTO resources (en, eatable) VALUES (?, 0)", (w,))
+    conn.execute("DELETE FROM recipes")
+    conn.execute(
+        "INSERT INTO recipes (id, building, inputs, seconds, product, product_amount) "
+        "VALUES (1, 'Smokehouse', ?, 60, 'Jerky', 10)",
+        (json.dumps([[{"menge": 5, "ware": "Meat"}],
+                     [{"menge": 2, "ware": "Coal"}, {"menge": 2, "ware": "Oil"}]]),))
+    conn.commit()
+
+    r = nahrung.rat(conn, {"[Food Raw] Meat": 40})
+    assert "Kein Verarbeitungsschritt" in r.empfehlung
+    assert "Jerky" in r.begruendung
+    assert "Coal" in r.begruendung and "Oil" in r.begruendung
+    assert "2 " in r.begruendung                     # die Menge steht dabei
+    conn.close()
+
+
+def test_huerden_bleiben_aus_wenn_niemand_danach_fragt(tmp_path: Path) -> None:
+    """Die Liste wird nur gefüllt, wenn ein Aufrufer sie mitgibt."""
+    conn = wissensbasis(tmp_path)
+    huerden: list[dict] = []
+    nahrung.vorschlaege(conn, {"[Food Raw] Meat": 2}, huerden=huerden)
+    assert huerden                                   # mit Liste: gefüllt
+    assert nahrung.vorschlaege(conn, {"[Food Raw] Meat": 2}) == []   # ohne: still
+    conn.close()

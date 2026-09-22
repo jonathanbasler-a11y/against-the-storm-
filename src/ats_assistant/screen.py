@@ -22,15 +22,49 @@ Ganze still.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import shutil
 import subprocess
+import threading
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 log = logging.getLogger(__name__)
+
+
+def im_eigenen_lauf(fabrik):
+    """Eine Koroutine ausfuehren, auch wenn schon eine Schleife laeuft.
+
+    `asyncio.run()` wirft in einer laufenden Ereignisschleife. Genau dort
+    landet die Texterkennung aber: unter dem MCP-Server sind die Werkzeuge
+    Aufrufe innerhalb der Schleife, und aus der Oberflaeche kommen sie aus
+    einem Arbeits-Thread. Ohne diesen Umweg bricht `read_choice` in dem
+    Moment ab, in dem es zum ersten Mal wirklich den Bildschirm liest --
+    dem einen Pfad, den der Prueflauf nicht erreicht.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(fabrik())          # keine Schleife, direkter Weg
+
+    # Eine Schleife laeuft. Ein eigener Thread bekommt seine eigene.
+    ergebnis: dict = {}
+
+    def lauf() -> None:
+        try:
+            ergebnis["wert"] = asyncio.run(fabrik())
+        except BaseException as exc:          # der Fehler darf nicht verschwinden
+            ergebnis["fehler"] = exc
+
+    t = threading.Thread(target=lauf, name="ats-ocr", daemon=True)
+    t.start()
+    t.join()
+    if "fehler" in ergebnis:
+        raise ergebnis["fehler"]
+    return ergebnis.get("wert")
 
 
 @dataclass(frozen=True)
@@ -170,8 +204,6 @@ def _erkenne_windows(bild: Path, sprache: str) -> list[Zeile]:
     Lokal, ohne Konto, ohne Netz -- und damit das einzige, was zum
     Leitprinzip der Spec passt, ohne ein weiteres Programm zu verlangen.
     """
-    import asyncio
-
     from winsdk.windows.globalization import Language            # type: ignore
     from winsdk.windows.graphics.imaging import BitmapDecoder    # type: ignore
     from winsdk.windows.media.ocr import OcrEngine               # type: ignore
@@ -202,7 +234,7 @@ def _erkenne_windows(bild: Path, sprache: str) -> list[Zeile]:
             zeilen.append(Zeile(zeile.text, links, oben, rechts - links, unten - oben))
         return zeilen
 
-    return asyncio.run(lauf())
+    return im_eigenen_lauf(lauf)
 
 
 def _erkenne_tesseract(bild: Path, sprache: str) -> list[Zeile]:
