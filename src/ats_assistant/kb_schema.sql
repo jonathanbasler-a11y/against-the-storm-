@@ -69,25 +69,53 @@ CREATE TABLE IF NOT EXISTS buildings (
     source_page  TEXT REFERENCES source_pages(title)
 );
 
+-- inputs ist eine Liste von Listen: je Zutat die Alternativen, unter denen
+-- das Spiel waehlen laesst. "5 Insects 5 Meat" sind nicht zwei Zutaten,
+-- sondern zwei Moeglichkeiten fuer eine.
 CREATE TABLE IF NOT EXISTS recipes (
     id           INTEGER PRIMARY KEY,
     building     TEXT REFERENCES buildings(en),
-    inputs       TEXT,          -- JSON
+    inputs       TEXT,          -- JSON: [[{menge, ware}, ...], ...]
     outputs      TEXT,          -- JSON
     ratio        TEXT,
     stars        INTEGER,
+    seconds      REAL,          -- Produktionsdauer
+    product      TEXT,
+    product_amount REAL,
     source_page  TEXT REFERENCES source_pages(title)
 );
 
+CREATE INDEX IF NOT EXISTS recipes_product ON recipes(product);
+
 CREATE TABLE IF NOT EXISTS species (
     en            TEXT PRIMARY KEY,
-    specialization TEXT,
+    specialization TEXT,        -- Proficiency
+    comfort       TEXT,
     base_resolve  REAL,
     house_type    TEXT,
     needs         TEXT,         -- JSON
     break_seconds REAL,
     hunger_tolerance INTEGER,
     decadence     REAL,
+    resilience    TEXT,         -- low / medium / high
+    demand        REAL,         -- Resolve Threshold
+    reputation_ratio REAL,      -- Species Resolve to Reputation Ratio
+    source_page   TEXT REFERENCES source_pages(title)
+);
+
+-- Die Seite "Difficulty" fuehrt je Schwierigkeitsgrad Multiplikatoren, unter
+-- anderem den Hostility Multiplier. Das passt nicht in die Tabelle prestige,
+-- die je Stufe einen Modifikatornamen erwartet -- also eine eigene.
+CREATE TABLE IF NOT EXISTS difficulty (
+    en            TEXT PRIMARY KEY,
+    rewards_multiplier REAL,
+    seal_fragments REAL,
+    tile_reach_max REAL,
+    experience_multiplier REAL,
+    score_multiplier REAL,
+    blight_footprint_rate REAL,
+    blight_corruption_rate REAL,
+    hostility_multiplier REAL,
     source_page   TEXT REFERENCES source_pages(title)
 );
 
@@ -106,16 +134,37 @@ CREATE TABLE IF NOT EXISTS glade_events (
     source_page  TEXT REFERENCES source_pages(title)
 );
 
--- Die deutschen Namen stehen nirgends öffentlich. confidence sagt, wie weit
--- eine Zeile trägt: screenshot und save_id sind belegt, guessed ist geraten.
+-- Die deutschen Namen standen nirgends öffentlich -- bis auf das Spiel selbst.
+-- resources.assets traegt je Schluessel eine englische und eine deutsche
+-- Zeichenkette; was daher kommt, ist nachgeschlagen statt geraten und traegt
+-- confidence = localization. Darunter erst das Beobachtete, zuletzt das Geratene.
 CREATE TABLE IF NOT EXISTS name_map (
     en           TEXT,
     de           TEXT,
     kind         TEXT,          -- resource, building, concept, biome, species
     category     TEXT,
-    confidence   TEXT NOT NULL, -- screenshot | save_id | spec_seed | observed | guessed
+    confidence   TEXT NOT NULL, -- localization | screenshot | save_id | spec_seed | observed | guessed
     source       TEXT,
     verified_at  TEXT,
+    note         TEXT,
+    loc_key      TEXT,          -- Lokalisierungsschluessel, z. B. Good_PickledGoods_Name
+    en_id        TEXT,          -- "Pickled Goods" -> pickled_goods, fuer den Nachschlag
+    PRIMARY KEY (en, de, kind)
+);
+
+CREATE INDEX IF NOT EXISTS name_map_en_id ON name_map(en_id);
+
+-- Was die Lokalisierung widerlegt hat, wird nicht still geloescht. Eine
+-- geratene Zeile, die sich als falsch erweist, ist ein Befund: sie sagt,
+-- wie weit der Recherche zu trauen war.
+CREATE TABLE IF NOT EXISTS retired_names (
+    en           TEXT,
+    de           TEXT,          -- der widerlegte deutsche Name
+    kind         TEXT,
+    confidence   TEXT,          -- womit die Zeile angetreten war
+    source       TEXT,
+    replaced_by  TEXT,          -- der belegte deutsche Name
+    retired_at   TEXT,
     note         TEXT,
     PRIMARY KEY (en, de, kind)
 );

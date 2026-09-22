@@ -9,6 +9,8 @@ Drei Unterbefehle:
              gegen Belege, nicht gegen Vermutungen.
     seed     Namenstabelle aus data/name_map_seed.csv und das Vokabular aus
              kb_probe.py --dump-ids in kb.sqlite uebernehmen. Braucht kein Wiki.
+    namen    Deutsche Namen aus der Lokalisierungstabelle des Spiels uebernehmen
+             und die geratenen dagegen halten. Braucht kein Wiki.
     build    Wikitext auswerten und die Sachtabellen fuellen. Erst sinnvoll,
              wenn survey gelaufen ist.
 
@@ -30,7 +32,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from ats_assistant import kb  # noqa: E402
+from ats_assistant import kb, localization  # noqa: E402
 
 GESPIELTE_VERSION = "1.10.4"
 
@@ -306,6 +308,226 @@ def cmd_page(args) -> int:
     return 0
 
 
+# Die Seiten, deren gerendertes HTML die Tabellen traegt, die im Wikitext
+# fehlen. Ihr Wikitext ist nur eine Abfrage ({{Perks|search=...}}), die Daten
+# klappt der Server aus.
+HTML_SEITEN = (
+    "List of Cornerstones and Perks",
+    "List of annual Cornerstones",
+    "List of Cornerstones available for purchase from traders",
+    "List of Cornerstones available from Orders",
+    "List of Perks",
+    "List of Buildings",
+    "List of Resources",
+    "List of Essential Blueprints",
+    "Glade Events",
+    "Dangerous Glade Event",
+    "Forbidden Glade Event",
+    "Prestige",
+    "Difficulty",
+    "Villagers",
+    "Resolve",
+    "Hunger Tolerance",
+    "Forest Hostility",
+    "Recipes",
+)
+
+
+def _passt(kopf: list[str], begriffe: tuple[str, ...]) -> bool:
+    text = " ".join(kopf).lower()
+    return all(b in text for b in begriffe)
+
+
+def cmd_html(args) -> int:
+    """Tabellen aus dem gerenderten HTML lesen und berichten, was drinsteht."""
+    from ats_assistant.wikihtml import html_dateien, tabellen_aus_datei
+
+    wiki_dir = Path(args.wiki_dir)
+    dateien = html_dateien(wiki_dir)
+    if not dateien:
+        print(f"Keine HTML-Dateien unter {wiki_dir}")
+        print("Erwartet wird ein Unterordner html/ mit .html-Dateien.")
+        return 1
+
+    gesucht = [s.lower() for s in (args.pages or HTML_SEITEN)]
+    nach_titel = {p.stem.lower(): p for p in dateien}
+
+    L: list[str] = []
+    add = L.append
+    add("=" * 78)
+    add("TABELLEN AUS DEM GERENDERTEN HTML")
+    add("=" * 78)
+    add(f"Verzeichnis: {wiki_dir}   ({len(dateien)} Seiten)")
+
+    gefunden = 0
+    for titel in gesucht:
+        pfad = nach_titel.get(titel)
+        add("")
+        add("-" * 78)
+        if pfad is None:
+            add(f"{titel}: nicht im Abzug")
+            continue
+        try:
+            tabellen = tabellen_aus_datei(pfad)
+        except Exception as exc:
+            add(f"{pfad.stem}: nicht lesbar ({type(exc).__name__}: {exc})")
+            continue
+        gefunden += 1
+        add(f"{pfad.stem}  ({pfad.stat().st_size // 1024} KB, {len(tabellen)} Tabellen)")
+        add("-" * 78)
+        for i, t in enumerate(tabellen[: args.max_tables], 1):
+            zeilen = t.als_dicts
+            add(f"  Tabelle {i}: {len(zeilen)} Zeilen")
+            add(f"    Kopf: {' | '.join(t.kopf[:12]) if t.kopf else '(keine Kopfzeile)'}")
+            for beispiel in zeilen[: args.examples]:
+                gekuerzt = {k: (v[:40] + "..." if len(v) > 40 else v)
+                            for k, v in list(beispiel.items())[:6]}
+                add(f"    z. B. {gekuerzt}")
+
+    if args.write:
+        L.append("")
+        L.append("=" * 78)
+        L.append("IN DIE WISSENSBASIS UEBERNOMMEN")
+        L.append("=" * 78)
+        for zeile in _schreiben(nach_titel, args.db):
+            L.append(f"  {zeile}")
+
+    text = "\n".join(L)
+    print(text)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    (out / f"wiki-html-{stamp}.txt").write_text(text, encoding="utf-8")
+    print(f"\n{gefunden} von {len(gesucht)} Seiten gelesen.")
+    print(f"Bericht geschrieben: {out / f'wiki-html-{stamp}.txt'}")
+    print("Schick mir den .txt -- daraus kommt die Zuordnung zu den Tabellen der Spec.")
+    return 0
+
+
+# Welche Seite welche Herkunft belegt. Die Ankreuzspalten der grossen Liste
+# heissen alle "Sources" und sind ohne ihre Unterueberschriften nicht zu
+# deuten -- die Zugehoerigkeit zu einer Seite dagegen ist eindeutig.
+HERKUNFT_SEITEN = {
+    "list of annual cornerstones": "jährlich",
+    "list of cornerstones available for purchase from traders": "Händler",
+    "list of cornerstones available from orders": "Auftrag",
+}
+
+REPUTATION_KOPF = re.compile(r"Reputation\s+Points?", re.IGNORECASE)
+
+
+def _hat(kopf: list[str], *begriffe: str) -> bool:
+    text = " ".join(kopf).lower()
+    return all(b.lower() in text for b in begriffe)
+
+
+def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
+    """Die Tabellen, deren Aufbau bekannt ist, in die Wissensbasis uebernehmen."""
+    from ats_assistant.wikihtml import tabellen_aus_datei
+
+    conn = kb.connect(db)
+    meldungen: list[str] = []
+    try:
+        # Diese Tabellen stammen vollstaendig aus dem Wiki. Ohne Leeren
+        # sammeln sich bei jedem Lauf Altlasten an -- nach der Korrektur der
+        # doppelten Namen standen "Bats" und "Bats Bats" nebeneinander.
+        for tabelle in ("species", "difficulty", "cornerstones", "glade_events", "recipes"):
+            conn.execute(f"DELETE FROM {tabelle}")
+        conn.commit()
+        # Spezies: zwei Seiten mit teils verschiedenen Spalten, die sich ergaenzen.
+        for titel in ("resolve", "villagers"):
+            pfad = nach_titel.get(titel)
+            if not pfad:
+                continue
+            for i, t in enumerate(tabellen_aus_datei(pfad), 1):
+                # Drei verschiedene Tabellen tragen Spezieswerte: Kennzahlen,
+                # Spezialisierungen und das Reputationsverhaeltnis. Sie
+                # ergaenzen sich, deshalb werden alle drei genommen --
+                # import_species behaelt vorhandene Spalten.
+                if _hat(t.kopf, "species") and (_hat(t.kopf, "base resolve")
+                                                or _hat(t.kopf, "comfort")
+                                                or _hat(t.kopf, "reputation ratio")):
+                    n = kb.import_species(conn, t.als_dicts, source_page=pfad.stem)
+                    if n:
+                        spalten = ", ".join(k for k in t.kopf[1:4] if k)
+                        meldungen.append(
+                            f"species: {n} Zeilen aus {pfad.stem} Tabelle {i} ({spalten})")
+
+        pfad = nach_titel.get("difficulty")
+        if pfad:
+            for t in tabellen_aus_datei(pfad):
+                if _hat(t.kopf, "difficulty", "hostility multiplier"):
+                    n = kb.import_difficulty(conn, t.als_dicts, source_page=pfad.stem)
+                    meldungen.append(f"difficulty: {n} Zeilen aus {pfad.stem}")
+
+        # Erst die grosse Liste (Name, Seltenheit, Text), dann die drei
+        # Herkunftslisten -- die tragen nur die Herkunft nach.
+        for titel in ("list of cornerstones and perks", "list of perks"):
+            pfad = nach_titel.get(titel)
+            if not pfad:
+                continue
+            for t in tabellen_aus_datei(pfad):
+                if _hat(t.kopf, "name", "rarity"):
+                    n = kb.import_cornerstones(conn, t.als_dicts, source_page=pfad.stem)
+                    eindeutig = conn.execute(
+                        "SELECT COUNT(*) c FROM cornerstones").fetchone()["c"]
+                    meldungen.append(
+                        f"cornerstones: {n} Zeilen aus {pfad.stem}, {eindeutig} eindeutige "
+                        f"Namen" + (f" ({n - eindeutig} mehrfach gelistet)"
+                                    if n > eindeutig else ""))
+            break
+        for titel, herkunft in HERKUNFT_SEITEN.items():
+            pfad = nach_titel.get(titel)
+            if not pfad:
+                continue
+            for t in tabellen_aus_datei(pfad):
+                if _hat(t.kopf, "name", "rarity"):
+                    n = kb.import_cornerstones(conn, t.als_dicts, origin=herkunft,
+                                               source_page=pfad.stem)
+                    meldungen.append(f"cornerstones: {n} mal Herkunft '{herkunft}'")
+
+        # Rezepte stehen auf den Gebaeudeseiten, nicht nur auf "Recipes" --
+        # 435 Aufrufe der Vorlage verteilen sich ueber den ganzen Abzug.
+        rezepte = 0
+        seiten_mit_rezepten = 0
+        for titel, rezeptpfad in sorted(nach_titel.items()):
+            try:
+                tabellen = tabellen_aus_datei(rezeptpfad)
+            except Exception:
+                continue
+            gefunden_hier = 0
+            for t in tabellen:
+                if _hat(t.kopf, "ingredient", "product"):
+                    gefunden_hier += kb.import_recipes(conn, t.als_dicts,
+                                                       source_page=rezeptpfad.stem)
+            if gefunden_hier:
+                rezepte += gefunden_hier
+                seiten_mit_rezepten += 1
+        if rezepte:
+            meldungen.append(f"recipes: {rezepte} Rezepte von {seiten_mit_rezepten} Seiten")
+
+        pfad = nach_titel.get("glade events")
+        if pfad:
+            paare: list[tuple[str, str]] = []
+            for t in tabellen_aus_datei(pfad):
+                if len(t.kopf) == 1 and REPUTATION_KOPF.search(t.kopf[0]):
+                    belohnung = t.kopf[0].strip()
+                    for zeile in t.zeilen:
+                        if zeile and zeile[0].strip():
+                            paare.append((zeile[0].strip(), belohnung))
+            if paare:
+                n = kb.import_glade_events(conn, paare, source_page=pfad.stem)
+                meldungen.append(f"glade_events: {n} Ereignisse aus {pfad.stem}")
+
+        meldungen.append("")
+        for bereich, werte in kb.coverage(conn).items():
+            if werte:
+                meldungen.append(f"{bereich}: " + ", ".join(f"{k}={v}" for k, v in sorted(werte.items())))
+    finally:
+        conn.close()
+    return meldungen
+
+
 def cmd_seed(args) -> int:
     conn = kb.connect(args.db)
     csv_pfad = Path(args.names)
@@ -353,6 +575,58 @@ def template_params(inhalt: str) -> dict[str, str]:
         pos += 1
         out[str(pos)] = teil.strip()
     return out
+
+
+def cmd_status(args) -> int:
+    """Was steckt in der Wissensbasis, und wie belastbar ist es?"""
+    conn = kb.connect(args.db)
+    try:
+        abdeckung = kb.coverage(conn)
+        print(f"Wissensbasis: {args.db}")
+        print("\nSachtabellen:")
+        for tabelle, n in sorted(abdeckung["tabellen"].items()):
+            marke = "  " if n else "  (leer) "
+            print(f"{marke}{tabelle:<16} {n}")
+        if abdeckung["name_map"]:
+            print("\nNamenstabelle nach Belastbarkeit:")
+            for conf, n in sorted(abdeckung["name_map"].items(),
+                                  key=lambda kv: -kb.CONFIDENCE_RANK.get(kv[0], 0)):
+                print(f"  {conf:<18} {n}")
+        if abdeckung["save_ids"]:
+            print("\nVokabular aus dem Spielstand:")
+            for art, n in sorted(abdeckung["save_ids"].items()):
+                print(f"  {art:<18} {n}")
+
+        essbar = kb.food_goods(conn)
+        if essbar:
+            print(f"\nEssbare Waren: {len(essbar)}")
+            nach_saettigung: dict[float, list[str]] = {}
+            for w in essbar:
+                nach_saettigung.setdefault(w["eating_fullness"] or 0, []).append(w["en"])
+            for wert in sorted(nach_saettigung, reverse=True):
+                print(f"  Sättigung {wert}: {', '.join(sorted(nach_saettigung[wert]))}")
+
+        verstaerkung = kb.food_amplification(conn)
+        if verstaerkung:
+            print(f"\nNahrungsverstärkung durch Verarbeitung: {len(verstaerkung)} Rezepte")
+            for e in verstaerkung[:8]:
+                print(f"  {e['eingesetzt']:<28} -> {e['saettigung_raus']:.0f} Sättigung "
+                      f"(Faktor {e['faktor']}) in {e['gebaeude'] or '?'}")
+
+        warnungen = conn.execute(
+            "SELECT COUNT(*) n FROM source_pages WHERE warning IS NOT NULL").fetchone()["n"]
+        seiten = conn.execute("SELECT COUNT(*) n FROM source_pages").fetchone()["n"]
+        if seiten:
+            print(f"\nQuellseiten: {seiten}, davon {warnungen} mit Versionswarnung "
+                  f"({warnungen * 100 // seiten} Prozent)")
+
+        offen = kb.unmatched_save_ids(conn)
+        if offen:
+            print(f"\nIDs aus dem Spielstand ohne Eintrag: {len(offen)}")
+            print("  " + ", ".join(offen[:12]) + (" ..." if len(offen) > 12 else ""))
+    finally:
+        conn.close()
+    return 0
 
 
 def cmd_build(args) -> int:
@@ -443,6 +717,63 @@ def cmd_build(args) -> int:
     return 0
 
 
+def cmd_namen(args) -> int:
+    """Deutsche Namen aus der Lokalisierung des Spiels uebernehmen.
+
+    Ohne --write wird nur gezeigt, was sich aendern wuerde. Das ist kein
+    Selbstzweck: der Lauf sagt, wie viele der geratenen Namen falsch waren,
+    und das ist die Antwort auf die Frage, wie weit der Recherche zu trauen
+    war.
+    """
+    if args.dir:
+        posten = localization.lade(Path(args.dir))
+        herkunft = str(Path(args.dir))
+    else:
+        csv_pfad = Path(args.csv)
+        if not csv_pfad.exists():
+            print(f"Weder --dir noch {csv_pfad} -- nichts zu tun.")
+            return 1
+        posten = localization.lade_csv(csv_pfad)
+        herkunft = str(csv_pfad)
+
+    print(f"Namen aus {herkunft}: {len(posten)}")
+    nach_art = Counter(e.kind for e in posten)
+    for art, n in sorted(nach_art.items(), key=lambda kv: -kv[1]):
+        print(f"  {art:<16} {n}")
+
+    conn = kb.connect(args.db)
+    try:
+        # Trockenlauf: dieselbe Rechnung, nur wird sie am Ende zurueckgedreht.
+        bericht = localization.import_localization(
+            conn, posten, quelle=localization.QUELLE if args.dir else herkunft,
+            commit=args.write)
+        print()
+        for zeile in bericht.zusammenfassung():
+            print(zeile)
+
+        if bericht.widerlegt:
+            print(f"\nWiderlegte Namen ({len(bericht.widerlegt)}):")
+            for en, falsch, richtig, conf in sorted(bericht.widerlegt)[:args.zeigen]:
+                print(f"  {en:<26} {falsch:<28} -> {richtig}   ({conf})")
+            if len(bericht.widerlegt) > args.zeigen:
+                print(f"  ... und {len(bericht.widerlegt) - args.zeigen} weitere")
+
+        if args.write:
+            if args.dir:
+                n = localization.schreibe_csv(posten, Path(args.csv))
+                print(f"\n{args.csv}: {n} Zeilen")
+            print("\nAbdeckung:")
+            for bereich, werte in kb.coverage(conn).items():
+                if werte:
+                    print(f"  {bereich}: " + ", ".join(f"{k}={v}" for k, v in sorted(werte.items())))
+        else:
+            conn.rollback()
+            print("\n(Trockenlauf -- nichts geschrieben. Mit --write uebernehmen.)")
+    finally:
+        conn.close()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -473,6 +804,30 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--title", nargs="+", required=True)
     s.add_argument("--chars", type=int, default=3000)
     s.set_defaults(func=cmd_page)
+
+    s = sub.add_parser("html", help="Tabellen aus dem gerenderten HTML lesen")
+    s.add_argument("--wiki-dir", required=True)
+    s.add_argument("--pages", nargs="*", help="Seitentitel, Vorgabe sind die Listenseiten")
+    s.add_argument("--max-tables", type=int, default=3)
+    s.add_argument("--examples", type=int, default=2)
+    s.add_argument("--out", default="diagnostics")
+    s.add_argument("--write", action="store_true",
+                   help="die erkannten Tabellen in die Wissensbasis schreiben")
+    s.add_argument("--db", default="kb.sqlite")
+    s.set_defaults(func=cmd_html)
+
+    s = sub.add_parser("namen", help="deutsche Namen aus der Spiel-Lokalisierung")
+    s.add_argument("--dir", help="Verzeichnis mit de_translations.json und de_en_mapping.json")
+    s.add_argument("--csv", default="data/name_map_localized.csv",
+                   help="Ablage im Repo; ohne --dir wird von hier gelesen")
+    s.add_argument("--db", default="kb.sqlite")
+    s.add_argument("--zeigen", type=int, default=25, help="wie viele Widerlegungen auflisten")
+    s.add_argument("--write", action="store_true", help="uebernehmen statt nur zeigen")
+    s.set_defaults(func=cmd_namen)
+
+    s = sub.add_parser("status", help="Inhalt der Wissensbasis zeigen")
+    s.add_argument("--db", default="kb.sqlite")
+    s.set_defaults(func=cmd_status)
 
     s = sub.add_parser("build", help="Wikitext auswerten (noch nicht fertig)")
     s.add_argument("--wiki-dir", required=True)

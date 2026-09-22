@@ -101,3 +101,66 @@ Zusätzlich, sobald du die ID-Listen aus der KB-Sonde hast:
 ```powershell
 python tools\build_kb.py seed --ids diagnostics\ids-20260921-223605
 ```
+
+
+---
+
+## Wo die restlichen Daten liegen
+
+Der Aufbau aus dem Wikitext hat 74 Waren geliefert und bei Gebäuden, Rezepten
+und Grundsteinen fast nichts. Der Grund steht im Abzug selbst: es gibt genau
+drei Datenseiten — `Data:Goods/1`, `Data:Deeds/1`, `Data:guid index/1`. Für
+Gebäude und Grundsteine gibt es keine.
+
+Der Wikitext der Listenseiten ist nur eine **Abfrage**: `{{Perks|search=Ale}}`
+sagt dem Server, was er ausklappen soll, und enthält selbst keine Daten. Im
+**gerenderten HTML** steht das Ergebnis — `List of Perks.html` hat 745 KB,
+`List of Cornerstones and Perks.html` 746 KB, `Glade Events.html` 2,2 MB,
+`Orders.html` 4,7 MB. Der zugehörige Wikitext ist jeweils eine Zeile.
+
+Deshalb liest `src/ats_assistant/wikihtml.py` jetzt gerenderte Tabellen, mit
+`html.parser` aus der Standardbibliothek. `rowspan` und `colspan` werden
+ausgeschrieben — die Tabellen des Wikis benutzen beides, und wer sie ignoriert,
+verschiebt die Spalten aller folgenden Zeilen.
+
+```powershell
+python tools\build_kb.py html --wiki-dir "C:\Users\Joni\.cursor\wiki\against-the-storm-wiki"
+```
+
+Das liest die achtzehn Seiten, die die fehlenden Tabellen tragen, und berichtet
+je Tabelle Kopfzeile, Zeilenzahl und zwei Beispielzeilen. Daraus kommt die
+Zuordnung zu den Tabellen der Spec — wieder gegen Belege statt gegen
+Vermutungen.
+
+## Was der Wikitext-Aufbau ergeben hat
+
+| | |
+|---|---|
+| guid-Index | 6469 Einträge |
+| Waren | 74, mit Kategorie, Sättigung, Brenndauer, Handelswerten |
+| Seiten mit Versionsangabe | 246, **davon 235 mit Warnung** |
+
+235 von 246 heißt: **96 Prozent des Wikis beschreiben eine ältere Spielversion
+als die gespielte.** Der Vorbehalt der Spec ist damit nicht die Ausnahme,
+sondern die Regel — und das ist das stärkste Argument dafür, `save_ids` und die
+Datenseiten ernst zu nehmen: die kommen aus 1.10.4.
+
+## Das Nahrungsmodell steht, und es ist besser als die Recherche behauptet
+
+15 essbare Waren mit Sättigungswert aus den Spieldaten:
+
+| Sättigung | Waren |
+|---|---|
+| 3,0 | Pickled Goods, Pie, Skewers |
+| 2,0 | Biscuits, Jerky, Paste, Porridge |
+| 1,0 | Berries, Eggs, Fish, Insects, Meat, … |
+
+Rohnahrung sättigt 1,0, verarbeitete Nahrung 2,0 bis 3,0. Bei einem Rezept,
+das aus 5 Roheinheiten 10 verarbeitete macht, stehen damit 5 Sättigungspunkte
+gegen 20 — **Faktor 4**, nicht die 2,0, die die Recherche als „caloric yield
+multiplier" nennt. Bei den Dreiern sind es 6.
+
+Das ist genau die Zahl, an der die Spec hängt: Nahrungsmangel im ersten Jahr
+ist das Problem, und die Umwandlung ist viermal so wirksam wie das Dokument
+behauptet. Belegt ist sie aber erst, wenn die Rezeptverhältnisse aus dem Wiki
+dazukommen — die 5:10 stammen bislang aus der Recherche.

@@ -11,12 +11,24 @@ Screenshot an ein Sprachmodell, nur kompaktes JSON.
 
 | Phase | Inhalt | Status |
 |---|---|---|
-| 0 | Machbarkeit: Save-Format, Schreibzeitpunkt, Sprache | Skript fertig, **Messung steht aus** |
-| 1 | Wissensbasis `kb.sqlite` | offen |
-| 2 | Save-Parser | offen |
-| 3 | Bildschirmauslesung | offen |
-| 4 | MCP-Server | offen |
-| 5 | Entscheidungslogik `ats-advisor` | offen |
+| 0 | Machbarkeit: Save-Format, Schreibzeitpunkt, Sprache | **beantwortet** |
+| 1 | Wissensbasis `kb.sqlite` | Waren vollständig, Grundsteine und Rezepte offen |
+| 2 | Save-Parser und Mitschrift | **fertig** |
+| 3 | Bildschirmauslesung | offen — nur noch Auswahlbildschirme |
+| 4 | MCP-Server | **fertig** bis auf `read_choice` |
+| 5 | Entscheidungslogik `ats-advisor` | **fertig**, wächst mit der Wissensbasis |
+
+## Im Betrieb
+
+```powershell
+uv run ats-watch     # läuft mit und schreibt jeden Zustand mit
+uv run ats-mcp       # MCP-Server für Claude Code
+```
+
+Befunde aus Phase 0 stehen in [docs/PHASE0.md](docs/PHASE0.md): der Spielstand
+ist unkomprimiertes JSON mit englischen IDs, wird alle 300 Spielzeitsekunden
+als Bündel aus vier Dateien geschrieben und trägt je Ware 180 Stützstellen
+Vorgeschichte im Zehnsekundentakt.
 
 ## Phase 0 ausführen
 
