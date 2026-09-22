@@ -162,3 +162,102 @@ Reputation, Ungeduld und Nahrungsreichweite; Nahrung mit drei Sätzen und der
 Kettentabelle; Auswahl mit zwei erkannten Grundsteinen samt Güte und Wirkung.
 
 **Stand: 228 Tests, alle grün, auf Python 3.12 mit echtem Tk.**
+
+---
+
+# Der erste Lauf am Spielrechner (2026-09-22)
+
+Das Fenster lief zum ersten Mal dort, wo das Spiel läuft: Windows, Python
+3.12, vier Reiter, `Alles bereit – 2273 Namen`. **Vier Funde in zwei
+Sitzungen — und der schwerste war der unauffälligste.**
+
+Keiner davon wäre hier aufgefallen. Drei brauchten einen echten Spielstand,
+einer eine fehlende Anmeldung. Alle vier liegen in Code, den die 228 Tests
+umrundet haben.
+
+## 1. Die Nahrungsvorhersage war tot, und nichts sagte es
+
+Im Fenster: „Nahrung reicht **–**", daneben rot „Es braucht zwei
+Spielstände". In der Statuszeile: **22 Mitschriften**. Beides stand da
+gleichzeitig, und beides stimmte.
+
+`get_state` baute die Kennung der Mitschrift so:
+
+```python
+kennung = run_id or f"{state.biome or 'lauf'}-{int(state.game_time)}"
+```
+
+Die Spielzeit steht in der Kennung. Also bekam **jeder Aufruf eine eigene
+Datei** — 22 Dateien mit je einer Zeile. `food_forecast` nimmt die letzten
+zwei Einträge *derselben* Mitschrift und fand nie einen zweiten.
+
+Der Grund, aus dem es dieses Programm gibt, ist der Nahrungsmangel im ersten
+Jahr. Genau der lief ins Leere, während alles andere grün aussah:
+`impatience_forecast` braucht nur einen Zustand und lieferte brav
+„Niederlage in 9 min".
+
+Behoben in `watcher.lauf_kennung`: Biom, Stufe und eine nicht
+zurückgesprungene Spieluhr heißen dieselbe Siedlung, also dieselbe Datei.
+Gelesen wird dafür nur die letzte Zeile, rückwärts in Blöcken — eine Zeile
+ist ein ganzer Zustand samt Zeitreihen, gut 200 kB. Dazu schreibt
+`mitschreiben` nichts, was schon dasteht, und ein neu gestarteter
+`ats-watch` verlängert den laufenden Lauf, statt einen neuen zu beginnen.
+
+**Warum kein Test das sah:** jeder Test gab seine Kennung selbst mit
+(`run_id="testlauf"`). Was ohne sie passiert, hat nie jemand geprüft.
+
+## 2. Die Feindseligkeit stand als rohes Dictionary im Fenster
+
+`{'level': 3, 'points': 72, 'sources':` — am rechten Rand abgeschnitten.
+
+Das Fenster suchte `feind.get("current")`. Dieser Schlüssel stammt aus der
+Testvorlage dieses Projekts, und die war **erfunden, nicht gemessen**. Das
+Spiel schreibt `level` und `points`.
+
+`rechner.feindseligkeit` liest beide Formen; die Vorlagen tragen jetzt die
+gemessene; und ein Test besteht darauf, dass nie eine geschweifte Klammer im
+Fenster landet, was auch kommt.
+
+## 3. Der Anmeldefehler ging an allen vier `except`-Zweigen vorbei
+
+Im Reiter „Rat" stand der englische Rohtext des SDK: *Could not resolve
+authentication method…*
+
+Nachgesehen in anthropic 1.7.0 statt vermutet: für eine fehlende Anmeldung
+wirft das SDK **kein** `AuthenticationError`, sondern ein schlichtes
+`TypeError` aus `_validate_headers` — und zwar beim Bauen der Kopfzeilen,
+mitten in `messages.create()`. `rechner._rat` fing es als `Exception` und
+setzte `zugang=True`; deshalb fehlte der Satz mit `setx ANTHROPIC_API_KEY`
+und der Hinweis auf „Lage kopieren".
+
+`_ist_anmeldefehler` erkennt es, absichtlich eng: ein `TypeError` über ein
+falsches Schlüsselwort — `budget_tokens` ging genau so schon einmal daneben —
+bleibt ein `TypeError`. Als Anmeldeproblem verkleidet wäre es nicht zu
+finden.
+
+Nebenbei aufgefallen: der vorhandene Test des Ratwegs hätte auf einem Rechner
+**mit** Schlüssel wirklich angefragt. Er setzt jetzt einen Client ein.
+
+## 4. Der Auswahlreiter sagte nicht, welcher Weg gelaufen ist
+
+Im Handfeld stand `handelsverhandlungen`, in der Ausgabe der Rat zu
+`pip install winsdk`. Gelaufen war der Bildweg — nur stand das nirgends.
+
+Kein Programmfehler im engeren Sinn: der Knopf „Bildschirm lesen" liest den
+Bildschirm. Aber ein Feld, das nicht sagt, woher seine Zeilen kommen, macht
+aus einem Bedienfehler einen Programmfehler. Jetzt steht die Herkunft in
+beiden Fällen oben, der Grund passt zum Weg (wer tippt, wird nicht nach dem
+Bildschirmfoto gefragt), und scheitert der Bildweg, während im Handfeld Text
+steht, weist ein Satz auf „Abgleichen".
+
+## Was das über die Prüfrunde sagt
+
+Die Prüfrunde hat sechs Fehler gefunden, ohne das Spiel zu starten. Diese
+vier brauchten es. Das ist keine Schwäche der Runde — es ist die Grenze, die
+sie selbst benannt hat: *„Ein Tk-Fenster unter Xvfb beweist die Verdrahtung,
+nicht die Windows-Seite."* Was sie nicht benannt hatte: dass auch ein echter
+**Spielstand** Dinge zeigt, die keine Vorlage zeigt. Zwei der vier Funde
+hängen an genau dem — einer erfundenen Testvorlage und einer Kennung, die
+kein Test je selbst bilden ließ.
+
+**Stand: 260 Tests, alle grün, auf Python 3.12 mit echtem Tk.**
