@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import analysis, kb
+from . import analysis, kb, nahrung, namen_match, screen
 from .forecast import food_forecast as _food_forecast
 from .forecast import impatience_forecast as _impatience_forecast
 from .save_reader import GameState, append_run_log, read_state
@@ -77,12 +77,73 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
     return out
 
 
-def read_choice() -> dict:
-    """Auswahlbildschirm -- kommt aus Phase 3 und ist noch nicht gebaut."""
+def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
+                db: str | Path = "kb.sqlite", arten: tuple[str, ...] = ("effect",),
+                aufnehmen: bool = False) -> dict:
+    """Der Auswahlbildschirm als Namen und Zahlen -- nie als Bild.
+
+    Gemessen am 22.09.2026: die angebotenen Grundsteine stehen nicht im
+    Spielstand, auch nicht als Text. Deshalb der Bildschirm. Das Lesen
+    passiert hier, lokal und deterministisch; was zurueckgeht, sind
+    belegte Namen und die Angaben aus der Wissensbasis dazu.
+
+    Drei Eingaenge, damit eine fehlende Abhaengigkeit nicht die ganze
+    Kette stilllegt: ein aufgenommenes Bild, eine vorhandene Bilddatei,
+    oder der bereits gelesene Text.
+    """
+    zeilen: list[str] = []
+    quelle = "text"
+    if text:
+        zeilen = [t for t in text if (t or "").strip()]
+    else:
+        pfad = Path(bild) if bild else None
+        if pfad is None and aufnehmen:
+            try:
+                pfad = screen.aufnehmen()
+            except Exception as exc:
+                return {"verfuegbar": False, "grund": str(exc),
+                        "umgebung": screen.verfuegbar()}
+        if pfad is None:
+            return {
+                "verfuegbar": False,
+                "grund": ("Kein Bild und kein Text. Entweder `bild` auf ein "
+                          "Bildschirmfoto zeigen lassen, `aufnehmen=True` setzen, "
+                          "oder die gelesenen Kartentitel als `text` uebergeben."),
+                "umgebung": screen.verfuegbar(),
+            }
+        quelle = str(pfad)
+        try:
+            erkannt = screen.sortiere_nach_karten(screen.erkenne(pfad))
+        except Exception as exc:
+            return {"verfuegbar": False, "grund": str(exc),
+                    "umgebung": screen.verfuegbar()}
+        zeilen = [z.text for z in erkannt]
+
+    conn = kb.connect(db)
+    try:
+        gelesen = namen_match.lies_auswahl(conn, zeilen, arten=arten)
+        angebot = [g for g in gelesen if g["eindeutig"]]
+        for eintrag in angebot:
+            zusatz = conn.execute(
+                "SELECT rarity, effect_text, origin FROM cornerstones WHERE en = ?",
+                (eintrag["en"],)).fetchone()
+            if zusatz:
+                eintrag.update({"seltenheit": zusatz["rarity"],
+                                "wirkung": zusatz["effect_text"],
+                                "herkunft": zusatz["origin"]})
+    finally:
+        conn.close()
+
+    unklar = [g for g in gelesen if not g["eindeutig"] and g["kandidaten"]]
     return {
-        "verfuegbar": False,
-        "grund": ("Auswahlbildschirme stehen nicht im Spielstand. Sie kommen aus "
-                  "Phase 3 (Bildschirmauslesung), die noch nicht gebaut ist."),
+        "verfuegbar": bool(angebot),
+        "quelle": quelle,
+        "angebot": angebot,
+        "unklar": unklar[:5],
+        "gelesene_zeilen": len(zeilen),
+        "grund": None if angebot else (
+            "Nichts erkannt, was einem belegten Namen nahekommt. Stand der "
+            "Auswahlbildschirm offen, als das Bild entstand?"),
     }
 
 
@@ -148,6 +209,65 @@ def food_forecast(runs_dir: str | Path = "runs", run_id: str | None = None,
         "reichweite_sekunden": f.runway_seconds,
         "stuetzstellen": f.samples_used,
         "warnung": f.warning,
+    }
+
+
+def food_advice(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
+                run_id: str | None = None, kategorie: str = "Food") -> dict:
+    """Was gegen den Nahrungsmangel zu bauen waere -- nicht nur, wann er kommt.
+
+    Das ist eine Ergaenzung zur Werkzeugliste der Spec. Sie steht dort nicht,
+    aber die Spec nennt den Nahrungsmangel im ersten Jahr als das Problem,
+    und `food_forecast` beantwortet nur dessen Diagnose. Gerechnet wird auf
+    denselben Grundlagen: die Rezepte aus der Wissensbasis, der Bestand aus
+    dem Spielstand, der Verbrauch aus der Zeitreihe. Kein Modell beteiligt.
+    """
+    zustaende, quelle = _letzte_zustaende(runs_dir, run_id)
+    if not zustaende:
+        return {"verfuegbar": False, "grund": "Keine Mitschrift vorhanden."}
+
+    aktuell = _als_zustand(zustaende[-1])
+    verbrauch = None
+    reichweite = None
+    if len(zustaende) >= 2:
+        f = _food_forecast(aktuell, _als_zustand(zustaende[-2]), category=kategorie)
+        verbrauch = f.rate_per_second
+        reichweite = f.runway_seconds
+
+    conn = kb.connect(db)
+    try:
+        r = nahrung.rat(conn, aktuell.storage or {}, verbrauch, reichweite)
+    finally:
+        conn.close()
+
+    return {
+        "verfuegbar": bool(r.vorschlaege),
+        "quelle": quelle,
+        "empfehlung": r.empfehlung,
+        "begruendung": r.begruendung,
+        "alternative": r.alternative,
+        "verbrauch_je_spielzeitsekunde": verbrauch,
+        "reichweite_sekunden": reichweite,
+        "ketten": [
+            {
+                "gebaeude": v.gebaeude,
+                "gebaeude_de": v.gebaeude_de,
+                "produkt": v.produkt,
+                "produkt_de": v.produkt_de,
+                "einsatz": [{"menge": z.menge * v.zyklen, "ware": z.ware}
+                            for z in v.zutaten],
+                "durchlaeufe": round(v.zyklen, 1),
+                "saettigung_rein": round(v.saettigung_rein, 1),
+                "saettigung_raus": round(v.saettigung_raus, 1),
+                "gewinn": round(v.gewinn, 1),
+                "faktor": round(v.faktor, 2) if v.faktor else None,
+                "sekunden": v.dauer,
+                "engpass": v.engpass,
+                "reichweite_plus_sekunden": (round(v.reichweite_plus)
+                                             if v.reichweite_plus else None),
+            }
+            for v in r.vorschlaege[:6]
+        ],
     }
 
 
@@ -234,6 +354,7 @@ class _Zustand:
         self.impatience_bonus_rate = daten.get("impatience_bonus_rate")
         self.category_trends = daten.get("category_trends") or {}
         self.goods_trends = daten.get("goods_trends") or {}
+        self.storage = daten.get("storage") or {}
 
 
 def _als_zustand(daten: dict) -> _Zustand:

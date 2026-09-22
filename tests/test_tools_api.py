@@ -152,15 +152,96 @@ def test_query_kb_sagt_wenn_nichts_da_ist(tmp_path: Path) -> None:
     assert "hinweis" in out
 
 
-def test_read_choice_sagt_klar_dass_phase_3_fehlt() -> None:
+def test_read_choice_ohne_eingabe_sagt_was_fehlt() -> None:
+    """Kein Bild, kein Text -- dann steht da, was zu tun waere."""
     out = tools_api.read_choice()
-    assert out["verfuegbar"] is False and "Phase 3" in out["grund"]
+    assert out["verfuegbar"] is False
+    assert "Bildschirmfoto" in out["grund"]
+    # Und was die Umgebung hergibt, statt nur dass etwas fehlt.
+    assert "erkennung" in out["umgebung"] and "rat" in out["umgebung"]
+
+
+def test_read_choice_bildet_gelesene_titel_auf_belegte_namen_ab(tmp_path: Path) -> None:
+    """Der Weg ohne Texterkennung: die gelesenen Titel direkt uebergeben.
+
+    Die zwei Namen standen am 22.09.2026 auf dem Auswahlbildschirm; die
+    Grossschrift und der fehlende Umlaut sind das, was eine Texterkennung
+    daraus macht.
+    """
+    from ats_assistant import localization
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Reward_MushroomSpecialization_Name",
+                             "Fungal Guide", "Pilzführer", "effect"),
+        localization.Eintrag("Reward_PacksRawProd_Name", "Export Specialization",
+                             "Exportspezialisierung", "effect"),
+    ])
+    conn.execute("INSERT INTO cornerstones (en, rarity, effect_text) "
+                 "VALUES ('Fungal Guide', 'Epic', '+1 Pilze je 25 Produktion')")
+    conn.commit()
+    conn.close()
+
+    out = tools_api.read_choice(text=["PlLZFUHRER", "EXPORTSPEZIALISIERUNG"], db=db)
+    assert out["verfuegbar"] is True
+    assert [a["en"] for a in out["angebot"]] == ["Fungal Guide", "Export Specialization"]
+    assert out["angebot"][0]["de"] == "Pilzführer"
+    # Die Wissensbasis haengt dran, was sie weiss.
+    assert out["angebot"][0]["seltenheit"] == "Epic"
+
+
+def test_read_choice_raet_nicht_bei_unlesbarem(tmp_path: Path) -> None:
+    out = tools_api.read_choice(text=["~~~~~", ""], db=tmp_path / "leer.sqlite")
+    assert out["verfuegbar"] is False
+    assert out["angebot"] == []
+    assert "Auswahlbildschirm offen" in out["grund"]
+
+
+def test_food_advice_rechnet_gegen_den_lagerbestand(tmp_path: Path) -> None:
+    """Die Antwort auf "was soll ich bauen" -- aus Rezepten, Bestand, Verbrauch."""
+    save_dir = buendel(tmp_path / "save")
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    for en, save_id, fuelle in (("Meat", "[Food Raw] Meat", 1.0),
+                                ("Jerky", "[Food Processed] Jerky", 2.0)):
+        conn.execute("INSERT INTO resources (en, save_id, eatable, eating_fullness) "
+                     "VALUES (?,?,1,?)", (en, save_id, fuelle))
+    conn.execute(
+        "INSERT INTO recipes (id, building, inputs, stars, seconds, product, "
+        " product_amount) VALUES (1, 'Smokehouse', ?, 1, 60, 'Jerky', 10)",
+        (json.dumps([[{"menge": 5, "ware": "Meat"}]]),))
+    conn.execute("INSERT INTO production (product, building, stars) "
+                 "VALUES ('Jerky', 'Smokehouse', 3)")
+    conn.commit()
+    conn.close()
+
+    out = tools_api.food_advice(runs, db, run_id="lauf")
+    assert out["verfuegbar"] is True
+    kette = out["ketten"][0]
+    assert kette["gebaeude"] == "Smokehouse"
+    assert kette["durchlaeufe"] == 8.4             # 42 Fleisch, 5 je Durchlauf
+    assert kette["faktor"] == 4.0
+    assert "Smokehouse" in out["empfehlung"]
+    # Ein Zustand reicht fuer den Rat, aber nicht fuer den Verbrauch.
+    assert out["verbrauch_je_spielzeitsekunde"] is None
+
+
+def test_food_advice_ohne_mitschrift_sagt_das(tmp_path: Path) -> None:
+    out = tools_api.food_advice(tmp_path / "leer", tmp_path / "kb.sqlite")
+    assert out["verfuegbar"] is False and "Mitschrift" in out["grund"]
 
 
 def test_werkzeugliste_entspricht_der_spec(tmp_path: Path) -> None:
     namen = {w["name"] for w in werkzeuge(tmp_path, tmp_path, tmp_path / "kb.sqlite")}
     assert {"get_state", "read_choice", "query_kb", "food_forecast",
             "log_event", "analyze_runs"} <= namen
+    # Ergaenzung ueber die Spec hinaus, mit demselben Leitprinzip: gerechnet
+    # wird hier, geurteilt im Modell.
+    assert "food_advice" in namen
 
 
 def test_jedes_werkzeug_hat_ein_schema(tmp_path: Path) -> None:

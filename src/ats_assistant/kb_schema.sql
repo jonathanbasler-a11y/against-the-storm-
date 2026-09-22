@@ -66,6 +66,11 @@ CREATE TABLE IF NOT EXISTS buildings (
     cost         TEXT,          -- JSON: {"Planks": 5, ...}
     specialization TEXT,
     worker_slots INTEGER,
+    unlock       TEXT,          -- "(always available)", "Unlocked on Level 3"
+    category     TEXT,          -- die Ueberschrift, unter der der Entwurf steht
+    purpose      TEXT,          -- Zweck in einem Satz
+    products     TEXT,          -- was es herstellt oder erntet
+    near         TEXT
     source_page  TEXT REFERENCES source_pages(title)
 );
 
@@ -86,6 +91,24 @@ CREATE TABLE IF NOT EXISTS recipes (
 );
 
 CREATE INDEX IF NOT EXISTS recipes_product ON recipes(product);
+
+-- Die Seite "List of Resources" fuehrt je Erzeugnis, in welchen Gebaeuden es
+-- entsteht und mit welchem Sterngrad -- "Smokehouse (***) Apothecary (**)
+-- Butcher (*)". Das ist die belastbare Zuordnung Produkt -> Gebaeude; die
+-- Rezepte von den Gebaeudeseiten tragen die Mengen, aber nicht zuverlaessig
+-- das Gebaeude. Dazu die Spezies, die das Erzeugnis bevorzugen.
+CREATE TABLE IF NOT EXISTS production (
+    product      TEXT,
+    building     TEXT,
+    stars        INTEGER,        -- 3 = beste Rezeptstufe im Gebaeude
+    category     TEXT,           -- "Complex Food", "Building Material", ...
+    inputs       TEXT,           -- JSON: Liste von Alternativlisten
+    species_pref TEXT,           -- Spezies, die es bevorzugen
+    source_page  TEXT REFERENCES source_pages(title),
+    PRIMARY KEY (product, building)
+);
+
+CREATE INDEX IF NOT EXISTS production_building ON production(building);
 
 CREATE TABLE IF NOT EXISTS species (
     en            TEXT PRIMARY KEY,

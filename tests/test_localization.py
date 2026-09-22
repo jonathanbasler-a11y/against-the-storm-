@@ -159,3 +159,23 @@ def test_lade_findet_dateien_mit_vorangestelltem_kuerzel(tmp_path: Path) -> None
     posten = localization.lade(verzeichnis)
     assert any(e.en == "Pickled Goods" for e in posten)
     assert any(e.en == "Impatience" for e in posten)     # Konzeptdurchgang lief
+
+
+def test_grundsteine_unter_reward_werden_mitgenommen() -> None:
+    """"Pilzführer" ist Reward_MushroomSpecialization_Name, nicht Effect_.
+
+    Der grosse Teil der Grundsteine steht unter diesem Praefix. Es
+    auszulassen hiess, ausgerechnet die Kategorie auszulassen, um die es in
+    SPEC.md geht -- aufgefallen an einem Auswahlbildschirm, auf dem beide
+    angebotenen Namen in der Tabelle fehlten.
+    """
+    strings = {
+        "Reward_MushroomSpecialization_Name": {"en": "Fungal Guide", "de": "Pilzführer"},
+        "Reward_PacksRawProd_Name": {"en": "Export Specialization",
+                                     "de": "Exportspezialisierung"},
+        "MetaReward_HearthServices_Name": {"en": "The Commons", "de": "Das Gemeindeland"},
+    }
+    nach_art = {e.en: e.kind for e in localization.eintraege(strings)}
+    assert nach_art["Fungal Guide"] == "effect"
+    assert nach_art["Export Specialization"] == "effect"
+    assert nach_art["The Commons"] == "meta"

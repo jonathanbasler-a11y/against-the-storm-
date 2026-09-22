@@ -29,6 +29,8 @@ Rate nichts, was ein Werkzeug beantwortet:
 |---|---|
 | Wie steht die Siedlung? | `get_state` |
 | Reicht die Nahrung? | `food_forecast` |
+| Was tun, wenn sie nicht reicht? | `food_advice` |
+| Was steht gerade zur Wahl? | `read_choice` |
 | Wie lange bis zur Niederlage? | `impatience_forecast` |
 | Was ist das auf Deutsch, was kostet es? | `query_kb` |
 | Was unterschied gewonnene Läufe? | `analyze_runs` |
@@ -57,6 +59,10 @@ aus den Spieldaten: Rohnahrung 1,0, Haferbrei/Dörrfleisch/Kekse/Paste 2,0,
 Eingelegte Nahrung/Pastete/Fleischspieße 3,0. Ein Rezept, das aus 5 roh 10 verarbeitet
 macht, vervierfacht damit die Sättigung. Das ist der stärkste Hebel gegen das
 Kernproblem — und größer, als gemeinhin angenommen.
+
+Welche Kette sich bei *diesem* Lager lohnt, rechnet `food_advice` aus: jedes
+Rezept gegen den Bestand, mit Durchläufen, Engpass und gewonnener Reichweite
+in Sekunden. Diese Zahl nicht schätzen — sie steht da.
 
 **Ab Prestige 10 schlägt Feindseligkeitssenkung fast jeden Wirtschaftsbonus.**
 
@@ -95,6 +101,14 @@ Regel.
 
 ## Auswahlbildschirme
 
-`read_choice` gibt es noch nicht — die Auswahlbildschirme stehen nicht im
-Spielstand und kommen erst mit Phase 3. Bis dahin: den Spieler die Optionen
-nennen lassen, dann beraten. Nicht so tun, als hättest du sie gesehen.
+Die angebotenen Grundsteine stehen **nicht** im Spielstand — gemessen, nicht
+vermutet. `read_choice` liest deshalb den Bildschirm: aufnehmen, Text
+erkennen, gegen die belegten deutschen Namen abgleichen.
+
+Was dabei zurückkommt, sind Namen mit einer **Güte**. Eine Lesung, die nicht
+eindeutig ist, steht unter `unklar` mit ihren Kandidaten — und dann wird
+gefragt, nicht geraten: „Stand da *Pilzführer* oder *Pilzsämlinge*?"
+
+Kommt gar nichts zurück (keine Texterkennung installiert, Bild nicht
+getroffen), den Spieler die Optionen nennen lassen. Nicht so tun, als hättest
+du sie gesehen.

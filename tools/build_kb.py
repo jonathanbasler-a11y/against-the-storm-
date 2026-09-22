@@ -431,7 +431,8 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
         # Diese Tabellen stammen vollstaendig aus dem Wiki. Ohne Leeren
         # sammeln sich bei jedem Lauf Altlasten an -- nach der Korrektur der
         # doppelten Namen standen "Bats" und "Bats Bats" nebeneinander.
-        for tabelle in ("species", "difficulty", "cornerstones", "glade_events", "recipes"):
+        for tabelle in ("species", "difficulty", "cornerstones", "glade_events",
+                        "recipes", "prestige", "production", "biomes"):
             conn.execute(f"DELETE FROM {tabelle}")
         conn.commit()
         # Spezies: zwei Seiten mit teils verschiedenen Spalten, die sich ergaenzen.
@@ -459,6 +460,13 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
                 if _hat(t.kopf, "difficulty", "hostility multiplier"):
                     n = kb.import_difficulty(conn, t.als_dicts, source_page=pfad.stem)
                     meldungen.append(f"difficulty: {n} Zeilen aus {pfad.stem}")
+                # Die Prestigestufen stehen auf derselben Seite, unter einem
+                # Kopf, der zweimal "Description" heisst: Stufe, Satz,
+                # Modifikatorname, Erklaerung.
+                elif _hat(t.kopf, "modifier", "explanation"):
+                    n = kb.import_prestige(conn, t.als_dicts, source_page=pfad.stem)
+                    if n:
+                        meldungen.append(f"prestige: {n} Stufen aus {pfad.stem}")
 
         # Erst die grosse Liste (Name, Seltenheit, Text), dann die drei
         # Herkunftslisten -- die tragen nur die Herkunft nach.
@@ -486,6 +494,71 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
                                                source_page=pfad.stem)
                     meldungen.append(f"cornerstones: {n} mal Herkunft '{herkunft}'")
 
+        # "List of Buildings": Arbeitsplaetze, Spezialisierung, Baukosten.
+        # Acht Tabellen mit verschiedenen Koepfen, gemeinsam ist "Building"
+        # und "Workplaces".
+        for titel in ("list of buildings", "list of essential blueprints", "buildings"):
+            pfad = nach_titel.get(titel)
+            if not pfad:
+                continue
+            gebaeude = entwuerfe = 0
+            for t in tabellen_aus_datei(pfad):
+                if _hat(t.kopf, "building", "workplaces"):
+                    gebaeude += kb.import_buildings_list(conn, t.als_dicts,
+                                                         source_page=pfad.stem)
+                elif _hat(t.kopf, "blueprint", "unlock"):
+                    entwuerfe += kb.import_blueprints(conn, t.als_dicts,
+                                                      source_page=pfad.stem)
+            if gebaeude:
+                meldungen.append(f"buildings: {gebaeude} Zeilen mit Kosten und "
+                                 f"Arbeitsplaetzen aus {pfad.stem}")
+            if entwuerfe:
+                meldungen.append(f"buildings: {entwuerfe} Entwuerfe aus {pfad.stem}")
+
+        # "List of Resources" fuehrt je Erzeugnis die Gebaeude mit Sterngrad,
+        # beide Zutatengruppen und die Spezies, die es bevorzugen. Das ist die
+        # belastbare Zuordnung Produkt -> Gebaeude.
+        pfad = nach_titel.get("list of resources")
+        if pfad:
+            for t in tabellen_aus_datei(pfad):
+                if not _hat(t.kopf, "production buildings"):
+                    continue
+                kategorie = t.kopf[0] if t.kopf else None
+                n = kb.import_production(conn, t.als_dicts, kategorie=kategorie,
+                                         produktspalte=kategorie,
+                                         source_page=pfad.stem)
+                if n:
+                    meldungen.append(
+                        f"production: {n} Zuordnungen fuer '{kategorie}' aus {pfad.stem}")
+
+        # Biome: eine Seite je Biom, erkannt an den 21 belegten Biomnamen aus
+        # der Lokalisierung. Drei Tabellen je Seite -- Effekte, Baumarten,
+        # Rohstoffe mit erntendem Lager.
+        biomnamen = [r["en"] for r in conn.execute(
+            "SELECT en FROM name_map WHERE kind = 'biome' AND en IS NOT NULL")]
+        biome = 0
+        for biom in sorted(set(biomnamen)):
+            biompfad = nach_titel.get(biom.lower())
+            if not biompfad:
+                continue
+            try:
+                tabellen = tabellen_aus_datei(biompfad)
+            except Exception:
+                continue
+            effekte, baeume, rohstoffe = [], [], []
+            for t in tabellen:
+                if _hat(t.kopf, "trees", "charges"):
+                    baeume = t.als_dicts
+                elif _hat(t.kopf, "primary resources", "gathering building"):
+                    rohstoffe = t.als_dicts
+                elif not any(t.kopf) and t.zeilen and len(t.zeilen[0]) >= 2:
+                    effekte = effekte or [list(z) for z in t.zeilen]
+            if kb.import_biome(conn, biom, effekte, baeume, rohstoffe,
+                               source_page=biompfad.stem):
+                biome += 1
+        if biome:
+            meldungen.append(f"biomes: {biome} Biome mit Baumarten und Rohstoffen")
+
         # Rezepte stehen auf den Gebaeudeseiten, nicht nur auf "Recipes" --
         # 435 Aufrufe der Vorlage verteilen sich ueber den ganzen Abzug.
         rezepte = 0
@@ -498,13 +571,27 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
             gefunden_hier = 0
             for t in tabellen:
                 if _hat(t.kopf, "ingredient", "product"):
-                    gefunden_hier += kb.import_recipes(conn, t.als_dicts,
-                                                       source_page=rezeptpfad.stem)
+                    # Auf einer Gebaeudeseite steht keine Spalte "Building" --
+                    # das Gebaeude ist die Seite.
+                    gefunden_hier += kb.import_recipes(
+                        conn, t.als_dicts, source_page=rezeptpfad.stem,
+                        gebaeude_default=rezeptpfad.stem)
             if gefunden_hier:
                 rezepte += gefunden_hier
                 seiten_mit_rezepten += 1
         if rezepte:
             meldungen.append(f"recipes: {rezepte} Rezepte von {seiten_mit_rezepten} Seiten")
+
+        # Gegenprobe: die Gebaeude der Seitenrezepte gegen die Zuordnung aus
+        # "List of Resources". Wo beide sich widersprechen, wird das gemeldet
+        # und nicht still angeglichen.
+        streit = kb.pruefe_rezept_gebaeude(conn)
+        if streit:
+            beispiele = "; ".join(
+                f"{e['produkt']} in {e['gebaeude']} statt {'/'.join(e['laut_liste'][:2])}"
+                for e in streit[:3])
+            meldungen.append(
+                f"WIDERSPRUCH: {len(streit)} Rezepte mit fraglichem Gebaeude ({beispiele})")
 
         pfad = nach_titel.get("glade events")
         if pfad:
@@ -610,8 +697,44 @@ def cmd_status(args) -> int:
         if verstaerkung:
             print(f"\nNahrungsverstärkung durch Verarbeitung: {len(verstaerkung)} Rezepte")
             for e in verstaerkung[:8]:
+                marke = "" if e.get("belegt") else "  (Gebäude nur laut Seitentitel)"
                 print(f"  {e['eingesetzt']:<28} -> {e['saettigung_raus']:.0f} Sättigung "
-                      f"(Faktor {e['faktor']}) in {e['gebaeude'] or '?'}")
+                      f"(Faktor {e['faktor']}) in {e['gebaeude'] or '?'}{marke}")
+
+        # Woher das Gebaeude eines Rezepts kommt. Der Seitentitel war ein
+        # Rueckgriff und hat "Doerrfleisch in der Makellosen Schmelzerei"
+        # ergeben; die Produktionstabelle nennt die Zuordnung ausdruecklich.
+        zuordnung = conn.execute(
+            "SELECT COUNT(*) gesamt, "
+            "  SUM(CASE WHEN p.product IS NULL THEN 1 ELSE 0 END) ohne, "
+            "  SUM(CASE WHEN p.product IS NOT NULL AND r.building <> p.building "
+            "           THEN 1 ELSE 0 END) anders "
+            "FROM recipes r LEFT JOIN production p ON p.product = r.product "
+            "  AND p.building = r.building").fetchone()
+        if zuordnung and zuordnung["gesamt"]:
+            print(f"\nGebäude je Rezept: {zuordnung['gesamt']} Rezepte, "
+                  f"{zuordnung['ohne']} ohne Eintrag in der Produktionstabelle")
+            offen = conn.execute(
+                "SELECT DISTINCT r.product, r.building FROM recipes r "
+                "LEFT JOIN production p ON p.product = r.product "
+                "WHERE p.product IS NULL AND r.product IS NOT NULL LIMIT 6").fetchall()
+            for z in offen:
+                print(f"  {z['product']:<24} laut Seite {z['building'] or '--'}")
+            # Welche Erzeugnisse die Produktionstabelle ueberhaupt kennt --
+            # es sind wenige, also stehen sie vollstaendig da. Danach die
+            # essbaren Produkte, die ihr fehlen. Aus dem Vergleich beider
+            # Listen faellt heraus, woran die Zuordnung haengt.
+            kennt = [z["product"] for z in conn.execute(
+                "SELECT DISTINCT product FROM production ORDER BY product")]
+            print(f"  Produktionstabelle kennt ({len(kennt)}): {', '.join(kennt)}")
+            fehlend = [z["product"] for z in conn.execute(
+                "SELECT DISTINCT r.product FROM recipes r "
+                "JOIN resources g ON g.en = r.product AND g.eatable = 1 "
+                "LEFT JOIN production p ON p.product = r.product "
+                "WHERE p.product IS NULL ORDER BY r.product")]
+            if fehlend:
+                print(f"  Essbar, aber ohne Zuordnung ({len(fehlend)}): "
+                      f"{', '.join(fehlend)}")
 
         warnungen = conn.execute(
             "SELECT COUNT(*) n FROM source_pages WHERE warning IS NOT NULL").fetchone()["n"]

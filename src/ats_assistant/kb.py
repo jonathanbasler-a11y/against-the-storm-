@@ -16,6 +16,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .wikihtml import entdoppeln
+
 log = logging.getLogger(__name__)
 
 SCHEMA = Path(__file__).with_name("kb_schema.sql")
@@ -578,11 +580,98 @@ def parse_grad(text: str | None) -> tuple[int | None, float | None]:
     return sterne, sekunden
 
 
-def import_recipes(conn: sqlite3.Connection, zeilen: list[dict],
-                   source_page: str | None = None) -> int:
+def _ist_gebaeude(conn: sqlite3.Connection, name: str) -> bool:
+    """Kennt die Wissensbasis diesen Namen als Gebaeude?
+
+    Seit die Namen aus der Lokalisierung kommen, stehen 226 Gebaeudenamen
+    belegt in name_map. Damit laesst sich pruefen, ob eine Seite ein Gebaeude
+    ist -- und nur dann darf ihr Titel als Gebaeude eines Rezepts gelten.
+    """
+    if not name:
+        return False
+    if conn.execute("SELECT 1 FROM buildings WHERE en = ?", (name,)).fetchone():
+        return True
+    return bool(conn.execute(
+        "SELECT 1 FROM name_map WHERE kind = 'building' AND (en = ? OR en_id = ?)",
+        (name, _normalform(name))).fetchone())
+
+
+def import_prestige(conn: sqlite3.Connection, zeilen: list[dict],
+                    source_page: str | None = None) -> int:
+    """Die Prestigestufen von der Seite Difficulty.
+
+    Der Tabellenkopf heisst dort zweimal "Description": die erste Spalte ist
+    die Stufe, die zweite der Satz dazu. Der Leser des HTML haengt an den
+    zweiten ein _2, und genau darueber wird sie geholt.
+    """
     n = 0
     for z in zeilen:
-        gebaeude = _spalte(z, "Building")
+        stufe = _zahl(_spalte(z, "Description", "Level", "Prestige"))
+        modifikator = _spalte(z, "Modifier")
+        if stufe is None or not modifikator:
+            continue
+        wirkung = _spalte(z, "Description_2", "Effect") or ""
+        erklaerung = _spalte(z, "Explanation") or ""
+        if erklaerung and erklaerung not in wirkung:
+            wirkung = f"{wirkung} {erklaerung}".strip()
+        conn.execute(
+            "INSERT OR REPLACE INTO prestige (level, modifier_en, effect, source_page) "
+            "VALUES (?,?,?,?)",
+            (int(stufe), modifikator, wirkung or None, source_page),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def import_blueprints(conn: sqlite3.Connection, zeilen: list[dict],
+                      kategorie: str | None = None,
+                      source_page: str | None = None) -> int:
+    """Die Entwurfsliste: welches Gebaeude ab welcher Stufe zur Wahl steht.
+
+    Das ist die halbe Antwort auf die zweite Frage der Spec. Ein Entwurf, den
+    es auf dieser Stufe noch gar nicht gibt, kann nicht im Angebot stehen --
+    und was immer verfuegbar ist, ist nie eine Ueberraschung.
+
+    Ergaenzend, nicht ersetzend: die Baukosten kommen aus dem Wikitext und
+    duerfen hier nicht verlorengehen.
+    """
+    n = 0
+    for z in zeilen:
+        name = _spalte(z, "Blueprint", "Building", "Name")
+        if not name or name.lower() in ("blueprint", "building", "name"):
+            continue
+        freischaltung = _spalte(z, "Unlock or Upgrade", "Unlock", "Upgrade")
+        conn.execute(
+            "INSERT INTO buildings (en, unlock, category, source_page) VALUES (?,?,?,?) "
+            "ON CONFLICT(en) DO UPDATE SET "
+            "  unlock = COALESCE(excluded.unlock, buildings.unlock), "
+            "  category = COALESCE(excluded.category, buildings.category), "
+            "  source_page = COALESCE(buildings.source_page, excluded.source_page)",
+            (name, freischaltung, kategorie, source_page),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def import_recipes(conn: sqlite3.Connection, zeilen: list[dict],
+                   source_page: str | None = None,
+                   gebaeude_default: str | None = None) -> int:
+    """Rezepte uebernehmen.
+
+    Auf einer Gebaeudeseite steht keine Spalte "Building" -- das Gebaeude ist
+    die Seite. Ohne diesen Rueckgriff haetten 193 von 193 Rezepten kein
+    Gebaeude, und `food_advice` koennte sagen, was zu kochen waere, aber
+    nicht worin. Gegriffen wird nur, wenn der Seitentitel wirklich ein
+    Gebaeude ist; sonst stuenden Rezepte unter Biomnamen.
+    """
+    rueckgriff = (gebaeude_default
+                  if gebaeude_default and _ist_gebaeude(conn, gebaeude_default)
+                  else None)
+    n = 0
+    for z in zeilen:
+        gebaeude = _spalte(z, "Building") or rueckgriff
         produkt = _spalte(z, "Product")
         if not produkt or (gebaeude or "").lower() == "building":
             continue
@@ -632,8 +721,21 @@ def food_amplification(conn: sqlite3.Connection) -> list[dict]:
             eingesetzt.append(f"{zutat['menge']:.0f} {zutat['ware']}")
         if rein <= 0:
             continue
+        if any(z["ware"] == r["product"] for gruppe in json.loads(r["inputs"] or "[]")
+               for z in gruppe):
+            # "3 Fleisch -> 30 Fleisch": eine Zutatenliste, die als Rezept
+            # gelesen wurde. Kein Umwandlungsschritt.
+            continue
+        belegt = conn.execute(
+            "SELECT building, stars FROM production WHERE product = ? "
+            "ORDER BY stars DESC, building LIMIT 1", (r["product"],)).fetchone()
         out.append({
-            "rezept": r["product"], "gebaeude": r["building"],
+            "rezept": r["product"],
+            # Die Produktionstabelle nennt das Gebaeude ausdruecklich; der
+            # Seitentitel war nur ein Rueckgriff.
+            "gebaeude": (belegt["building"] if belegt else r["building"]),
+            "gebaeude_laut_seite": r["building"],
+            "belegt": bool(belegt),
             "eingesetzt": " + ".join(eingesetzt),
             "saettigung_rein": rein, "saettigung_raus": raus,
             "faktor": round(raus / rein, 2),
@@ -641,3 +743,281 @@ def food_amplification(conn: sqlite3.Connection) -> list[dict]:
         })
     out.sort(key=lambda e: -e["faktor"])
     return out
+
+
+# --------------------------------------------------------------------------
+# "List of Resources": Produkt -> Gebaeude, Zutaten, Speziesvorliebe
+# --------------------------------------------------------------------------
+#
+# Die Rezepte von den Gebaeudeseiten tragen die Mengen, aber nicht das
+# Gebaeude -- der Rueckgriff auf den Seitentitel hat "Jerky in Flawless
+# Smelter" ergeben, was Unsinn ist. Diese Seite fuehrt die Zuordnung
+# ausdruecklich, mitsamt Sterngrad, und daran laesst sich das pruefen.
+
+# "Smokehouse (★★★) Apothecary (★★) Butcher (★)" -- der Name steht vor der
+# Klammer, die Sterne darin. Auch ☆ kommt vor (Grad null).
+GEBAEUDE_GRAD_RE = re.compile(r"([A-Z][A-Za-z'’\- ]*?)\s*\(\s*([★☆]+)\s*\)")
+
+
+def parse_gebaeude_grade(text: str | None) -> list[tuple[str, int]]:
+    """'Smokehouse (★★★) Butcher (★)' -> [('Smokehouse', 3), ('Butcher', 1)]."""
+    out: list[tuple[str, int]] = []
+    for name, sterne in GEBAEUDE_GRAD_RE.findall(text or ""):
+        name = name.strip()
+        if name:
+            out.append((name, sterne.count("★")))
+    return out
+
+
+def _waren_namen(conn: sqlite3.Connection) -> list[str]:
+    """Alle bekannten Warennamen, laengste zuerst -- fuer gierige Zerlegung."""
+    namen = {r["en"] for r in conn.execute("SELECT en FROM resources") if r["en"]}
+    namen |= {r["en"] for r in conn.execute(
+        "SELECT en FROM name_map WHERE kind IN ('resource', 'resource_node')")
+        if r["en"]}
+    return sorted(namen, key=len, reverse=True)
+
+
+def zerlege_waren(text: str | None, bekannt: list[str]) -> list[str]:
+    """'Coal Oil Salt Sea Marrow Wood' -> die fuenf Waren, nicht sechs Woerter.
+
+    Ohne die Liste der bekannten Namen waere "Sea Marrow" zwei Waren und
+    "Plant Fiber" auch. Gesucht wird deshalb gierig nach den laengsten
+    Namen zuerst.
+    """
+    rest = " ".join((text or "").split())
+    out: list[str] = []
+    while rest:
+        for name in bekannt:
+            if rest.startswith(name) and (len(rest) == len(name)
+                                          or rest[len(name)] == " "):
+                out.append(name)
+                rest = rest[len(name):].lstrip()
+                break
+        else:
+            # Unbekanntes Wort: ueberspringen, aber nicht haengenbleiben.
+            _, _, rest = rest.partition(" ")
+    return out
+
+
+def import_production(conn: sqlite3.Connection, zeilen: list[dict],
+                      kategorie: str | None = None,
+                      produktspalte: str | None = None,
+                      source_page: str | None = None) -> int:
+    """Eine Tabelle von "List of Resources" uebernehmen."""
+    bekannt = _waren_namen(conn)
+    n = 0
+    for z in zeilen:
+        spalte = produktspalte or next(iter(z), "")
+        produkt = _spalte(z, spalte)
+        if not produkt or produkt.strip().lower() == spalte.strip().lower():
+            continue        # Kopfzeile, die als Datenzeile durchgereicht wurde
+        gebaeude = parse_gebaeude_grade(_spalte(z, "Production Buildings"))
+        if not gebaeude:
+            continue
+        gruppen = [
+            zerlege_waren(wert, bekannt)
+            for schluessel, wert in z.items()
+            if schluessel.startswith(("Ingredients and Options",
+                                      "Recipe Ingredients and Options"))
+        ]
+        gruppen = [g for g in gruppen if g]
+        vorliebe = _spalte(z, "Species Preferences")
+        for name, sterne in gebaeude:
+            conn.execute(
+                "INSERT OR REPLACE INTO production "
+                "(product, building, stars, category, inputs, species_pref, source_page) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (produkt.strip(), name, sterne, kategorie,
+                 json.dumps(gruppen, ensure_ascii=False), vorliebe, source_page),
+            )
+            n += 1
+    conn.commit()
+    return n
+
+
+def pruefe_rezept_gebaeude(conn: sqlite3.Connection) -> list[dict]:
+    """Rezepte, deren Gebaeude die Produktionstabelle nicht bestaetigt.
+
+    Ein Befund, keine Korrektur: wo beide Quellen sich widersprechen, steht
+    die Frage offen, und still das eine dem anderen anzugleichen hiesse,
+    den Widerspruch zu verstecken.
+    """
+    bekannt: dict[str, set[str]] = {}
+    for r in conn.execute("SELECT product, building FROM production"):
+        bekannt.setdefault(r["product"], set()).add(r["building"])
+    out: list[dict] = []
+    for r in conn.execute(
+            "SELECT id, product, building FROM recipes WHERE building IS NOT NULL"):
+        erlaubt = bekannt.get(r["product"])
+        if erlaubt and r["building"] not in erlaubt:
+            out.append({"id": r["id"], "produkt": r["product"],
+                        "gebaeude": r["building"], "laut_liste": sorted(erlaubt)})
+    return out
+
+
+# --------------------------------------------------------------------------
+# Biomseiten
+# --------------------------------------------------------------------------
+#
+# Jede Biomseite fuehrt drei Tabellen: die Biomeffekte (ohne Kopfzeile), die
+# Baumarten mit ihren Bonusressourcen, und die Rohstoffe mit Vorkommen,
+# erntendem Lager und Tempo. Zusammen beantworten sie die Frage, die jede
+# Bauplanempfehlung braucht: gibt dieses Biom das ueberhaupt her?
+#
+# Die Namen stehen doppelt -- "Roots Roots Vegetables Vegetables" --, weil im
+# HTML das Symbol seinen Namen als alt-Text traegt und der Verweis daneben
+# denselben Namen noch einmal.
+
+PROZENT_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*%")
+
+
+def _einfach(namen: list[str]) -> list[str]:
+    """Aufeinanderfolgende Wiederholungen zusammenziehen."""
+    out: list[str] = []
+    for n in namen:
+        if not out or out[-1] != n:
+            out.append(n)
+    return out
+
+
+def parse_bonus(text: str | None, bekannt: list[str]) -> list[dict]:
+    """'Algae Algae 30% + Vegetables Vegetables 20%' -> zwei Eintraege."""
+    out: list[dict] = []
+    for teil in (text or "").split("+"):
+        waren = _einfach(zerlege_waren(PROZENT_RE.sub(" ", teil), bekannt))
+        anteile = [float(p.replace(",", ".")) for p in PROZENT_RE.findall(teil)]
+        for i, ware in enumerate(waren):
+            out.append({"ware": ware,
+                        "anteil": anteile[i] if i < len(anteile) else (
+                            anteile[0] if anteile else None)})
+    return out
+
+
+def import_biome(conn: sqlite3.Connection, name: str,
+                 effekte: list[list[str]] | None = None,
+                 baeume: list[dict] | None = None,
+                 rohstoffe: list[dict] | None = None,
+                 source_page: str | None = None) -> bool:
+    """Eine Biomseite uebernehmen. Fehlende Tabellen sind kein Fehler."""
+    bekannt = _waren_namen(conn)
+
+    wirkungen = [{"name": z[0].strip(), "text": (z[1] if len(z) > 1 else "").strip()}
+                 for z in (effekte or []) if z and z[0].strip()]
+
+    arten = []
+    for z in (baeume or []):
+        baum = _spalte(z, "Trees")
+        if not baum:
+            continue
+        arten.append({
+            "baum": " ".join(dict.fromkeys(baum.split())),
+            "ladungen": _zahl(_spalte(z, "Charges")),
+            "bonus": parse_bonus(_spalte(z, "Bonus Resources"), bekannt),
+        })
+
+    knoten = []
+    for z in (rohstoffe or []):
+        roh = _spalte(z, "Primary Resources")
+        if not roh:
+            continue
+        # "Herbalists' Camp Herbalists' Camp ★★" -- Symbolname und Verweis.
+        # Hier hilft kein Wortvergleich, sondern der Haelftenvergleich aus
+        # dem HTML-Leser: die eine Haelfte ist die andere.
+        lager = entdoppeln((_spalte(z, "Gathering Building") or "").split("★")[0].strip())
+        knoten.append({
+            "ressourcen": _einfach(zerlege_waren(roh, bekannt)),
+            "vorkommen": _spalte(z, "Charges → Resource Deposits"),
+            "anteil": _spalte(z, "Bonus Resources"),
+            "lager": lager or None,
+            "tempo": _spalte(z, "Speed per Unit"),
+        })
+
+    if not (wirkungen or arten or knoten):
+        return False
+
+    vorhanden = sorted({w for k in knoten for w in k["ressourcen"]}
+                       | {b["ware"] for a in arten for b in a["bonus"]})
+    conn.execute(
+        "INSERT OR REPLACE INTO biomes (en, effects, tree_species, node_weights, "
+        " notes, source_page) VALUES (?,?,?,?,?,?)",
+        (name, json.dumps(wirkungen, ensure_ascii=False),
+         json.dumps(arten, ensure_ascii=False),
+         json.dumps(knoten, ensure_ascii=False),
+         ", ".join(vorhanden) or None, source_page),
+    )
+    conn.commit()
+    return True
+
+
+def biom_hat(conn: sqlite3.Connection, biom: str, ware: str) -> bool | None:
+    """Gibt dieses Biom diese Ware her? None heisst: nicht erfasst.
+
+    Die Spec fuehrt drei solche Faustregeln -- kein Getreide im Korallenwald,
+    kein fruchtbarer Boden in der Bambusebene, kein Holz aus Baeumen in der
+    Felsschlucht. Nachschlagen ist besser als sich erinnern.
+    """
+    zeile = conn.execute("SELECT notes FROM biomes WHERE en = ? COLLATE NOCASE",
+                         (biom,)).fetchone()
+    if zeile is None or not zeile["notes"]:
+        return None
+    return ware.lower() in [w.strip().lower() for w in zeile["notes"].split(",")]
+
+
+MENGE_WARE_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s+([A-Z][A-Za-z'’ \-]*?)(?=\s+\d|$)")
+
+
+def parse_kosten(text: str | None, bekannt: list[str]) -> dict[str, float]:
+    """'3 Parts 10 Wood' -> {'Parts': 3.0, 'Wood': 10.0}.
+
+    Die Warennamen werden gegen die bekannten geprueft, sonst wuerde
+    "10 Sea Marrow" zu "Sea" und "Marrow" zerfallen.
+    """
+    out: dict[str, float] = {}
+    for menge, roh in MENGE_WARE_RE.findall(" ".join((text or "").split())):
+        waren = _einfach(zerlege_waren(roh, bekannt)) or [roh.strip()]
+        out[waren[0]] = float(menge.replace(",", "."))
+    return out
+
+
+def import_buildings_list(conn: sqlite3.Connection, zeilen: list[dict],
+                          source_page: str | None = None) -> int:
+    """Die Seite "List of Buildings": Arbeitsplaetze, Spezialisierung, Baukosten.
+
+    Die Baukosten kamen bisher aus dem Wikitext und ergaben zwei Zeilen. Hier
+    stehen sie in der Spalte "Cost to build", je Gebaeude eine Zeile.
+    Ergaenzend geschrieben: was schon dasteht, bleibt.
+    """
+    bekannt = _waren_namen(conn)
+    n = 0
+    for z in zeilen:
+        name = _spalte(z, "Building")
+        if not name or name.strip().lower() == "building":
+            continue
+        kosten = parse_kosten(_spalte(z, "Cost to build"), bekannt)
+        spezialisierung = _spalte(z, "Specialization")
+        if (spezialisierung or "").strip().lower() == "none":
+            spezialisierung = None
+        conn.execute(
+            "INSERT INTO buildings (en, cost, specialization, worker_slots, "
+            " purpose, products, near, source_page) VALUES (?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(en) DO UPDATE SET "
+            "  cost = COALESCE(excluded.cost, buildings.cost), "
+            "  specialization = COALESCE(excluded.specialization, buildings.specialization), "
+            "  worker_slots = COALESCE(excluded.worker_slots, buildings.worker_slots), "
+            "  purpose = COALESCE(excluded.purpose, buildings.purpose), "
+            "  products = COALESCE(excluded.products, buildings.products), "
+            "  near = COALESCE(excluded.near, buildings.near), "
+            "  source_page = COALESCE(buildings.source_page, excluded.source_page)",
+            (name.strip(),
+             json.dumps(kosten, ensure_ascii=False) if kosten else None,
+             spezialisierung,
+             int(_zahl(_spalte(z, "Workplaces")) or 0) or None,
+             _spalte(z, "Purpose"),
+             _spalte(z, "Products", "Primary resource gathered"),
+             _spalte(z, "Place near this"),
+             source_page),
+        )
+        n += 1
+    conn.commit()
+    return n

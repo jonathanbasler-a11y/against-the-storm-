@@ -269,7 +269,6 @@ Ruin,Ruine,category,,localization,resources.assets,2026-09-22,,BuildingCategory_
 Services,Dienste,category,,localization,resources.assets,2026-09-22,,NeedCategory_Services_Name,services
 Trade Goods,Handelswaren,category,,localization,resources.assets,2026-09-22,,GoodCategory_TradeGoods_Name,trade_goods
 Adamantine Seal,Adamantin-Siegel,concept,,localization,resources.assets,2026-09-22,,WorldSeals_23_DisplayName,adamantine_seal
-Ale and Hearty,Bier gewinnt,concept,,localization,resources.assets,2026-09-22,,Reward_ReputationForLuxury_Name,ale_and_hearty
 Blightrot,Pestfäule,concept,,localization,resources.assets,2026-09-22,,GameUI_BlightPanel_Tooltip_Header,blightrot
 Blightrot Cysts,Pestfäulezysten,concept,,localization,resources.assets,2026-09-22,,GameUI_CystSlotTooltip_Header,blightrot_cysts
 Blood of the Guardian,Blut des Hüters,concept,,localization,resources.assets,2026-09-22,,Seal_Blood_Name,blood_of_the_guardian
@@ -279,8 +278,6 @@ Building Blueprints,Gebäude-Entwürfe,concept,,localization,resources.assets,20
 Camp,Lager,concept,,localization,resources.assets,2026-09-22,,Label_Relic_Camp,camp
 Clearance Water,Sommerwasser,concept,,localization,resources.assets,2026-09-22,,Water_Clearance_Name,clearance_water
 Comfort,Komfort,concept,,localization,resources.assets,2026-09-22,,DecorationTier_1_Name,comfort
-Consecrated Scrolls,Geweihte Schriftrollen,concept,,localization,resources.assets,2026-09-22,,Reward_LowerHostilityForEducation_Name,consecrated_scrolls
-Consumption Control,Verbrauchssteuerung,concept,,localization,resources.assets,2026-09-22,,MetaReward_ConsumptionControlActivation_Name,consumption_control
 Cornerstone,Grundstein,concept,,localization,resources.assets,2026-09-22,,Label_MetaReward_Cornerstone,cornerstone
 Cornerstones,Grundsteine,concept,,localization,resources.assets,2026-09-22,,GameUI_Stats_CornerstonesPicked,cornerstones
 Crystal Feathers,Kristallfedern,concept,,localization,resources.assets,2026-09-22,,Seal_Trading_Feathers_Name,crystal_feathers
@@ -298,7 +295,6 @@ Fuel Reserves,Brennstoffvorrat,concept,,localization,resources.assets,2026-09-22
 Glade Event,Lichtungsereignis,concept,,localization,resources.assets,2026-09-22,,Label_ResolveEffect_Glade,glade_event
 Glade Events,Lichtungsereignisse,concept,,localization,resources.assets,2026-09-22,,GameUI_Stats_Category_Relics,glade_events
 Glades,Lichtungen,concept,,localization,resources.assets,2026-09-22,,GameUI_Orders_Logics_GladeDiscovery_Name,glades
-Gleeman's Tales,Spielmannsgeschichten,concept,,localization,resources.assets,2026-09-22,,Reward_InstitutionGlobalResolve_Name,gleemans_tales
 Golden Blood,Goldenes Blut,concept,,localization,resources.assets,2026-09-22,,Seal_Trading_Blood_Name,golden_blood
 Heart of Amber,Bernsteinherz,concept,,localization,resources.assets,2026-09-22,,Seal_Trading_Heart_Name,heart_of_amber
 Heart of the Ancient Flame,Herz der uralten Flamme,concept,,localization,resources.assets,2026-09-22,,Seal_Resolve_Heart_Name,heart_of_the_ancient_flame
@@ -308,17 +304,13 @@ Hunger,Hunger,concept,,localization,resources.assets,2026-09-22,,Building_BiomeP
 Impatience,Ungeduld,concept,,localization,resources.assets,2026-09-22,,Label_Reward_Impatience,impatience
 Life Essence of the Guardian,Lebensessenz des Hüters,concept,,localization,resources.assets,2026-09-22,,Seal_Essence_Name,life_essence_of_the_guardian
 Loyalty,Loyalität,concept,,localization,resources.assets,2026-09-22,,DecisionTag_Loyalty,loyalty
-Market Carts,Marktkarren,concept,,localization,resources.assets,2026-09-22,,Reward_InstitutionGlobalCapacity_Name,market_carts
 Mechanical Heart,Mechanisches Herz,concept,,localization,resources.assets,2026-09-22,,Seal_Industry_Heart_Name,mechanical_heart
 Metal Feathers,Metallfedern,concept,,localization,resources.assets,2026-09-22,,Seal_Industry_Feathers_Name,metal_feathers
-Metallurgic Proficiency,Metallurgische Tüchtigkeit,concept,,localization,resources.assets,2026-09-22,,Reward_MetalProdBoost_Name,metallurgic_proficiency
 Mortal Blood,Sterbliches Blut,concept,,localization,resources.assets,2026-09-22,,Seal_Resolve_Blood_Name,mortal_blood
 Need,Bedürfnis,concept,,localization,resources.assets,2026-09-22,,Label_ResolveEffect_Need,need
 Needs,Bedürfnisse,concept,,localization,resources.assets,2026-09-22,,GameUI_PoroPanel_Needs_Header,needs
 Production,Produktion,concept,,localization,resources.assets,2026-09-22,,GameUI_BuildingPanel_Tab_Production,production
 Queen's Feathers,Federn der Königin,concept,,localization,resources.assets,2026-09-22,,Seal_Resolve_Feathers_Name,queens_feathers
-Rainpunk Engines,Regenpunk-Maschinen,concept,,localization,resources.assets,2026-09-22,,MetaReward_Rainpunk_Name,rainpunk_engines
-Reinforced Axes,Verstärkte Äxte,concept,,localization,resources.assets,2026-09-22,,Reward_QuickWoodcutting_Name,reinforced_axes
 Reputation,Reputation,concept,,localization,resources.assets,2026-09-22,,Label_Reward_Reputation,reputation
 Resolve,Entschlossenheit,concept,,localization,resources.assets,2026-09-22,,GameUI_RaceResolveBarTooltip_MainHeader,resolve
 Sacrifice,Opfer,concept,,localization,resources.assets,2026-09-22,,GameUI_HearthPanel_SacrificeHeader,sacrifice
@@ -329,37 +321,52 @@ Standing Level,Beziehungsstufe,concept,,localization,resources.assets,2026-09-22
 Storm Water,Sturmwasser,concept,,localization,resources.assets,2026-09-22,,Water_Storm_Name,storm_water
 Storm Water Geyser,Sturmwasser-Geysir,concept,,localization,resources.assets,2026-09-22,,Spring_SmallSpring_Storm_Name,storm_water_geyser
 Stormbird Feathers,Sturmvogelfedern,concept,,localization,resources.assets,2026-09-22,,Seal_Exploration_Feathers_Name,stormbird_feathers
-Surprise Child,Überraschungskind,concept,,localization,resources.assets,2026-09-22,,Reward_AccidentalLizard_Name,surprise_child
 Synthetic Blood,Synthetisches Blut,concept,,localization,resources.assets,2026-09-22,,Seal_Industry_Blood_Name,synthetic_blood
-The Crown Chronicles,Die Kronenchronik,concept,,localization,resources.assets,2026-09-22,,Reward_InstitutionResolveForRuins_Name,the_crown_chronicles
-The Green Brew,Grünbräu,concept,,localization,resources.assets,2026-09-22,,Reward_InstitutionLowerHostility_Name,the_green_brew
-The Guild's Welfare,Wohlergehen der Gilde,concept,,localization,resources.assets,2026-09-22,,Reward_InstitutionResolveForSales_Name,the_guilds_welfare
-Timed Orders,Aufträge mit Zeitlimit,concept,,localization,resources.assets,2026-09-22,,MetaReward_TimedOrdersActivation_Name,timed_orders
 Trade,Handel,concept,,localization,resources.assets,2026-09-22,,StorageOperation_Trade_Name,trade
 Trade Route,Handelsweg,concept,,localization,resources.assets,2026-09-22,,Label_Reward_TradeRoute,trade_route
 Upgrade,Upgrade,concept,,localization,resources.assets,2026-09-22,,GameUI_AltarPanel_PickButton_Upgrade,upgrade
-Viceroy's Quarters,Persönliches Quartier,concept,,localization,resources.assets,2026-09-22,,MetaReward_CitadelHomeUnlock_Name,viceroys_quarters
 Villagers,Dorfbewohner,concept,,localization,resources.assets,2026-09-22,,Label_MetaReward_Villagers,villagers
 "10 <sprite name=""[tools] simple tools""> Tools","10 <sprite name=""[tools] simple tools""> Werkzeuge",effect,,localization,resources.assets,2026-09-22,,Effect_GoodsPassive_Lizards_Name,10_sprite_name_tools_simple_tools_tools
 "50 <sprite name=""[needs] coats""> Coats","50 <sprite name=""[needs] coats""> Mäntel",effect,,localization,resources.assets,2026-09-22,,Effect_GoodsPassive_Harpies_Name,50_sprite_name_needs_coats_coats
 Abandoned Settlement,Verlassene Siedlung,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_AbandonedSettlement_Name,abandoned_settlement
 Absorption,Absorption,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_ResistantCysts_Name,absorption
+Abyssal Revenge,Vergeltung des Abgrunds,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_TreeHostility_Name,abyssal_revenge
+Accumulated Dew,Angesammelter Tau,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalCrystalDew_Name,accumulated_dew
 Acid Rain,Säureregen,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_BuildingMaterialsProdLess_Name,acid_rain
 Acidic Environment,Saure Umgebung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_AcidicEnvironment_Name,acidic_environment
 Adjustment Period,Übergangszeit,effect,,localization,resources.assets,2026-09-22,,Effect_MoreTradeOffers_Child_Name,adjustment_period
+Advanced Brewing,Fortschrittliches Brauen,effect,,localization,resources.assets,2026-09-22,,Reward_BreweryProd30_Name,advanced_brewing
+Advanced Coopering,Fortschrittliches Böttchern,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdBonus_Barrels_Name,advanced_coopering
+Advanced Filters,Fortschrittliche Filter,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdWine_Name,advanced_filters
+Advanced Fuel,Fortschrittlicher Brennstoff,effect,,localization,resources.assets,2026-09-22,,Reward_FuelRecipeRate_Name,advanced_fuel
+Advanced Herbalism,Fortschrittliche Kräuterkunde,effect,,localization,resources.assets,2026-09-22,,Reward_ReinforcedTools_HerbGarden_Name,advanced_herbalism
+Advanced Leatherworking,Fortschrittliche Lederverarbeitung,effect,,localization,resources.assets,2026-09-22,,Reward_AdvancedLeatherworking_Name,advanced_leatherworking
+Advanced Press,Fortschrittliche Presse,effect,,localization,resources.assets,2026-09-22,,Reward_PaperRawProd_Name,advanced_press
+Advanced Smelting,Fortschrittliches Schmelzen,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdCopperBar_Name,advanced_smelting
+Advanced Smithing,Fortgeschrittenes Schmieden,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdCopperTools_Name,advanced_smithing
 Advent of Flame,Beginn der Flamme,effect,,localization,resources.assets,2026-09-22,,Effect_AdventofFlame_Name,advent_of_flame
 Aftermath,Nachwirkungen,effect,,localization,resources.assets,2026-09-22,,Effect_BlightBomb_Blightrot_Name,aftermath
 Agitated Swarm,Aufgeregter Schwarm,effect,,localization,resources.assets,2026-09-22,,Effect_TermiteBurrowMaterials_Name,agitated_swarm
 Airbender,Luftmagier,effect,,localization,resources.assets,2026-09-22,,Effect_FishmenMysteries_Name,airbender
 Alarm Bells,Alarmglocken,effect,,localization,resources.assets,2026-09-22,,Effect_AlarmBells_Name,alarm_bells
+Ale Delivery Line,Bier-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Ale_Name,ale_delivery_line
+Ale and Hearty,Bier gewinnt,effect,,localization,resources.assets,2026-09-22,,Reward_ReputationForLuxury_Name,ale_and_hearty
 Alluring Lights,Verführerische Lichter,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_DeadlyLights_Name,alluring_lights
+Amber Curse,Bernsteinfluch,effect,,localization,resources.assets,2026-09-22,,Reward_AmberCurse_Name,amber_curse
+Amber Pouch,Bernsteinbeutel,effect,,localization,resources.assets,2026-09-22,,Reward_AmberPouch_Name,amber_pouch
+Amber Tax,Bernsteinsteuer,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Amber_Name,amber_tax
 Amphibian Leadership,Amphibische Führung,effect,,localization,resources.assets,2026-09-22,,Effect_FrogNewcomerBonus_Name,amphibian_leadership
+An Insect,Ein Insekt,effect,,localization,resources.assets,2026-09-22,,Reward_Insects1_Name,an_insect
 Ancient Artifact,Uraltes Artefakt,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_AncientArtifact_Name,ancient_artifact
 Ancient Battleground,Antikes Schlachtfeld,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_InitialHostility_Name,ancient_battleground
+Ancient Pact,Uralter Pakt,effect,,localization,resources.assets,2026-09-22,,Reward_GladeKillsForInfo_Name,ancient_pact
 Ancient Practices,Uralte Bräuche,effect,,localization,resources.assets,2026-09-22,,Effect_ExtraProductionForRelicsResolved_Name,ancient_practices
+Ancient Sewing Technique,Uralte Nähtechnik,effect,,localization,resources.assets,2026-09-22,,Reward_AncientSewingTechnique_Name,ancient_sewing_technique
 Ancient Spire,Uralter Turm,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_RandomSeasonDuration_Name,ancient_spire
+Ancient Stabilizer,Uralter Stabilisator,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_SlowFuelLongStorm_Name,ancient_stabilizer
 Ancient Strength,Uralte Kraft,effect,,localization,resources.assets,2026-09-22,,Effect_CarryMoreForTablets_Name,ancient_strength
 Ancient Ways,Uralte Sitten,effect,,localization,resources.assets,2026-09-22,,Effect_InstitutionCampsProduction_Name,ancient_ways
+Archaeological Tools,Archäologische Werkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_PotteryForGlades_Name,archaeological_tools
 Armed to the Teeth,Bis an die Zähne bewaffnet,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_LizardResolveTrainingGear_Name,armed_to_the_teeth
 Atrium,Atrium,effect,,localization,resources.assets,2026-09-22,,EffectModel_FrogHouseNewcomerBonus_Name,atrium
 Aura of Despair,Aura der Verzweiflung,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_RepFromResolveBlock_Name,aura_of_despair
@@ -367,16 +374,47 @@ Aura of Fear,Aura der Furcht,effect,,localization,resources.assets,2026-09-22,,E
 Aura of Peace,Aura des Friedens,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_SpringEvents_Name,aura_of_peace
 Aurora,Aurora,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_Aurora_Name,aurora
 Awakening,Erweckung,effect,,localization,resources.assets,2026-09-22,,Effect_Awakening_Name,awakening
+Back to Nature,Zurück zur Natur,effect,,localization,resources.assets,2026-09-22,,Reward_BackToNature_Name,back_to_nature
+Bad Reputation,Schlechte Reputation,effect,,localization,resources.assets,2026-09-22,,Reward_CityScore_Name,bad_reputation
 Badge of Courage,Emblem des Muts,effect,,localization,resources.assets,2026-09-22,,Effect_ImpatienceForGlade_Name,badge_of_courage
 Bandit Camp,Banditenlager,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_TradeBlock_Name,bandit_camp
 Baptism of Fire,Feuertaufe,effect,,localization,resources.assets,2026-09-22,,Effect_BurntCysts_lower_hostility_for_blocked_sacrifice_Name,baptism_of_fire
+Barrel Delivery Line,Fässer-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Barrels_Name,barrel_delivery_line
+Barrel Schematics,Fass-Bauplan,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_BarrelRecipes_Name,barrel_schematics
+Barrel of Salt,Fass Salz,effect,,localization,resources.assets,2026-09-22,,Reward_Salt_Name,barrel_of_salt
+Barrels,Fässer,effect,,localization,resources.assets,2026-09-22,,Reward_Barrels_Name,barrels
+Barrels of Ale,Bierfässer,effect,,localization,resources.assets,2026-09-22,,Reward_Ale_Name,barrels_of_ale
+Barrels of Wine,Weinfässer,effect,,localization,resources.assets,2026-09-22,,Reward_Wine_Name,barrels_of_wine
 Barren Lands,Unfruchtbares Land,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_NoGrass_Name,barren_lands
 Basic Housing,Einfaches Haus,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_AnyHousingEffect_Name,basic_housing
+Basket of Berries,Korb mit Beeren,effect,,localization,resources.assets,2026-09-22,,Reward_Berries_Name,basket_of_berries
+Basket of Biscuits,Korb mit Keksen,effect,,localization,resources.assets,2026-09-22,,Reward_Biscuits_Name,basket_of_biscuits
+Basket of Eggs,Korb Eier,effect,,localization,resources.assets,2026-09-22,,Reward_Eggs_Name,basket_of_eggs
+Basket of Fish,Korb Fische,effect,,localization,resources.assets,2026-09-22,,Reward_Fish_Name,basket_of_fish
+Basket of Insects,Korb mit Insekten,effect,,localization,resources.assets,2026-09-22,,Reward_Insects_Name,basket_of_insects
+Basket of Jerky,Korb Dörrfleisch,effect,,localization,resources.assets,2026-09-22,,Reward_Jerky_Name,basket_of_jerky
+Basket of Pies,Korb Pasteten,effect,,localization,resources.assets,2026-09-22,,Reward_Pie_Name,basket_of_pies
+Bat,Fledermaus,effect,,localization,resources.assets,2026-09-22,,Reward_Bat_Name,bat
 Bat Clan Support,Fledermausclan-Unterstützung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_BatFactionSupport_Name,bat_clan_support
 Bat Housing,Fledermaushaus,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_BatHousingEffect_Name,bat_housing
+Beaver,Biber,effect,,localization,resources.assets,2026-09-22,,Reward_Beaver_Name,beaver
+Beaver Clan Support,Unterstützung der Biberfraktion,effect,,localization,resources.assets,2026-09-22,,Reward_BeaverFactionSupport_Name,beaver_clan_support
+Beaver Friendship,Biber-Freundschaft,effect,,localization,resources.assets,2026-09-22,,Reward_GuaranteedBeaverNewcommers_Name,beaver_friendship
 Beaver Housing,Biberhaus,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_BeaverHousingEffect_Name,beaver_housing
 Beavers Clan Support,Unterstützung der Biberfraktion,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_BeaversFactionSupport_Name,beavers_clan_support
 Bed and Breakfast,Frühstückspension,effect,,localization,resources.assets,2026-09-22,,Effect_TraderPriceForHubLevel_Name,bed_and_breakfast
+Beneficial Agreement,Vorteilhafte Vereinbarung,effect,,localization,resources.assets,2026-09-22,,Reward_TraderInterval15_Name,beneficial_agreement
+Berry Delivery Line,Beeren-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Berries_Name,berry_delivery_line
+Berry New Year,Beeriges Neues Jahr,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_RawProd_Berries_Name,berry_new_year
+Big Mystery Box,Große Überraschungskiste,effect,,localization,resources.assets,2026-09-22,,Reward_RewardsPack_Big_Name,big_mystery_box
+Big Phials,Große Fläschchen,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdInk_Name,big_phials
+Bigger Barrels,Größere Fässer,effect,,localization,resources.assets,2026-09-22,,Reward_BiggerBarrels_Name,bigger_barrels
+Bigger Grill,Größerer Grill,effect,,localization,resources.assets,2026-09-22,,Reward_SkewersRawProd_Name,bigger_grill
+Bigger Ovens,Größere Öfen,effect,,localization,resources.assets,2026-09-22,,Reward_BiggerOvens_Name,bigger_ovens
+Bigger Pans,Größere Pfannen,effect,,localization,resources.assets,2026-09-22,,Reward_BiscuitsRawProd_Name,bigger_pans
+Biscuit Delivery Line,Keks-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Biscuits_Name,biscuit_delivery_line
+Biscuit Diet,Keks-Diät,effect,,localization,resources.assets,2026-09-22,,Reward_NeedPerkBiscuitFarmers_Name,biscuit_diet
+Biscuit Recipes,Keksrezepte,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_BiscuitRecipes_Name,biscuit_recipes
 Biscuits,Kekse,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_BiscuitsEffect_Name,biscuits
 Bitter Rain,Bitterer Regen,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_BitterRain_Name,bitter_rain
 Blazing Amber,Brennender Bernstein,effect,,localization,resources.assets,2026-09-22,,Effect_BlazingAmber_Name,blazing_amber
@@ -395,56 +433,122 @@ Blightrot Mutation,Pestfäule-Mutation,effect,,localization,resources.assets,202
 Blightrot Outbreak,Pestfäuleausbruch,effect,,localization,resources.assets,2026-09-22,,Effect_Outbreak_Name,blightrot_outbreak
 Blightrot Pruner,Pestfäulemesser,effect,,localization,resources.assets,2026-09-22,,Effect_EggsForCysts_Name,blightrot_pruner
 Blood Flower,Blutblume,effect,,localization,resources.assets,2026-09-22,,Effect_BlightrotResolve_Name,blood_flower
+Blood Price Contract,Blutpreisvertrag,effect,,localization,resources.assets,2026-09-22,,Reward_BloodPrice_Name,blood_price_contract
 Blood Sorcery,Blutzauber,effect,,localization,resources.assets,2026-09-22,,Effect_FishmenSoothsayerPlague_Name,blood_sorcery
 Blood for Blood,Blut für Blut,effect,,localization,resources.assets,2026-09-22,,Effect_GhostKill_Generic_Name,blood_for_blood
 Book of Water,Wasserbuch,effect,,localization,resources.assets,2026-09-22,,Effect_WaterCritForFishing_Name,book_of_water
+Boot Delivery Line,Stiefel-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Boots_Name,boot_delivery_line
 Boots,Stiefel,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_BootsEffect_Name,boots
 Borrowed Time,Geborgte Zeit,effect,,localization,resources.assets,2026-09-22,,Effect_FrogGracePeriod_Name,borrowed_time
+Bowl of Paste,Kiste Paste,effect,,localization,resources.assets,2026-09-22,,Reward_Paste_Name,bowl_of_paste
 Box Crib,Auszimmerung,effect,,localization,resources.assets,2026-09-22,,Effect_BoxCrib_Name,box_crib
+Box of Boots,Kiste Stiefel,effect,,localization,resources.assets,2026-09-22,,Reward_BoxOfBoots_Name,box_of_boots
+Box of Crystalized Dew,Kiste kristallisierter Tau,effect,,localization,resources.assets,2026-09-22,,Reward_CrystalizedDew_Name,box_of_crystalized_dew
+Box of Grain,Kiste Getreide,effect,,localization,resources.assets,2026-09-22,,Reward_BoxofGrain_Name,box_of_grain
+Box of Infused Tools,Kiste magische Werkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_InfusedTools_Name,box_of_infused_tools
+Box of Planks,Kiste Bretter,effect,,localization,resources.assets,2026-09-22,,Reward_BoxofPlanks_Name,box_of_planks
+Box of Porridge,Packung Haferbrei,effect,,localization,resources.assets,2026-09-22,,Reward_Porridge_Name,box_of_porridge
+Box of Pottery,Kiste mit Keramik,effect,,localization,resources.assets,2026-09-22,,Reward_Pottery_Name,box_of_pottery
+Box of Scales,Kiste Schuppen,effect,,localization,resources.assets,2026-09-22,,Reward_Scales_Name,box_of_scales
+Box of Tools,Werkzeugkasten,effect,,localization,resources.assets,2026-09-22,,Reward_MetalTools_Name,box_of_tools
 Brawling,Schlägereien,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_BloodthirstEffect_Name,brawling
+Bread Peels,Brotschieber,effect,,localization,resources.assets,2026-09-22,,Reward_BreadPeels_Name,bread_peels
 Breadwinner,Brotverdiener,effect,,localization,resources.assets,2026-09-22,,Effect_BiomePoroProductivity_Name,breadwinner
 Budget Cuts,Budgetkürzungen,effect,,localization,resources.assets,2026-09-22,,Effect_FewerInitialBlueprints_Name,budget_cuts
+Builder's Pack,Bauarbeiterpaket,effect,,localization,resources.assets,2026-09-22,,Reward_Builder'sPack_Name,builders_pack
+Bundle of Algae,Algenbündel,effect,,localization,resources.assets,2026-09-22,,Reward_Algae_Name,bundle_of_algae
+Bundle of Coats,Bündel Mäntel,effect,,localization,resources.assets,2026-09-22,,Reward_BundleofReedCoats_Name,bundle_of_coats
+Bundle of Fabric,Stoffbündel,effect,,localization,resources.assets,2026-09-22,,Reward_Rope_Name,bundle_of_fabric
+Bundle of Herbs,Kräuterbündel,effect,,localization,resources.assets,2026-09-22,,Reward_Herbs_Name,bundle_of_herbs
+Bundle of Leather,Lederbündel,effect,,localization,resources.assets,2026-09-22,,Reward_Leather_Name,bundle_of_leather
+Bundle of Plant Fiber,Bündel Pflanzenfasern,effect,,localization,resources.assets,2026-09-22,,Reward_PlantFiber_Name,bundle_of_plant_fiber
+Bundle of Reeds,Bündel Schilf,effect,,localization,resources.assets,2026-09-22,,Reward_BundleofReeds_Name,bundle_of_reeds
+Bundle of Scrolls,Bündel Schriftrollen,effect,,localization,resources.assets,2026-09-22,,Reward_Paper_Name,bundle_of_scrolls
+Buried Mysteries,Vergrabene Geheimnisse,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_ExcavationSites_Name,buried_mysteries
 Buried Riches,Vergrabene Reichtümer,effect,,localization,resources.assets,2026-09-22,,Effect_BuriedRiches_Name,buried_riches
 Burnt to a Crisp,Vollkommen verkohlt,effect,,localization,resources.assets,2026-09-22,,Effect_CoalForCysts_Name,burnt_to_a_crisp
 Bustling Town,Geschäftige Stadt,effect,,localization,resources.assets,2026-09-22,,Effect_ResolveForStartedRoute_Child_Name,bustling_town
 Calm Lands,Stille Lande,effect,,localization,resources.assets,2026-09-22,,Effect_CalmLands_Name,calm_lands
 Calming Water,Beruhigendes Wasser,effect,,localization,resources.assets,2026-09-22,,Effect_HostilityForWater_Name,calming_water
 Calming the Forest,Waldbefriedung,effect,,localization,resources.assets,2026-09-22,,Effect_HostilityforDangerousRelics_Name,calming_the_forest
+Cannibalism,Kannibalismus,effect,,localization,resources.assets,2026-09-22,,Reward_Cannibalism_Name,cannibalism
 Canopy,Kronendach,effect,,localization,resources.assets,2026-09-22,,EffectModel_HarpyHousesUniqueBonus_Name,canopy
 Captain's Curse,Fluch des Kapitäns,effect,,localization,resources.assets,2026-09-22,,Effect_CaptainCurse_Name,captains_curse
 Caravan Member Loss,Ein Karawanenmitglied weniger,effect,,localization,resources.assets,2026-09-22,,CycleEffect_Villagers_GenericLoss1_Name,caravan_member_loss
 Caravan Wagons,Karawanenwagen,effect,,localization,resources.assets,2026-09-22,,CycleEffect_EmbarkRange_Name,caravan_wagons
+Careful Exploration,Vorsichtige Erkundung,effect,,localization,resources.assets,2026-09-22,,Reward_ExploringExpedition_Penalty_Name,careful_exploration
 Carnivorous Tradition,Fleischfressertradition,effect,,localization,resources.assets,2026-09-22,,Effect_InstitutionMoreResolveFromMeat_Name,carnivorous_tradition
+Carpenter's Tools,Tischlerwerkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_BuildingMaterialsForPlanks_Name,carpenters_tools
 Carved in Stone,In Stein gemeißelt,effect,,localization,resources.assets,2026-09-22,,Effect_WorkingTimeforTablets_Name,carved_in_stone
 Cellar,Weinkeller,effect,,localization,resources.assets,2026-09-22,,EffectModel_LizardHousesUniqueBonus_Name,cellar
 Chaos,Chaos,effect,,localization,resources.assets,2026-09-22,,Effect_Chaos_Name,chaos
 Charged Rain,"""Aufgeladener"" Regen",effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_ToxicRain_Name,charged_rain
 Cheap Construction,Niedrige Baukosten,effect,,localization,resources.assets,2026-09-22,,Effect_ConstructionCostForNodes_Name,cheap_construction
+Chest of Ancient Tablets,Truhe mit uralten Tafeln,effect,,localization,resources.assets,2026-09-22,,Reward_AncientTablet_Name,chest_of_ancient_tablets
+Chest of Coal,Truhe Kohle,effect,,localization,resources.assets,2026-09-22,,Reward_Coal_Name,chest_of_coal
+Chest of Farming Tools,Truhe mit Landwirtschaftsgeräten,effect,,localization,resources.assets,2026-09-22,,Reward_BeaconEffect_FarmingBoost_Name,chest_of_farming_tools
+Chicken or Egg?,Huhn oder Ei?,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalHarpy_Name,chicken_or_egg
+Chum Bucket,Ködereimer,effect,,localization,resources.assets,2026-09-22,,Reward_FishRawProd_Name,chum_bucket
 City Renown,Stadtruf,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_CityRenown_Name,city_renown
 City of Wonders,Stadt der Wunder,effect,,localization,resources.assets,2026-09-22,,Effect_FrogForUpgrade_Name,city_of_wonders
+Clay Delivery Line,Lehm-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Clay_Name,clay_delivery_line
 Cleanliness,Sauberkeit,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_CleanlinessEffect_Name,cleanliness
+Cleanup Duty,Putzdienst,effect,,localization,resources.assets,2026-09-22,,Reward_ReputationPenaltyCaravan_Name,cleanup_duty
+Clear Skies,Klarer Himmel,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_ClearSkies_Name,clear_skies
+Clearance Totem,Sommer-Totem,effect,,localization,resources.assets,2026-09-22,,Reward_LongerClearance25_Name,clearance_totem
 Cloaked Wanderer's Vengeance,Die Rache des verhüllten Wandersmanns,effect,,localization,resources.assets,2026-09-22,,Effect_CloakedWandererVengeance_Name,cloaked_wanderers_vengeance
 Cloudburst,Wolkenbruch,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_Cloudburst_Name,cloudburst
+Coal Delivery Line,Kohle-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Coal_Name,coal_delivery_line
+Coat Delivery Line,Mantel-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Coats_Name,coat_delivery_line
 Coats,Mäntel,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_ClothesEffect_Name,coats
 Cold Flame,Kalte Flamme,effect,,localization,resources.assets,2026-09-22,,Effect_ColdFlame_Name,cold_flame
 Cold Front,Kaltfront,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_ColdFront_Name,cold_front
 Cold Snap,Kälteeinbruch,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_ColdSnapI_Name,cold_snap
 Collapse,Einsturz,effect,,localization,resources.assets,2026-09-22,,Effect_LightningPayment_Penalty_Name,collapse
 Combustion,Verbrennung,effect,,localization,resources.assets,2026-09-22,,Effect_WildfireFuel_Name,combustion
+Consecrated Scrolls,Geweihte Schriftrollen,effect,,localization,resources.assets,2026-09-22,,Reward_LowerHostilityForEducation_Name,consecrated_scrolls
+Conservation,Konservierung,effect,,localization,resources.assets,2026-09-22,,Reward_ScorpionConvert2_Name,conservation
 Consumerism,Konsumismus,effect,,localization,resources.assets,2026-09-22,,Effect_HigherNeedsConsumptionRate_Name,consumerism
 Contaminated Food,Kontaminiertes Essen,effect,,localization,resources.assets,2026-09-22,,Effect_FoodProductionSpeed50_Name,contaminated_food
 Contraband,Schmuggelware,effect,,localization,resources.assets,2026-09-22,,Effect_WildcardPickTrader_Name,contraband
+Converted Altar of Decay,Umgewandelter Altar des Verfalls,effect,,localization,resources.assets,2026-09-22,,Reward_DecayAltarPositive_Name,converted_altar_of_decay
+Converted Fishmen Lighthouse,Umgewandelter Fischmenschenleuchtturm,effect,,localization,resources.assets,2026-09-22,,Reward_FishmenLighthouse_Name,converted_fishmen_lighthouse
+Converted Harmony Spirit Altar,Umgewandelter Harmoniegeist-Altar,effect,,localization,resources.assets,2026-09-22,,Reward_HarmonyAltarPositive_Name,converted_harmony_spirit_altar
+Converted Rain Totem,Umgewandeltes Regen-Totem,effect,,localization,resources.assets,2026-09-22,,Reward_RainTotemPositive_Name,converted_rain_totem
+Converted Totem of Denial,Umgewandeltes Totem der Leugnung,effect,,localization,resources.assets,2026-09-22,,Reward_SacrificeTotemPositive_Name,converted_totem_of_denial
+Cooking Steam,Dampfkocher,effect,,localization,resources.assets,2026-09-22,,Reward_CookingSteam_Name,cooking_steam
+Copper Extractor,Kupferextraktor,effect,,localization,resources.assets,2026-09-22,,Reward_CopperForTrees_Name,copper_extractor
+Cornerstone Forge,Grundsteinschmiede,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_Forge_Name,cornerstone_forge
 Corrosive Rainfall,Ätzender Regen,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_LessMetalProduced_Name,corrosive_rainfall
 Corrosive Torrent,Ätzender Strom,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_NoGoodsRefund_Name,corrosive_torrent
+Cosmetic Delivery Line,Kosmetik-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Cosmetics_Name,cosmetic_delivery_line
+Cosmetic Specialization,Kosmetikspezialisierung,effect,,localization,resources.assets,2026-09-22,,Reward_HarpyResolveForBalmProd_Name,cosmetic_specialization
 Counterfeit Amber,Gefälschter Bernstein,effect,,localization,resources.assets,2026-09-22,,Effect_AmberForWater_Name,counterfeit_amber
+Cowardice,Feigheit,effect,,localization,resources.assets,2026-09-22,,Reward_ReputationPenaltyShipWreck_Name,cowardice
+Crate of Bricks,Kiste Ziegel,effect,,localization,resources.assets,2026-09-22,,Reward_Blocks_Name,crate_of_bricks
+Crate of Clay,Kiste Lehm,effect,,localization,resources.assets,2026-09-22,,Reward_CrateofClay_Name,crate_of_clay
+Crate of Copper Ore,Kiste Kupfererz,effect,,localization,resources.assets,2026-09-22,,Reward_CopperOre_Name,crate_of_copper_ore
+Crate of Cosmetics,Kiste Kosmetika,effect,,localization,resources.assets,2026-09-22,,Reward_Cosmetics_Name,crate_of_cosmetics
+Crate of Sea Marrow,Kiste mit Seemark,effect,,localization,resources.assets,2026-09-22,,Reward_SeaMarrow_Name,crate_of_sea_marrow
+Crate of Stone,Kiste Stein,effect,,localization,resources.assets,2026-09-22,,Reward_CrateofWetstone_Name,crate_of_stone
+Crate of Tea,Kiste Tee,effect,,localization,resources.assets,2026-09-22,,Reward_Tea_Name,crate_of_tea
+Crate of Vegetables,Kiste Gemüse,effect,,localization,resources.assets,2026-09-22,,Reward_CrateOfVegetables_Name,crate_of_vegetables
+Crate of Waterskins,Kiste Trinkschläuche,effect,,localization,resources.assets,2026-09-22,,Reward_Waterskins_Name,crate_of_waterskins
+Crate of Wood,Kiste Holz,effect,,localization,resources.assets,2026-09-22,,Reward_CrateofWood_Name,crate_of_wood
 Creeping Fishmen,Schleichende Fischmenschen,effect,,localization,resources.assets,2026-09-22,,Effect_FishmenOutpostResolve_Name,creeping_fishmen
 Creeping Shadows,Drohende Schatten,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_CreepingShadows_Name,creeping_shadows
 Cricket Mating Grounds,Grillen-Paarungsgebiet,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_Insects30_Name,cricket_mating_grounds
 Crimson Rainfall,Purpurroter Regen,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_InkInCollector_Name,crimson_rainfall
+Crowded Houses,Überfüllte Häuser,effect,,localization,resources.assets,2026-09-22,,Reward_HousesforBreak_Name,crowded_houses
 Crumbling Seal,Bröckelndes Siegel,effect,,localization,resources.assets,2026-09-22,,Effect_CrumblingSeal_Name,crumbling_seal
+Crystal Cathode,Kristallkathode,effect,,localization,resources.assets,2026-09-22,,Reward_ReplaceRainpunkEngineEffect_Name,crystal_cathode
+Crystal Growth,Kristallwucherung,effect,,localization,resources.assets,2026-09-22,,Reward_CrystalizedDewRawProd_Name,crystal_growth
+Curse of Weakness,Schwächefluch,effect,,localization,resources.assets,2026-09-22,,Reward_RainTotemSlow_Name,curse_of_weakness
 Curse of the Forefathers,Fluch der Vorfahren,effect,,localization,resources.assets,2026-09-22,,Effect_ShrineKill_Name,curse_of_the_forefathers
 Cursed Rain,Verfluchter Regen,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_CursedLand_Name,cursed_rain
+Cursed Treasure,Verfluchter Schatz,effect,,localization,resources.assets,2026-09-22,,Reward_CursedTreasure_Name,cursed_treasure
 Dangerous Lands,Gefährliche Länder,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_DangerousLands_Name,dangerous_lands
+Dangerous Move,Gefährliche Entscheidung,effect,,localization,resources.assets,2026-09-22,,Reward_DangGladesReducesResolve_Name,dangerous_move
 Dark Mist,Dunkler Nebel,effect,,localization,resources.assets,2026-09-22,,Effect_DarkMist_Name,dark_mist
 Darkest Shadows,Dunkelste Schatten,effect,,localization,resources.assets,2026-09-22,,Effect_GhostHostility_Name,darkest_shadows
 Deadly Spores,Tödliche Sporen,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_DeadlySpores_Name,deadly_spores
@@ -454,39 +558,65 @@ Decay,Fäulnis,effect,,localization,resources.assets,2026-09-22,,Effect_ReplaceB
 Decaying Food,Faulendes Essen,effect,,localization,resources.assets,2026-09-22,,Effect_RemoveFoodOverTime_Blightrot_Name,decaying_food
 Decryption,Entschlüsselung,effect,,localization,resources.assets,2026-09-22,,Effect_HostilityForTablets_Name,decryption
 Dedication,Hingabe,effect,,localization,resources.assets,2026-09-22,,Effect_BatsResolveForDeaths_Name,dedication
+Deep Pockets,Tiefe Taschen,effect,,localization,resources.assets,2026-09-22,,Reward_AmberForTradeRoutes_Name,deep_pockets
+Deeply Hidden Riches,Tief verborgene Reichtümer,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_ShardsForRelics_Name,deeply_hidden_riches
 Defenseless,Wehrlos,effect,,localization,resources.assets,2026-09-22,,Effect_ConvictsResolve_Name,defenseless
 Degradation,Verfall,effect,,localization,resources.assets,2026-09-22,,Effect_PetrifiedTreeHousing_Name,degradation
 Demonic Hunger,Dämonischer Hunger,effect,,localization,resources.assets,2026-09-22,,Effect_GargoleKillVillager_Name,demonic_hunger
 Desecrator,Schänder,effect,,localization,resources.assets,2026-09-22,,Effect_Desecrator_Name,desecrator
+Deserted Caravans,Verlassene Wohnwagen,effect,,localization,resources.assets,2026-09-22,,Reward_TradeblockforProdSpeed_Name,deserted_caravans
 Desperate Prayers,Verzweifelte Gebete,effect,,localization,resources.assets,2026-09-22,,Effect_GargoleHolstility_Name,desperate_prayers
 Devastating Storms,Verheerende Stürme,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_DevastatingStorms_Name,devastating_storms
 Devastation,Verwüstung,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_1BuildingDestroyed_Name,devastation
 Diligence,Fleiß,effect,,localization,resources.assets,2026-09-22,,Effect_BatsShrineGlobalExtraProd_Name,diligence
 Dire Blight,Grauenhafte Fäule,effect,,localization,resources.assets,2026-09-22,,Effect_BlightrotHigh_Name,dire_blight
 Disappearance,Verschwinden,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_WoodPaymentForVillagers_Penalty_Name,disappearance
+Disappointment,Enttäuschung,effect,,localization,resources.assets,2026-09-22,,Reward_ReputationPenaltyGhost_Name,disappointment
 Disgrace,Schande,effect,,localization,resources.assets,2026-09-22,,Effect_Disgrace_Name,disgrace
 Distant Howling,Fernes Gejaule,effect,,localization,resources.assets,2026-09-22,,Effect_TW_Hostility_Name,distant_howling
 Disturbing the Dead,Störung der Totenruhe,effect,,localization,resources.assets,2026-09-22,,Effect_HostilityForTree_Name,disturbing_the_dead
+Diverse Flora,Vielfältige Flora,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_DiverseFlora_Name,diverse_flora
 Downpour,Platzregen,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_Downpour_Name,downpour
 Drafting Table,Reißbrett,effect,,localization,resources.assets,2026-09-22,,EffectModel_FrogHouseBuildingMatSpeed_Name,drafting_table
 Drenched,Durchnässt,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_SoakedClothes_Name,drenched
+Driving Water,Wasserkraft,effect,,localization,resources.assets,2026-09-22,,Reward_DrivingWater_Name,driving_water
 Drizzle Anomaly,Nieselregen-Anomalie,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_DrizzleWaterPerMinute_Name,drizzle_anomaly
+Drizzle Totem,Niesel-Totem,effect,,localization,resources.assets,2026-09-22,,Reward_LongerDrizzle25_Name,drizzle_totem
 Drowsiness,Schläfrigkeit,effect,,localization,resources.assets,2026-09-22,,Effect_ToxicSlug_ShorterBreakInterval_Name,drowsiness
+Drying Boards,Wäscheständer,effect,,localization,resources.assets,2026-09-22,,Reward_NeedPerkCoatsBreaks_Name,drying_boards
 Drylands,Trockengebiet,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_NoGeysers_Name,drylands
+Dual Brewing Tools,Duale Brauwerkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalWine_Name,dual_brewing_tools
+Dual Carriage System,Doppelwagensystem,effect,,localization,resources.assets,2026-09-22,,Reward_2HaulingCarts_Name,dual_carriage_system
 Dullahan's Legacy,Dullahans Vermächtnis,effect,,localization,resources.assets,2026-09-22,,Effect_OverrideTraderMerch_Name,dullahans_legacy
+Dye Extractor,Farbstoff-Extrahierer,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalPigment_Name,dye_extractor
 Earthquake,Erdbeben,effect,,localization,resources.assets,2026-09-22,,Effect_MoleEarthquake_Name,earthquake
 Eclipse,Finsternis,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_Eclipse_Name,eclipse
+Economic Migration,Wirtschaftsmigration,effect,,localization,resources.assets,2026-09-22,,Reward_NewcomerRateforTradeRoutes_Name,economic_migration
 Education,Bildung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_EducationEffect_Name,education
 Eerie Song,Unheimliches Lied,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_EerieSong_Name,eerie_song
 Effective Parasite,Effektiver Parasit,effect,,localization,resources.assets,2026-09-22,,Effect_EffectiveParasite_Name,effective_parasite
+Efficient Brewing,Effizientes Brauen,effect,,localization,resources.assets,2026-09-22,,Reward_BreweryProd50_Name,efficient_brewing
+Egg Containers,Eierpackungen,effect,,localization,resources.assets,2026-09-22,,Reward_EggContainers_Name,egg_containers
+Egg Delivery Line,Ei-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Eggs_Name,egg_delivery_line
+Emergency Rations,Notrationen,effect,,localization,resources.assets,2026-09-22,,Reward_RemoveHungerStacks_Name,emergency_rations
 Enemy of the Forest,Feind des Waldes,effect,,localization,resources.assets,2026-09-22,,Effect_HostilityForGladeTrader_Name,enemy_of_the_forest
 Engine Corrosion,Maschinenkorrosion,effect,,localization,resources.assets,2026-09-22,,Effect_EngineCorrosion_Name,engine_corrosion
+Enhanced Blueprints,Verbesserte Entwürfe,effect,,localization,resources.assets,2026-09-22,,Reward_FasterConstruction_Name,enhanced_blueprints
+Enriched Amber,Angereicherter Bernstein,effect,,localization,resources.assets,2026-09-22,,Reward_AmberWorthMore_Name,enriched_amber
+Epic Sunken Treasure,Epischer versunkener Schatz,effect,,localization,resources.assets,2026-09-22,,Reward_RewardsPack_Epic_Name,epic_sunken_treasure
 Escape,Fliehen,effect,,localization,resources.assets,2026-09-22,,Effect_Escape_Name,escape
 Escaping the Shadows,Flucht aus den Schatten,effect,,localization,resources.assets,2026-09-22,,Effect_SaveVillagersForAncientTablets_Name,escaping_the_shadows
 Euphoric Vapors,Euphorische Dämpfe,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_EuphoricVapours_Name,euphoric_vapors
+Excavation,Ausgrabung,effect,,localization,resources.assets,2026-09-22,,Reward_ScorpionConvert1_Name,excavation
 Exile,Exil,effect,,localization,resources.assets,2026-09-22,,Effect_BatsBanish_Name,exile
 Expensive Lottery,Teure Lotterie,effect,,localization,resources.assets,2026-09-22,,Effect_HigherBlueprintsRerollCost_Name,expensive_lottery
+Experimental Cornerstone Resolve,Experimentelle-Grundstein-Entschlossenheit,effect,,localization,resources.assets,2026-09-22,,Reward_PerkCrafter_Resolve_Name,experimental_cornerstone_resolve
+Exploration Contract,Erkundungsvertrag,effect,,localization,resources.assets,2026-09-22,,Reward_ExplorationContract_Name,exploration_contract
+Exploration Expedition,Erkundungsexpedition,effect,,localization,resources.assets,2026-09-22,,Reward_ExploringExpedition_Name,exploration_expedition
+Exploration Training,Erkundungsausbildung,effect,,localization,resources.assets,2026-09-22,,Reward_EventsRewardsForBloodthirst_Name,exploration_training
 Explorers' Boredom,Langeweile der Erkunder,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_ExplorersBoredom_Name,explorers_boredom
+Export Contract,Exportvertrag,effect,,localization,resources.assets,2026-09-22,,Reward_PacksForResolveRep_Name,export_contract
+Export Specialization,Exportspezialisierung,effect,,localization,resources.assets,2026-09-22,,Reward_PacksRawProd_Name,export_specialization
 Exposed Resources,Freigelegte Ressourcen,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_ProductiveMine_Name,exposed_resources
 Extreme Noise,Extremer Lärm,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_ExtremeNoise_Name,extreme_noise
 Failed Obligation,Aufgabe nicht erfüllt,effect,,localization,resources.assets,2026-09-22,,Effect_Status_WorldEventFailed_Name,failed_obligation
@@ -494,24 +624,41 @@ Faint Flame,Schwache Flamme,effect,,localization,resources.assets,2026-09-22,,Se
 Fallen Brethren,Gefallene Brüder,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_BattlegroundPenalty_Name,fallen_brethren
 Family Gratitude,Dankbare Familien,effect,,localization,resources.assets,2026-09-22,,Effect_FamiliesGratitude_Name,family_gratitude
 Famine Outbreaks,Hungersnöte,effect,,localization,resources.assets,2026-09-22,,Effect_AscensionHungerMultiplier_Name,famine_outbreaks
+Farmer's Pack,Bauernpaket,effect,,localization,resources.assets,2026-09-22,,Reward_ProfessionCapacityFarmer_Name,farmers_pack
 Farmer's Pride,Bauernstolz,effect,,localization,resources.assets,2026-09-22,,Effect_Biome_FarmsExtraProductionForFertilizer_Name,farmers_pride
+Farming Tools,Landwirtschaftsgeräte,effect,,localization,resources.assets,2026-09-22,,Reward_SmallFarmProdBoost_Name,farming_tools
 Farsight,Weitsicht,effect,,localization,resources.assets,2026-09-22,,Effect_WorkingSpeedForSmallGlade_Name,farsight
 Favoring,Begünstigend,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_FavoringEffect_Name,favoring
 Fear of the Wilds,Angst vor der Wildnis,effect,,localization,resources.assets,2026-09-22,,Effect_CaravanResolve_Name,fear_of_the_wilds
 Fermented Rain,Fermentierter Regen,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_TastyRain_Name,fermented_rain
 Fertile Grounds,Fruchtbare Böden,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_AdditionalGrass_Name,fertile_grounds
+Fertilizer,Dünger,effect,,localization,resources.assets,2026-09-22,,Reward_PlantingRatePlus30_Name,fertilizer
+Festering Wounds,Schwärende Wunden,effect,,localization,resources.assets,2026-09-22,,Reward_BatResolveForFrogDeath_Name,festering_wounds
 Festive Mood,Festliche Stimmung,effect,,localization,resources.assets,2026-09-22,,Effect_FallenViceroyCommemoration_Name,festive_mood
+Fiber Delivery Line,Faser-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Fiber_Name,fiber_delivery_line
+Fickle Flame,Flackerflamme,effect,,localization,resources.assets,2026-09-22,,Reward_FuelConsumptionHaunted_Name,fickle_flame
 Field Test,Feldtest,effect,,localization,resources.assets,2026-09-22,,Effect_BlightBomb_Explosion_Name,field_test
+Fiery Wrath,Feuriger Zorn,effect,,localization,resources.assets,2026-09-22,,Reward_SacrificeCostForImpatience_Name,fiery_wrath
+Filling Dish,Sättigendes Gericht,effect,,localization,resources.assets,2026-09-22,,Reward_FillingDish_Name,filling_dish
+Filthy Trick,Schmutziger Trick,effect,,localization,resources.assets,2026-09-22,,Reward_ReputationPenaltyCorruptedCaravan_Name,filthy_trick
 Finders Keepers,Finderlohn,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_SpringRoutes_Name,finders_keepers
 Firekeeper Letters,Briefe der Feuerwärter,effect,,localization,resources.assets,2026-09-22,,Effect_SacrificeStackForTrade_Name,firekeeper_letters
 Firekeeper's Armor,Rüstung des Feuerwärters,effect,,localization,resources.assets,2026-09-22,,Effect_HearthCorruptionRate_Name,firekeepers_armor
 Firekeeper's Prayer,Gebet des Feuerwärters,effect,,localization,resources.assets,2026-09-22,,Effect_RelicTimeReduction_Name,firekeepers_prayer
+Firelink Ritual,Feuerbande-Ritual,effect,,localization,resources.assets,2026-09-22,,Reward_LowerHostilityForReligion_Name,firelink_ritual
+Fish Delivery Line,Fisch-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Fish_Name,fish_delivery_line
+Fish Flood,Fischflut,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_RawProd_Fish_Name,fish_flood
+Fish Scaler,Fischentschupper,effect,,localization,resources.assets,2026-09-22,,Reward_ScalesRawProd_Name,fish_scaler
+Fish Scraps,Fischreste,effect,,localization,resources.assets,2026-09-22,,Reward_BaitForCrafting_Name,fish_scraps
 Fishmen Ritual Site,Rituelle Stätte der Fischmenschen,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_NoOrders_Name,fishmen_ritual_site
 Fishmen Rituals,Fischmenschenrituale,effect,,localization,resources.assets,2026-09-22,,Effect_LongStormTotem_Name,fishmen_rituals
 Fishmen Traps,Fischmenschenfallen,effect,,localization,resources.assets,2026-09-22,,Effect_FishmenTraps_Name,fishmen_traps
+Flame Amulets,Flammenamulette,effect,,localization,resources.assets,2026-09-22,,Reward_LessHostilityPerWoodcutter_Name,flame_amulets
+Flavour Enhancer,Geschmacksverstärker,effect,,localization,resources.assets,2026-09-22,,Reward_FlavourEnhancer_Name,flavour_enhancer
 Flooded Mines,Geflutete Minen,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_HostilityPeople_Name,flooded_mines
 Flooded Roads,Überflutete Straßen,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_TradeRouteStorm_Name,flooded_roads
 Flooding,Überschwemmung,effect,,localization,resources.assets,2026-09-22,,Effect_RainTotemRoads_Name,flooding
+Flour Delivery Line,Mehl-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Flour_Name,flour_delivery_line
 Fog,Nebel,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_Fog_Name,fog
 Forbidden Lands,Verbotene Länder,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_ForbiddenLands_Name,forbidden_lands
 Forbidden Ritual,Verbotenes Ritual,effect,,localization,resources.assets,2026-09-22,,Effect_RelicRitual_Name,forbidden_ritual
@@ -521,43 +668,82 @@ Force of Nature,Naturgewalt,effect,,localization,resources.assets,2026-09-22,,Ef
 Forced Improvisation,Erzwungene Improvisation,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_ForcedImprovisation_Name,forced_improvisation
 Forced Sacrifice,Zwangsopfer,effect,,localization,resources.assets,2026-09-22,,Effect_TempleAllLuxuryLost_Name,forced_sacrifice
 Forest Offerings,Waldgaben,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_GoodsForSolvedRelics_Name,forest_offerings
+Forge Trip Hammer,Hammerwerk,effect,,localization,resources.assets,2026-09-22,,Reward_ForgeTripHammer_Name,forge_trip_hammer
 Forgiving Crown,Nachsichtige Krone,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_GiftForReputation_Name,forgiving_crown
 Forsaken Gods Temple,Tempel der Verlassenen Götter,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_NoLeaving_Name,forsaken_gods_temple
+Forsaken Seal,Siegel der Verlassenen,effect,,localization,resources.assets,2026-09-22,,Reward_Hooked_CornerstoneRerollEachYear_Name,forsaken_seal
+Fossil Leaching,Fossilien auswaschen,effect,,localization,resources.assets,2026-09-22,,Reward_FossilLeaching_Name,fossil_leaching
 Foul Taste,Widerlicher Geschmack,effect,,localization,resources.assets,2026-09-22,,Effect_CauldronResolve_Name,foul_taste
+Fox,Fuchs,effect,,localization,resources.assets,2026-09-22,,Reward_Fox_Name,fox
+Fox Friendship,Fuchs-Freundschaft,effect,,localization,resources.assets,2026-09-22,,Reward_GuaranteedFoxesNewcommers_Name,fox_friendship
 Fox Housing,Fuchshaus,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_FoxesHousingEffect_Name,fox_housing
 Fox Pack Support,Fuchsrudel-Unterstützung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_FoxesFactionSupport_Name,fox_pack_support
+Fragrant Roots,Duftende Wurzeln,effect,,localization,resources.assets,2026-09-22,,Reward_IncenseForRoots_Name,fragrant_roots
+Free Samples,Kostenlose Proben,effect,,localization,resources.assets,2026-09-22,,Reward_PartsForTrade_Name,free_samples
 Frequent Caravans,Regelmäßige Karawanen,effect,,localization,resources.assets,2026-09-22,,Effect_ResolveForStartedRoute_Name,frequent_caravans
 Frequent Patrols,Regelmäßige Patrouillen,effect,,localization,resources.assets,2026-09-22,,Effect_Hostilityforrelics_Name,frequent_patrols
 Fresh Breeze,Frische Brise,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_FreshBreeze_Name,fresh_breeze
 Friend or Foe,Freund oder Feind,effect,,localization,resources.assets,2026-09-22,,Effect_CystForHostility_Name,friend_or_foe
+Friendly Relations,Freundliche Beziehungen,effect,,localization,resources.assets,2026-09-22,,Reward_ResolveforStanding_Name,friendly_relations
+Friends of the Forest,Freunde des Waldes,effect,,localization,resources.assets,2026-09-22,,Reward_NoBeaverHostility_Name,friends_of_the_forest
 Frightening Visions,Furchterregende Visionen,effect,,localization,resources.assets,2026-09-22,,Effect_FrighteningVisions_Name,frightening_visions
+Frog,Frosch,effect,,localization,resources.assets,2026-09-22,,Reward_Frog_Name,frog
 Frog Clan Support,Froschclan-Unterstützung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_FrogsFactionSupport_Name,frog_clan_support
+Frog Friendship,Frosch-Freundschaft,effect,,localization,resources.assets,2026-09-22,,Reward_GuaranteedFrogNewcommers_Name,frog_friendship
 Frog Housing,Froschunterkünfte,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_FrogHousingEffect_Name,frog_housing
+From the Ashes,Aus der Asche,effect,,localization,resources.assets,2026-09-22,,Reward_ArtifactForDangerousRelic_Name,from_the_ashes
 From the Shadows,Aus den Schatten,effect,,localization,resources.assets,2026-09-22,,Effect_VillagersForCorruption_Name,from_the_shadows
 Frosts,Frost,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_Frosts_Name,frosts
 Fruitful Season,Erntezeit,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_SpeedGathering_Name,fruitful_season
 Frustrated,Frustriert,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_Frustrated_Name,frustrated
 Fuel Donation,Brennstoffspende,effect,,localization,resources.assets,2026-09-22,,Effect_WE_RemoveFuel_Name,fuel_donation
+Fuel Mix,Brennstoffmischung,effect,,localization,resources.assets,2026-09-22,,Reward_FuelMixed_Name,fuel_mix
 Fuel Rods,Brennstäbe,effect,,localization,resources.assets,2026-09-22,,Effect_FuelRodActivation_Name,fuel_rods
 Full Goblets,Volle Kelche,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_BeaverResolveWine_Name,full_goblets
 Full Stock,Volle Lager,effect,,localization,resources.assets,2026-09-22,,Effect_TradeRouteSpeedforPacks_Name,full_stock
+Fungal Growth,Pilzwucherung,effect,,localization,resources.assets,2026-09-22,,Reward_RawProd_Mushroom_Name,fungal_growth
+Fungal Guide,Pilzführer,effect,,localization,resources.assets,2026-09-22,,Reward_MushroomSpecialization_Name,fungal_guide
 Gate Presence,Tor-Präsenz,effect,,localization,resources.assets,2026-09-22,,Effect_DarkGateResolve_Name,gate_presence
 Gathering Knowledge,Wissen sammeln,effect,,localization,resources.assets,2026-09-22,,Effect_MarshlandsGathererSpeed_Name,gathering_knowledge
 Gathering Storm,Ein Sturm zieht auf,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_GatheringStorm_Name,gathering_storm
+Gathering Tools,Sammeln von Werkzeugen,effect,,localization,resources.assets,2026-09-22,,Reward_ProvisionsForGlade_Name,gathering_tools
+Generous Donation,Großzügige Spende,effect,,localization,resources.assets,2026-09-22,,Reward_HalfReputationTrade_Name,generous_donation
 Generous Gifts,Großzügige Geschenke,effect,,localization,resources.assets,2026-09-22,,Effect_HubsForNewcomerGoods_Name,generous_gifts
+Generous Rations,Großzügige Rationen,effect,,localization,resources.assets,2026-09-22,,Reward_ResolveForConsumption_Name,generous_rations
+Gentle Dawn,Sanfte Morgendämmerung,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_GentleDown_Name,gentle_dawn
 Geological Survey,Geologische Vermessung,effect,,localization,resources.assets,2026-09-22,,Effect_SpawnOreAround_Name,geological_survey
 Ghastly Chant,Gespenstischer Gesang,effect,,localization,resources.assets,2026-09-22,,Effect_TW_RelicsWorkingTime_Name,ghastly_chant
 Giant Beast,Riesige Bestie,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_MoleResolvePenalty_Name,giant_beast
+Giant Fluffbeak,Riesen-Fluffschnabel,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_PoroStartingGlade_Name,giant_fluffbeak
 Giant Organisms,Riesige Organismen,effect,,localization,resources.assets,2026-09-22,,Effect_MarshlandsGiantNodes_Name,giant_organisms
+Giant Vegetables,Riesiges Gemüse,effect,,localization,resources.assets,2026-09-22,,Reward_RawProd_Vegetables_Name,giant_vegetables
+Gift from the Woods,Ein Geschenk aus dem Wald,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_Wealthy Friends_Name,gift_from_the_woods
+Gift of Fish,Geschenk der Fische,effect,,localization,resources.assets,2026-09-22,,Reward_CloakedWandererShrine_Fish_Name,gift_of_fish
+Gift of Gathering,Geschenk des Sammelns,effect,,localization,resources.assets,2026-09-22,,Reward_CloakedWandererShrine_Gathering_Name,gift_of_gathering
+Gift of Gratitude,Geschenk der Dankbarkeit,effect,,localization,resources.assets,2026-09-22,,Reward_GratitudeGift_Name,gift_of_gratitude
+Gift of Salt,Geschenk des Salzes,effect,,localization,resources.assets,2026-09-22,,Reward_CloakedWandererShrine_Salt_Name,gift_of_salt
+Gift of the Depths,Geschenk der Tiefen,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_AlgaeSacrifice_Name,gift_of_the_depths
 Gift of the Seal Keeper,Geschenk des Siegelwächters,effect,,localization,resources.assets,2026-09-22,,Effect_SealExtraCornerstone_Name,gift_of_the_seal_keeper
+Gift of the Woodlands,Geschenk der Wälder,effect,,localization,resources.assets,2026-09-22,,Reward_HarvestingRate_RoyalWoodlandsPlus25_Name,gift_of_the_woodlands
+Gleeman's Tales,Spielmannsgeschichten,effect,,localization,resources.assets,2026-09-22,,Reward_InstitutionGlobalResolve_Name,gleemans_tales
 Golden Dust,Goldener Staub,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_ClearanceForDrizzle_Name,golden_dust
 Golden Marrow,Goldmark,effect,,localization,resources.assets,2026-09-22,,Effect_AmberForSeaMarrow_Name,golden_marrow
 Good Health,Gute Gesundheit,effect,,localization,resources.assets,2026-09-22,,Effect_InstitutionGlobalProductionRate_Name,good_health
+Grain Bags,Getreidesäcke,effect,,localization,resources.assets,2026-09-22,,Reward_GrainSpecialization_Name,grain_bags
+Grain Delivery Line,Getreide-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Grain_Name,grain_delivery_line
 Greater Threat,Größere Bedrohung,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_GreaterThreat_Name,greater_threat
 Grim Fate,Düsteres Schicksal,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_GrimFate_Name,grim_fate
 Groundwater Extraction,Grundwasser-Extraktion,effect,,localization,resources.assets,2026-09-22,,Effect_Extractor_ClearanceWaterPerMin_Name,groundwater_extraction
+Group of Bats,Gruppe von Fledermäusen,effect,,localization,resources.assets,2026-09-22,,Reward_GroupOfBats_Name,group_of_bats
+Group of Beavers,Biber-Gruppe,effect,,localization,resources.assets,2026-09-22,,Reward_GroupOfBeavers_Name,group_of_beavers
+Group of Foxes,Fuchs-Gruppe,effect,,localization,resources.assets,2026-09-22,,Reward_Foxes_Name,group_of_foxes
+Group of Frogs,Frosch-Gruppe,effect,,localization,resources.assets,2026-09-22,,Reward_Frogs_Name,group_of_frogs
+Group of Harpies,Harpyien-Gruppe,effect,,localization,resources.assets,2026-09-22,,Reward_GroupOfHarpies_Name,group_of_harpies
+Group of Humans,Menschen-Gruppe,effect,,localization,resources.assets,2026-09-22,,Reward_GroupOfHumans_Name,group_of_humans
+Group of Lizards,Echsen-Gruppe,effect,,localization,resources.assets,2026-09-22,,Reward_GroupOfLizards_Name,group_of_lizards
 Growing Darkness,Wachsende Dunkelheit,effect,,localization,resources.assets,2026-09-22,,Effect_WorseStorms_Name,growing_darkness
 Growth Medium,Wachstumsmedium,effect,,localization,resources.assets,2026-09-22,,Effect_CystForFood_Name,growth_medium
+Grubbing Tools,Rodungswerkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_RootsForGlades_Name,grubbing_tools
 Guild Catalogue,Gildenkatalog,effect,,localization,resources.assets,2026-09-22,,Effect_ExtraTraderMerch_Name,guild_catalogue
 Guild Territory,Gildengebiet,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_OneInitialVillagerPerRace_Name,guild_territory
 "Guild of Traders, or Thieves?",Gilde der Händler oder Diebe?,effect,,localization,resources.assets,2026-09-22,,Effect_HigherTradersPrices_Name,guild_of_traders_or_thieves
@@ -567,14 +753,24 @@ Guild's Sigil,Siegelring der Gilde,effect,,localization,resources.assets,2026-09
 Hailstorm,Hagelsturm,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_Hailstorm_Name,hailstorm
 Hard Times,Schwere Zeiten,effect,,localization,resources.assets,2026-09-22,,Effect_HardOrdersOnly_Name,hard_times
 Harmony,Harmonie,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HarmonyAltarPositive_Name,harmony
+Harpy,Harpyie,effect,,localization,resources.assets,2026-09-22,,Reward_Harpy_Name,harpy
 Harpy Clan Support,Harpyienclan-Unterstützung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HarpyFactionSupport_Name,harpy_clan_support
+Harpy Friendship,Harpyien-Freundschaft,effect,,localization,resources.assets,2026-09-22,,Reward_GuaranteedHarpyNewcommers_Name,harpy_friendship
 Harpy Housing,Harpyienwohnraum,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HarpyHousingEffect_Name,harpy_housing
+Haste Makes Waste,Eile mit Weile,effect,,localization,resources.assets,2026-09-22,,Reward_FasterScouts_Name,haste_makes_waste
+Hauling Cart,Transportkarren,effect,,localization,resources.assets,2026-09-22,,Reward_HaulingCarts_Name,hauling_cart
 Haunted,Spukerscheinungen,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_FrighteningVisionsResolveEffect_Name,haunted
 Haunted Forest,Spukwald,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_NoGladeInfo_Name,haunted_forest
 Health Infusion,Gesundheitsaufguß,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HarpyResolveTea_Name,health_infusion
 Hearth Defect,Feuerstellendefekt,effect,,localization,resources.assets,2026-09-22,,Effect_FasterFuelSacrifice_Name,hearth_defect
+Heavy Drops,Schwere Tropfen,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_RawProd_Sparkdew_Name,heavy_drops
+Heavy Fog,Dichter Nebel,effect,,localization,resources.assets,2026-09-22,,Reward_GladeDangerBlock_Mistworm_Name,heavy_fog
+Heavy Millstone,Schwerer Mühlstein,effect,,localization,resources.assets,2026-09-22,,Reward_HeavyMillStone_Name,heavy_millstone
+Heavy Press,Schwere Presse,effect,,localization,resources.assets,2026-09-22,,Reward_OilRawProd_Name,heavy_press
+Herb Delivery Line,Kräuter-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Herbs_Name,herb_delivery_line
 Hidden Mystery,Verborgenes Geheimnis,effect,,localization,resources.assets,2026-09-22,,Effect_TabletsForGlades_Name,hidden_mystery
 Hidden Reward,Versteckte Belohnung,effect,,localization,resources.assets,2026-09-22,,Effect_AncientTabletforEvents_Name,hidden_reward
+Hidden Seal,Verborgenes Siegel,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_SealedGlade_Name,hidden_seal
 High Hygiene,Hohe Hygiene,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HarpyResolveBalm_Name,high_hygiene
 High Voltage,Hochspannung,effect,,localization,resources.assets,2026-09-22,,Effect_Hostility2_Name,high_voltage
 Higher Expectations,Höhere Erwartungen,effect,,localization,resources.assets,2026-09-22,,Effect_LowerImpatienceReduction_Name,higher_expectations
@@ -583,22 +779,37 @@ Homelessness,Obdachlosigkeit,effect,,localization,resources.assets,2026-09-22,,R
 Horrors from Beneath,Das Grauen von unten,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_MineInStorm_Name,horrors_from_beneath
 Hostility of the Forest,Feindseligkeit des Waldes,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_NewYearPenalty_Name,hostility_of_the_forest
 Hot Springs,Heiße Quellen,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_HotSprings_Name,hot_springs
+Human,Mensch,effect,,localization,resources.assets,2026-09-22,,Reward_Human_Name,human
 Human Clan Support,Unterstützung der Menschenfraktion,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HumansFactionSupport_Name,human_clan_support
+Human Friendship,Menschen-Freundschaft,effect,,localization,resources.assets,2026-09-22,,Reward_GuaranteedHumanNewcommers_Name,human_friendship
 Human Housing,Menschenhaus,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HumanHousingEffect_Name,human_housing
 Human Influx,Zustrom von Menschen,effect,,localization,resources.assets,2026-09-22,,Effect_HumanInflux_Name,human_influx
 Humid Climate,Feuchtes Klima,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_FuelRateHostility_Name,humid_climate
 Hunger,Hunger,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HungerPenalty_Name,hunger
 Hunger Storm,Hungersturm,effect,,localization,resources.assets,2026-09-22,,Effect_HungerStorm_Name,hunger_storm
 Hungry Mistworm,Hungriger Nebelwurm,effect,,localization,resources.assets,2026-09-22,,Effect_RemoveFoodOverTime_Mistworm_Name,hungry_mistworm
+Hunter-Gatherers,Jäger und Sammler,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_HunterGatherers_Name,hunter_gatherers
 Hunting Ground,Jagdrevier,effect,,localization,resources.assets,2026-09-22,,Effect_LessNewcommers_Name,hunting_ground
+Important Matters,Wichtige Angelegenheiten,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_ReputationPenaltyRate_Name,important_matters
+Improvised Tools,Improvisierte Werkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_ToolsForGladeForResolve_Name,improvised_tools
+Incense Delivery Line,Weihrauch-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Incense_Name,incense_delivery_line
 Industrialized Agriculture,Industrialisierte Landwirtschaft,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_AgriculturePenalty_Name,industrialized_agriculture
+Industrialized Farming,Industrialisierte Landwirtschaft,effect,,localization,resources.assets,2026-09-22,,Reward_MorePacksOfCrops_Name,industrialized_farming
+Infamous Viceroy,Berüchtigter Statthalter,effect,,localization,resources.assets,2026-09-22,,Reward_TraderIntervalAttack_Name,infamous_viceroy
+Infamy,Ehrlosigkeit,effect,,localization,resources.assets,2026-09-22,,Reward_ImpatienceForDecision_Name,infamy
 Infection,Ansteckung,effect,,localization,resources.assets,2026-09-22,,Effect_ToxicSlug_HungerMultiplier_Name,infection
 Infestation,Befall,effect,,localization,resources.assets,2026-09-22,,Effect_Infestation_Name,infestation
 Insane Gamble,Verrückte Wette,effect,,localization,resources.assets,2026-09-22,,Effect_ReputationPenaltyRate_Gambler_Seal_Name,insane_gamble
 Insatiable Hunger,Unstillbarer Hunger,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_GrowingFoodConsumption_Name,insatiable_hunger
+Insect Delivery Line,Insekten-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Insects_Name,insect_delivery_line
+Insect Lure,Insektenköder,effect,,localization,resources.assets,2026-09-22,,Reward_InsectLure_Name,insect_lure
+Insect Traps,Insektenfallen,effect,,localization,resources.assets,2026-09-22,,Reward_InsectTraps_Name,insect_traps
+Inspiring Pressure,Inspirierender Druck,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_InspiringPressure_Name,inspiring_pressure
 Inspiring Speech,Inspirierende Rede,effect,,localization,resources.assets,2026-09-22,,Effect_TW_LeavingRateReduction_Name,inspiring_speech
 Inspiring View,Inspirierende Aussicht,effect,,localization,resources.assets,2026-09-22,,Effect_SELongerBreakInterval_Name,inspiring_view
+Inspiring Work,Inspirierende Arbeit,effect,,localization,resources.assets,2026-09-22,,Reward_ResolveForGlade_Child_Name,inspiring_work
 Instability,Instabilität,effect,,localization,resources.assets,2026-09-22,,Effect_FuelRodsNegative_Name,instability
+Intensive Mutations,Intensive Mutationen,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_IntensiveMutations_Name,intensive_mutations
 Into the Mists,In die Nebel,effect,,localization,resources.assets,2026-09-22,,Effect_StagRunning_Name,into_the_mists
 Invigorating Winds,Belebende Winde,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_InvigoratingWinds_Name,invigorating_winds
 Invoker,Beschwörer,effect,,localization,resources.assets,2026-09-22,,Effect_FishmenNegativeMysteries_Name,invoker
@@ -607,6 +818,7 @@ Iron Medal,Eisenmedaille,effect,,localization,resources.assets,2026-09-22,,Cycle
 Irresponsible Archaeology,Unverantwortliche Archäologie,effect,,localization,resources.assets,2026-09-22,,Effect_ReputationPenaltyRate100_Name,irresponsible_archaeology
 Irresponsible Gamble,Unvernünftige Wette,effect,,localization,resources.assets,2026-09-22,,Effect_ReputationPenaltyRate_Gambler_Meta_Name,irresponsible_gamble
 Jerky,Dörrfleisch,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_JerkyEffect_Name,jerky
+Jerky Delivery Line,Dörrfleisch-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Jerky_Name,jerky_delivery_line
 Joy Of Discovery,Die Freude an der Entdeckung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_JoyOfDiscovery_Name,joy_of_discovery
 Kelpie's Charm,Zauber des Flussgeists,effect,,localization,resources.assets,2026-09-22,,Effect_KelpiesCharm_Name,kelpies_charm
 Kontai,Kontai,effect,,localization,resources.assets,2026-09-22,,Effect_CornerstonesLimit_Npc_Name,kontai
@@ -614,74 +826,131 @@ Land Tax,Grundsteuer,effect,,localization,resources.assets,2026-09-22,,Effect_Ex
 Land Tax (big glade),Grundsteuer (große Lichtung),effect,,localization,resources.assets,2026-09-22,,Effect_ExplorationTaxPayment_Big_Name,land_tax_big_glade
 Land Tax (small glade),Grundsteuer (kleine Lichtung),effect,,localization,resources.assets,2026-09-22,,Effect_ExplorationTaxPayment_Small_Name,land_tax_small_glade
 Land of Greed,Land der Gier,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_LandOfGreed_Name,land_of_greed
+Large Baskets,Große Körbe,effect,,localization,resources.assets,2026-09-22,,Reward_ReinforcedTools_Plantation_Name,large_baskets
+Large Berry Baskets,Große Beerenkörbe,effect,,localization,resources.assets,2026-09-22,,Reward_BerriesRawProd_Name,large_berry_baskets
 Leakage,Leck,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_WeakHearth_Name,leakage
+Leather Delivery Line,Leder-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Leather_Name,leather_delivery_line
+Leather Gloves,Lederhandschuhe,effect,,localization,resources.assets,2026-09-22,,Reward_LeatherGloves_Name,leather_gloves
+Leftover Crops,Übrig gebliebene Feldfrüchte,effect,,localization,resources.assets,2026-09-22,,Reward_CropsForGrain_Name,leftover_crops
+Legendary Sunken Treasure,Legendärer versunkener Schatz,effect,,localization,resources.assets,2026-09-22,,Reward_RewardsPack_Legendary_Name,legendary_sunken_treasure
 Leisure,Freizeit,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_LeasiureEffect_Name,leisure
 Less is More,Weniger ist mehr,effect,,localization,resources.assets,2026-09-22,,Effect_FewerBlueprintsOptions_Name,less_is_more
 Lesser Cold Flame,Kleine kalte Flamme,effect,,localization,resources.assets,2026-09-22,,Effect_ColdFlame_Weak_Name,lesser_cold_flame
 Levitating Monument,Schwebendes Denkmal,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_Move_Name,levitating_monument
 Lichen,Flechte,effect,,localization,resources.assets,2026-09-22,,EffectModel_FoxHousesUniqueBonus_Name,lichen
 Life from Beneath,Leben von unten,effect,,localization,resources.assets,2026-09-22,,Effect_SpawnBlightrot_BurialSite_Name,life_from_beneath
+Light Timber,Leichtholz,effect,,localization,resources.assets,2026-09-22,,Reward_WoodcutterCapacity5_Name,light_timber
+Light as a Feather,Leicht wie eine Feder,effect,,localization,resources.assets,2026-09-22,,Reward_HarpyGlobalCapacity_Name,light_as_a_feather
 Lightning Strike,Blitzschlag,effect,,localization,resources.assets,2026-09-22,,Effect_LightningCatcher_Name,lightning_strike
 Lightweight Axes,Leichte Äxte,effect,,localization,resources.assets,2026-09-22,,Effect_FasterWoodcutters_Name,lightweight_axes
 Lightweight Wood,Leichteres Holz,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_WoodcutterCapacity10_Name,lightweight_wood
+Lizard,Echse,effect,,localization,resources.assets,2026-09-22,,Reward_Lizard_Name,lizard
 Lizard Clan Support,Unterstützung der Echsenfraktion,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_LizardsFactionSupport_Name,lizard_clan_support
+Lizard Friendship,Echsen-Freundschaft,effect,,localization,resources.assets,2026-09-22,,Reward_GuaranteedLizardNewcommers_Name,lizard_friendship
 Lizard Housing,Echsenhaus,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_LizardHousingEffect_Name,lizard_housing
+Local Taxes,Lokale Steuern,effect,,localization,resources.assets,2026-09-22,,Reward_LocalTaxes_Name,local_taxes
 Long Live the Queen,Lang lebe die Königin,effect,,localization,resources.assets,2026-09-22,,Effect_ResolveForReputation_Name,long_live_the_queen
 Long Term Contract,Langfristiger Vertrag,effect,,localization,resources.assets,2026-09-22,,Effect_MoreResolveForComfortable_Name,long_term_contract
 Looming Darkness,Drohende Finsternis,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_StormPenalty_Name,looming_darkness
 Lost Newcomers,Verirrte Neuankömmlinge,effect,,localization,resources.assets,2026-09-22,,Effect_SELateNewcomers_Holder_Name,lost_newcomers
+Lost Supplies,Verlorene Vorräte,effect,,localization,resources.assets,2026-09-22,,Reward_MeatAndGrainForEvents_Name,lost_supplies
 Lucky Charm,Glücksbringer,effect,,localization,resources.assets,2026-09-22,,Effect_TraderReroll_Name,lucky_charm
 Lucky Talisman,Glücksbringer,effect,,localization,resources.assets,2026-09-22,,Effect_EventTimeReduction10_Name,lucky_talisman
 Luxury,Luxus,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_LuxuryEffect_Name,luxury
+Luxury Tax,Luxussteuer,effect,,localization,resources.assets,2026-09-22,,Reward_AmberForLuxury_Name,luxury_tax
 Makeshift Water Tank,Provisorischer Wassertank,effect,,localization,resources.assets,2026-09-22,,Effect_TankCapacity_Name,makeshift_water_tank
 Malcontents,Unzufriedene,effect,,localization,resources.assets,2026-09-22,,Effect_GlobalReputationTresholdIncrease_Name,malcontents
 Mark of the Sealed Ones,Mal der Versiegelten,effect,,localization,resources.assets,2026-09-22,,Effect_CorruptedSacrifice_Name,mark_of_the_sealed_ones
+Market Carts,Marktkarren,effect,,localization,resources.assets,2026-09-22,,Reward_InstitutionGlobalCapacity_Name,market_carts
 Market Shift Plan,Marktveränderungsplan,effect,,localization,resources.assets,2026-09-22,,Effect_MoreTradeOffers_Name,market_shift_plan
 Marrow Growth,Markwachstum,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_MarrowMine_Name,marrow_growth
 Master Blueprint,Hauptentwurf,effect,,localization,resources.assets,2026-09-22,,Effect_AllCampsUnlock_Name,master_blueprint
+Mating Season,Paarungszeit,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_MatingSeason_Name,mating_season
+Meat Cleavers,Fleischhacker,effect,,localization,resources.assets,2026-09-22,,Reward_ButcherProd50_Name,meat_cleavers
+Meat Specialization,Fleischspezialisierung,effect,,localization,resources.assets,2026-09-22,,Reward_MeatSpecialization_Name,meat_specialization
+Medium Mystery Box,Mittlere Überraschungskiste,effect,,localization,resources.assets,2026-09-22,,Reward_RewardsPack_Medium_Name,medium_mystery_box
 Melancholy,Melancholie,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_Melancholy_Name,melancholy
 Memorial Rite,Gedenkritus,effect,,localization,resources.assets,2026-09-22,,Effect_FuneralFeast_Resolve_Name,memorial_rite
 Memory of the Forest,Erinnerung des Waldes,effect,,localization,resources.assets,2026-09-22,,Effect_MemoryoftheForest_Name,memory_of_the_forest
 Mesmerizing Light,Hypnotisches Licht,effect,,localization,resources.assets,2026-09-22,,Effect_MesmerizingLight_Name,mesmerizing_light
+Metal Delivery Line,Metall-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_CopperBar_Name,metal_delivery_line
 Metallurgic Experts,Metallurgie-Experten,effect,,localization,resources.assets,2026-09-22,,Effect_MetallurgicExperts_Name,metallurgic_experts
+Metallurgic Proficiency,Metallurgische Tüchtigkeit,effect,,localization,resources.assets,2026-09-22,,Reward_MetalProdBoost_Name,metallurgic_proficiency
+Microfilter Net,Mikrofilternetz,effect,,localization,resources.assets,2026-09-22,,Reward_AlgaeRawProd_Name,microfilter_net
 Mine Dredging,Ausbaggerung,effect,,localization,resources.assets,2026-09-22,,Effect_MoreCharges_Name,mine_dredging
 Minecart,Lore,effect,,localization,resources.assets,2026-09-22,,Effect_MineCarts_Name,minecart
 Mining Automatons,Minenautomat,effect,,localization,resources.assets,2026-09-22,,Effect_AutomatonInAllMines_Name,mining_automatons
+Miracle of Agility,Das Wunder der Wendigkeit,effect,,localization,resources.assets,2026-09-22,,Reward_BeaconEffect_WorkingSpeed_Name,miracle_of_agility
+Miracle of Peace,Das Wunder des Friedens,effect,,localization,resources.assets,2026-09-22,,Reward_BeaconEffect_LowerHostility_Name,miracle_of_peace
+Miracle of Strength,Das Wunder der Stärke,effect,,localization,resources.assets,2026-09-22,,Reward_BeaconEffect_BonusHP_Name,miracle_of_strength
 Missing Crude Workstation,Fehlende primitive Werkbank,effect,,localization,resources.assets,2026-09-22,,Effect_MissingCrudeWorkstation_Name,missing_crude_workstation
+Mist Piercers,Nebeldurchdringer,effect,,localization,resources.assets,2026-09-22,,Reward_MistsPiercers_Name,mist_piercers
 Mistworm Infestation,Nebelwurmbefall,effect,,localization,resources.assets,2026-09-22,,Effect_MistwormFood_Name,mistworm_infestation
 Mitosis,Mitose,effect,,localization,resources.assets,2026-09-22,,Effect_BlightrotCloning_Name,mitosis
+Mold Supply,Düngerversorgung,effect,,localization,resources.assets,2026-09-22,,Reward_MoldSupply_Name,mold_supply
+Moldy Grain Seeds,Schimmelige Getreidesamen,effect,,localization,resources.assets,2026-09-22,,Reward_MoldGrain_Name,moldy_grain_seeds
 Monastery of the Holy Flame,Kloster der Heiligen Flamme,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_NoControl_Name,monastery_of_the_holy_flame
 More trade offers,Mehr Handelsangebote,effect,,localization,resources.assets,2026-09-22,,Effect_ExtendTradeRoutes_Name,more_trade_offers
+Mortar and Pestle,Mörser und Stößel,effect,,localization,resources.assets,2026-09-22,,Reward_BalmRawProd_Name,mortar_and_pestle
+Moss Broccoli Seeds,Moos-Brokkoli-Samen,effect,,localization,resources.assets,2026-09-22,,Reward_VegetablesInGreenhouse_Name,moss_broccoli_seeds
 Motivated,Motiviert,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_Motivated_Name,motivated
+Muddy Ground,Schlammiger Boden,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_MuddyGround_Name,muddy_ground
+Mushroom Delivery Line,Pilze-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Mushrooms_Name,mushroom_delivery_line
 Mushroom Seedlings,Pilzsämlinge,effect,,localization,resources.assets,2026-09-22,,Effect_MushroomInFarms_Name,mushroom_seedlings
+Mushrooms After Rain,Pilze nach dem Regen,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_RawProd_Mushroom_Name,mushrooms_after_rain
 Natural Filtration,Natürliche Filterung,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_NaturalFiltration_Name,natural_filtration
 Nauseating Spores,Übelkeit erregende Sporen,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_NauseousSpores_Name,nauseating_spores
 Negligence,Vernachlässigung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_UnfairTreatmentPenalty_Name,negligence
+Nest Eggs,Nesteier,effect,,localization,resources.assets,2026-09-22,,Reward_StormbirdEggs_Name,nest_eggs
+Nets,Netze,effect,,localization,resources.assets,2026-09-22,,Reward_Nets_Name,nets
 New Caravan Member,Neues Karawanenmitglied,effect,,localization,resources.assets,2026-09-22,,CycleEffect_Villagers_GenericGain1_Name,new_caravan_member
 New Caravan Members,Neue Karawanenmitglieder,effect,,localization,resources.assets,2026-09-22,,CycleEffect_Villagers_GenericGainMultiple_Name,new_caravan_members
 New Terms,Neue Bedingungen,effect,,localization,resources.assets,2026-09-22,,CycleEffect_GhostTownForceTraderPriceReduction_Name,new_terms
 No Cooking Utensils,Kein Kochbesteck,effect,,localization,resources.assets,2026-09-22,,Effect_Nocookingutensils_Name,no_cooking_utensils
 No Hope,Keine Hoffnung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_NoFirePenalty_Name,no_hope
+No Quality Control,Keine Qualitätskontrolle,effect,,localization,resources.assets,2026-09-22,,Reward_WoodForInsects_Name,no_quality_control
 No contact,Kein Kontakt,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_NoImpatienceReduction_Name,no_contact
 Obsidian Box,Obsidiankiste,effect,,localization,resources.assets,2026-09-22,,CycleEffect_SealFragments_Name,obsidian_box
 Obsidian Runestone,Obsidian-Runenstein,effect,,localization,resources.assets,2026-09-22,,Effect_HearthHP500_Name,obsidian_runestone
+Obsidian Sickles,Obsidian-Sicheln,effect,,localization,resources.assets,2026-09-22,,Reward_HarvestingRatePlus25_Name,obsidian_sickles
+Obsidian Tools,Obsidian-Werkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_ReinforcedTools_Homestead_Name,obsidian_tools
+Oil Delivery Line,Öl-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Oil_Name,oil_delivery_line
+Oil Vessels,Ölgefäße,effect,,localization,resources.assets,2026-09-22,,Reward_OilVessels_Name,oil_vessels
 Old Fedora Hat,Alter Filzhut,effect,,localization,resources.assets,2026-09-22,,Effect_FedoraHat_Name,old_fedora_hat
+Old Ghran's Technique,Technik der alten Ghran,effect,,localization,resources.assets,2026-09-22,,Reward_OldGhran'sTechnique_Name,old_ghrans_technique
 Ominous Presence,Bedrohliche Präsenz,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_OminousPresence_Name,ominous_presence
 Ominous Whispers,Bedrohliches Flüstern,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_VaultResolvePenalty_Name,ominous_whispers
+Orderly Storage,Ordnungsgemäße Lagerung,effect,,localization,resources.assets,2026-09-22,,Reward_BiggerStorage_Name,orderly_storage
+Ore Delivery Line,Erz-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_CopperOre_Name,ore_delivery_line
+Over-Diligent Woodworkers,Überfleißige Holzarbeiter,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalBarrels_Name,over_diligent_woodworkers
 Overcharged Rainpunk Technology,Überladene Regenpunk-Technologie,effect,,localization,resources.assets,2026-09-22,,Effect_RainpunkFoundryBlightrotSpawn_Name,overcharged_rainpunk_technology
 Overexploitation,Übernutzung,effect,,localization,resources.assets,2026-09-22,,Effect_Overexploitation_Name,overexploitation
 Overflow,Überschwemmung,effect,,localization,resources.assets,2026-09-22,,Effect_Overflow_Name,overflow
 Overgrown Library,Überwucherte Bibliothek,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_OvergrownLibrary_Name,overgrown_library
+Overgrown Vegetation,Überwachsene Vegetation,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_BigTrees_Name,overgrown_vegetation
 Overheating,Überhitzung,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_ProdSpeedForSparkdew_Name,overheating
 Overwhelmed Gatherers,Überforderte Sammler,effect,,localization,resources.assets,2026-09-22,,Effect_AllCampsUnlock_Child_Name,overwhelmed_gatherers
+Overzealous Architects,Übereifrige Architekten,effect,,localization,resources.assets,2026-09-22,,Reward_BlueprintsForUpgrades_Name,overzealous_architects
+Pack of Meat,Fleischpaket,effect,,localization,resources.assets,2026-09-22,,Reward_Meat_Name,pack_of_meat
+Pack of Mushrooms,Pilzepaket,effect,,localization,resources.assets,2026-09-22,,Reward_Mushrooms_Name,pack_of_mushrooms
+Pack of Roots,Wurzelpakete,effect,,localization,resources.assets,2026-09-22,,Reward_PackofRoots_Name,pack_of_roots
+Pack of Skewers,Fleischspieß-Paket,effect,,localization,resources.assets,2026-09-22,,Reward_Skewers_Name,pack_of_skewers
+Packs of Building Materials,Baumaterialien-Pakete,effect,,localization,resources.assets,2026-09-22,,Reward_PackOfBuildingMaterials_Name,packs_of_building_materials
+Packs of Crops,Feldfruchtpakete,effect,,localization,resources.assets,2026-09-22,,Reward_PackOfCrops_Name,packs_of_crops
+Packs of Provisions,Proviantpakete,effect,,localization,resources.assets,2026-09-22,,Reward_PackOfProvisions_Name,packs_of_provisions
 Parasites,Parasiten,effect,,localization,resources.assets,2026-09-22,,Effect_Parasites_Name,parasites
+Parts,Teile,effect,,localization,resources.assets,2026-09-22,,Reward_Parts_Name,parts
+Peasant Supplies,Bauernbedarf,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalProvisions_Name,peasant_supplies
 Pestilence,Pestilenz,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_BlightForSparkdew_Penalty_Name,pestilence
 Petrification,Versteinerung,effect,,localization,resources.assets,2026-09-22,,Effect_PetrifiedTreeWoodcutting_Name,petrification
 Petrified Egg,Versteinertes Ei,effect,,localization,resources.assets,2026-09-22,,Effect_PetrifiedEgg_Name,petrified_egg
 Petrified Necropolis,Versteinerte Nekropolis,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_PetrifiedNecropolis_Name,petrified_necropolis
 Petrified Wood,Versteinertes Holz,effect,,localization,resources.assets,2026-09-22,,Effect_RemoveAllWood_Name,petrified_wood
+Pickle Jars,Konservengläser,effect,,localization,resources.assets,2026-09-22,,Reward_PickleJars_Name,pickle_jars
 Pickled Goods,Eingelegte Nahrung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_PickledEffect_Name,pickled_goods
+Pickled Goods Delivery Line,Eingelegte-Nahrung-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_PickledGoods_Name,pickled_goods_delivery_line
 Pie,Pastete,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_PieEffect_Name,pie
+Pie Delivery Line,Pasteten-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Pie_Name,pie_delivery_line
 Piercing Winds,Durchdringende Winde,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_PiercingWinds_Name,piercing_winds
 Pit Pony,Grubenpferd,effect,,localization,resources.assets,2026-09-22,,Effect_PitPony_Name,pit_pony
 Plague of Blindness,Plage der Blindheit,effect,,localization,resources.assets,2026-09-22,,Effect_PlagueOfBlindness_Name,plague_of_blindness
@@ -705,63 +974,116 @@ Poisoned Groundwater,Vergiftetes Grundwasser,effect,,localization,resources.asse
 Poisoned Wind,Vergifteter Wind,effect,,localization,resources.assets,2026-09-22,,Effect_TW_RemoveFoodOverTime_Name,poisoned_wind
 Politically Outmaneuvered,Politisch ausmanövriert,effect,,localization,resources.assets,2026-09-22,,Effect_PoliticallyOutmaneuvered_Name,politically_outmaneuvered
 Porridge,Haferbrei,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_PorridgeEffect_Name,porridge
+Pottery Delivery Line,Keramik-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Pottery_Name,pottery_delivery_line
+Pragmatic Frugality,Pragmatische Genügsamkeit,effect,,localization,resources.assets,2026-09-22,,Reward_FuelConsumption_HearthBeaver_Name,pragmatic_frugality
 Prayer,Gebet,effect,,localization,resources.assets,2026-09-22,,Effect_TW_GlobalExtraProd_Name,prayer
 Prayer Book,Gebetsbuch,effect,,localization,resources.assets,2026-09-22,,Effect_WorkingTimeForFirekeeper_Name,prayer_book
+Prayer of Courage,Gebet des Muts,effect,,localization,resources.assets,2026-09-22,,Reward_CloakedWandererShrine_WorkingSpeed_Name,prayer_of_courage
+Prayer of Perseverance,Gebet des Durchhaltevermögens,effect,,localization,resources.assets,2026-09-22,,Reward_CloakedWandererShrine_HP_Name,prayer_of_perseverance
+Prayer of Protection,Gebet des Schutzes,effect,,localization,resources.assets,2026-09-22,,Reward_CloakedWandererShrine_Hostility_Name,prayer_of_protection
 Prayers,Gebete,effect,,localization,resources.assets,2026-09-22,,Effect_Prayers_Name,prayers
 Prestigious Expedition,Prestigeträchtige Expedition,effect,,localization,resources.assets,2026-09-22,,Effect_ReputationChanges_Name,prestigious_expedition
 Procrastination,Prokrastination,effect,,localization,resources.assets,2026-09-22,,Effect_LongerRelicsWorkingTime_Name,procrastination
+Prosperous Archaeology,Erfolgreiche Archäologen,effect,,localization,resources.assets,2026-09-22,,Reward_ResolveForChests_Name,prosperous_archaeology
+Prosperous Settlement,Wohlhabende Siedlung,effect,,localization,resources.assets,2026-09-22,,Reward_ResolveForSales_Name,prosperous_settlement
+Protected Trade,Geschützter Handel,effect,,localization,resources.assets,2026-09-22,,Reward_HostilityForSales_Name,protected_trade
+Provisioner's Toolkit,Werkzeug des Versorgers,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdBonus_PackOfProvisions_Name,provisioners_toolkit
 Public Performances,Öffentliche Aufführung,effect,,localization,resources.assets,2026-09-22,,Effect_InstitutionGlobalExtraProduction_Name,public_performances
+Puffed Grain,Gepufftes Getreide,effect,,localization,resources.assets,2026-09-22,,Reward_PuffedGrain_Name,puffed_grain
+Purified Pond,Gereinigter Teich,effect,,localization,resources.assets,2026-09-22,,Reward_SpawnLake_Name,purified_pond
 Purified Spring,Geläuterte Quelle,effect,,localization,resources.assets,2026-09-22,,Effect_SpawnRandomSpring_Kelpie_Name,purified_spring
 Quaking Bog,Bebender Sumpf,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_SlowGathering_Name,quaking_bog
 Queen's Gift,Geschenk der Königin,effect,,localization,resources.assets,2026-09-22,,Effect_HPforImpatience_Name,queens_gift
+Queen's Grace,Die Gnade der Königin,effect,,localization,resources.assets,2026-09-22,,Reward_Queen'sGrace_Name,queens_grace
 Queen's Sailors,Matrosen der Königin,effect,,localization,resources.assets,2026-09-22,,Effect_QueenSailors_Name,queens_sailors
 Queen's Support,Die Unterstützung der Königin,effect,,localization,resources.assets,2026-09-22,,Effect_QueensSupport_Name,queens_support
+Queen's Wrath,Der Zorn der Königin,effect,,localization,resources.assets,2026-09-22,,Reward_ImpatienceForAttack_Name,queens_wrath
 Queen's Wrath (Vassal Tax),Der Zorn der Königin (Vasallensteuer),effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_ImpatienceForAmber_Penalty_Name,queens_wrath_vassal_tax
+Quick Deliveries,Schnelle Lieferungen,effect,,localization,resources.assets,2026-09-22,,Reward_PackProdBoost_Name,quick_deliveries
+Quick Harvest,Schnelle Ernte,effect,,localization,resources.assets,2026-09-22,,Reward_HarvestingRatePlus50_Name,quick_harvest
+Quick Planting,Schnelles Pflanzen,effect,,localization,resources.assets,2026-09-22,,Reward_PlantingRatePlus50_Name,quick_planting
 Rage of the Forest,Zorn des Waldes,effect,,localization,resources.assets,2026-09-22,,Effect_Hostility1_Name,rage_of_the_forest
+Rain Collector Filter,Regenkollektorfilter,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_CrystalizedDewCollector_Name,rain_collector_filter
+Rain Pumps,Regenpumpen,effect,,localization,resources.assets,2026-09-22,,Reward_RainPumps_Name,rain_pumps
 Rain Sorcery,Regenmagie,effect,,localization,resources.assets,2026-09-22,,Effect_FishmenSoothsayerCurse_Name,rain_sorcery
+Rain-Powered Pottery Wheel,Regenbetriebene Töpferscheibe,effect,,localization,resources.assets,2026-09-22,,Reward_RainPoweredPotteryWheel_Name,rain_powered_pottery_wheel
+Rainpunk Drills,Regenpunk-Bohrer,effect,,localization,resources.assets,2026-09-22,,Reward_MineProd30_Name,rainpunk_drills
+Rainpunk Noria,Regenpunk-Noria,effect,,localization,resources.assets,2026-09-22,,Reward_NoriaRainpunk_Name,rainpunk_noria
+Rainpunk Smithing,Regenpunk-Schmieden,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdInfusedTools_Name,rainpunk_smithing
 Rainwashed Soil,Regengetränkte Erde,effect,,localization,resources.assets,2026-09-22,,Effect_Biome_GrassSpawner_Name,rainwashed_soil
 Rainwater Condenser,Regenwasserkondensator,effect,,localization,resources.assets,2026-09-22,,Effect_StormWaterProdBonus_Name,rainwater_condenser
 Rainwater Storage,Regenwasserspeicher,effect,,localization,resources.assets,2026-09-22,,Effect_TankCapacity_Frog_Name,rainwater_storage
+Rare Sunken Treasure,Seltener versunkener Schatz,effect,,localization,resources.assets,2026-09-22,,Reward_RewardsPack_Rare_Name,rare_sunken_treasure
 Rationing,Rationierung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_EqualProhibitionPenalty_Name,rationing
 Rebellious Spirit,Rebellischer Geist,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_RebeliousSpirit_Name,rebellious_spirit
 Recall (Land Tax),Rückruf (Grundsteuer),effect,,localization,resources.assets,2026-09-22,,Effect_ExplorationTax_Penalty_Name,recall_land_tax
 Recall (Royal Tax),Rückruf (Königliche Steuer),effect,,localization,resources.assets,2026-09-22,,Effect_AmberPayment_Penalty_Name,recall_royal_tax
+Reckless Plunder,Rücksichtslose Plünderung,effect,,localization,resources.assets,2026-09-22,,Reward_CacheRewardsForNodes_Name,reckless_plunder
 Reconnaissance,Aufklärung,effect,,localization,resources.assets,2026-09-22,,Effect_WorkingSpeedForSmallGlade_Child_Name,reconnaissance
+Reconstruction,Rekonstruktion,effect,,localization,resources.assets,2026-09-22,,Reward_ScorpionConvert3_Name,reconstruction
 Recultivation,Rekultivierung,effect,,localization,resources.assets,2026-09-22,,Effect_SpawnFertileSoil_Cauldron_Name,recultivation
+Reed Delivery Line,Schilf-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Reeds_Name,reed_delivery_line
+Refreshing Discovery,Belebende Entdeckung,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_GentleDown_Child_Name,refreshing_discovery
 Regrowth,Neues Wachstum,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_ProductiveFarmsInDrizzle_Name,regrowth
 Regular Baths,Regelmäßige Bäder,effect,,localization,resources.assets,2026-09-22,,Effect_InstitutionSlowerLeaving_Name,regular_baths
 Regular Storm,Normaler Sturm,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_RegularStorm_Name,regular_storm
+Reinforced Axes,Verstärkte Äxte,effect,,localization,resources.assets,2026-09-22,,Reward_QuickWoodcutting_Name,reinforced_axes
+Reinforced Brick Mold,Verstärkte Ziegel – Form,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdBricks_Name,reinforced_brick_mold
+Reinforced Needles,Verstärkte Nadeln,effect,,localization,resources.assets,2026-09-22,,Reward_ReinforcedNeedles_Name,reinforced_needles
+Reinforced Saw Blades,Verstärkte Sägeblätter,effect,,localization,resources.assets,2026-09-22,,Reward_ReinforcedSawBlades_Name,reinforced_saw_blades
+Reinforced Stoves,Verstärkte Öfen,effect,,localization,resources.assets,2026-09-22,,Reward_BakeryProd50_Name,reinforced_stoves
+Reinforced Tools,Verstärkte Werkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_ReinforcedTools_Name,reinforced_tools
 Religion,Religion,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_ReligionEffect_Name,religion
+Religious Settlement,Religiöse Siedlung,effect,,localization,resources.assets,2026-09-22,,Reward_HumanResolveForIncenseProd_Name,religious_settlement
 Repair Station,Reparaturstation,effect,,localization,resources.assets,2026-09-22,,Effect_BatHousesUniqueBonus_Name,repair_station
+Repurposed Bait,Wiederverwendeter Köder,effect,,localization,resources.assets,2026-09-22,,Reward_InsectsForBait_Name,repurposed_bait
+Repurposed Clay,Wiederverwendeter Lehm,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalBricks_Name,repurposed_clay
+Resin Delivery Line,Harz-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Resin_Name,resin_delivery_line
+Resin Extractor,Harz-Extrahierer,effect,,localization,resources.assets,2026-09-22,,Reward_RawProd_Resin_Name,resin_extractor
 Resisting Flora,Wehrhafte Flora,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_SlowWoodCutting_Name,resisting_flora
 Resource Hub,Ressourcenknoten,effect,,localization,resources.assets,2026-09-22,,Effect_Biome_FasterTrade_Name,resource_hub
+Respected Business Partner,Respektierter Geschäftspartner,effect,,localization,resources.assets,2026-09-22,,Reward_AmberForRelics_Name,respected_business_partner
 Restrictions,Einschränkungen,effect,,localization,resources.assets,2026-09-22,,Effect_FewerCornerstonesOptions_Name,restrictions
 Reveals a geyser,Deckt einen Geysir auf,effect,,localization,resources.assets,2026-09-22,,Effect_LocateSprings_Name,reveals_a_geyser
 Reveals a ruin,Enthüllt eine Ruine,effect,,localization,resources.assets,2026-09-22,,Effect_RacialLocateRuin_Name,reveals_a_ruin
 Reveals fertile soil,Deckt Nährboden auf,effect,,localization,resources.assets,2026-09-22,,Effect_LocateGrass_Name,reveals_fertile_soil
+Rich Branches,Üppige Zweige,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_CampingForFarming_Name,rich_branches
+Rich in Fiber,Reich an Pflanzenfasern,effect,,localization,resources.assets,2026-09-22,,Reward_RawProd_PlantFibre_Name,rich_in_fiber
 Ritual of Denial,Ritual der Leugnung,effect,,localization,resources.assets,2026-09-22,,Effect_SacrificeTotem_Name,ritual_of_denial
 Riverlands,Flusslande,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_SmallMap_Name,riverlands
 Roaming Swarm,Umherstreifender Schwarm,effect,,localization,resources.assets,2026-09-22,,Effect_RoamingShelledMosquitos_Name,roaming_swarm
 Robbed Dead,Leichenfledderer,effect,,localization,resources.assets,2026-09-22,,Effect_RobbedDeceased_Name,robbed_dead
 Rogue Tempest,Ungezügelter Sturm,effect,,localization,resources.assets,2026-09-22,,Effect_InstantStorm_Stormforge_Name,rogue_tempest
+Root Delivery Line,Wurzeln-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Roots_Name,root_delivery_line
+Rooty Ground,Durchwurzelte Erde,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_Wood3forFarmin50_Name,rooty_ground
 Rot from the Sky,Fäulnis vom Himmel,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_FoorProdSpeedSlower_Name,rot_from_the_sky
 Rotten Rain,Fauler Regen,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_LivingFarmfield_Name,rotten_rain
 Rotten Vapors,Faulige Dämpfe,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_BlightForSparkdew_Name,rotten_vapors
 Rotting Wood,Verrottendes Holz,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_RottingWood_Name,rotting_wood
+Royal Archaeologists,Königliche Archäologen,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_Archaeologist_Name,royal_archaeologists
+Royal Debt,Königliche Schulden,effect,,localization,resources.assets,2026-09-22,,Reward_ImpatienceBorrowedTime_Name,royal_debt
 Royal Funding,Königliche Unterstützung,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_GoodsForTrade_Name,royal_funding
 Royal Guard Training,Ausbildung durch die königliche Garde,effect,,localization,resources.assets,2026-09-22,,Effect_RoyalGuardTraining_Name,royal_guard_training
 Royal Outpost,Königlicher Außenposten,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_3Orders_Name,royal_outpost
 Royal Patronage,Königliches Patronat,effect,,localization,resources.assets,2026-09-22,,Effect_Biome_CaveInitialGoods_Name,royal_patronage
+Royal Permit,Königliche Konzession,effect,,localization,resources.assets,2026-09-22,,Reward_1CornerstoneReroll_Name,royal_permit
+Royal Subsidy,Königlicher Zuschuss,effect,,localization,resources.assets,2026-09-22,,Reward_AmberForTradePacks_Name,royal_subsidy
 Royal Tax,Königliche Steuer,effect,,localization,resources.assets,2026-09-22,,Effect_AmberPayment_Name,royal_tax
 Ruined Armory,Zerstörte Waffenkammer,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_TraderAttack_Name,ruined_armory
 Ruins,Ruinen,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_RuinedSettlement_Name,ruins
 Rune Calibration,Runenkalibrierung,effect,,localization,resources.assets,2026-09-22,,Effect_HearthHP500_Child_Name,rune_calibration
 Sabotage,Sabotage,effect,,localization,resources.assets,2026-09-22,,Effect_Sabotage_Name,sabotage
+Sacks of Flour,Säcke mit Mehl,effect,,localization,resources.assets,2026-09-22,,Reward_Flour_Name,sacks_of_flour
 Sacrament of the Flame,Sakrament der Flamme,effect,,localization,resources.assets,2026-09-22,,Effect_InstitutionSlowerSacrafice_Name,sacrament_of_the_flame
 Sacred Flame Rituals,Rituale der Heiligen Flamme,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_WoodPaymentForVillagers_Name,sacred_flame_rituals
 Sacred Pyre,Heiliger Scheiterhaufen,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HearthEffect_Lizard_Name,sacred_pyre
 Safe Haven,Sicherer Hafen,effect,,localization,resources.assets,2026-09-22,,Effect_HubsForHostility_Name,safe_haven
+Safety Ropes,Sicherheitsseile,effect,,localization,resources.assets,2026-09-22,,Reward_HaulerCapacity_Name,safety_ropes
+Sahilda's Secret Cookbook,Sahildas geheimes Kochbuch,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalJerky_Name,sahildas_secret_cookbook
+Salt Pick,Salzhacke,effect,,localization,resources.assets,2026-09-22,,Reward_SaltRawProd_Name,salt_pick
+Salted Jerky,Gesalzenes Dörrfleisch,effect,,localization,resources.assets,2026-09-22,,Reward_JerkyRawProd_Name,salted_jerky
 Salty Breeze,Salzige Brise,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_FastFood_Name,salty_breeze
+Salvaging Tools,Bergungswerkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_CopperAndWoodForChest_Name,salvaging_tools
 Saturated Air,Gesättigte Luft,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_ResolveForWater_Name,saturated_air
 Scared,Verängstigt,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_ForsakenCryptResolveEffect_Name,scared
 Scarlet Tears,Scharlachtränen,effect,,localization,resources.assets,2026-09-22,,Effect_GhostGoodsRemoval_Name,scarlet_tears
@@ -771,85 +1093,152 @@ Scientific Agreement,Wissenschaftliche Zusammenarbeit,effect,,localization,resou
 Scientific Award,Wissenschaftliche Auszeichnung,effect,,localization,resources.assets,2026-09-22,,Effect_ArcheologyExtraCornerstone_Name,scientific_award
 Scientific Council,Wissenschaftlicher Rat,effect,,localization,resources.assets,2026-09-22,,Effect_ArcheologyExtraBlueprint_Name,scientific_council
 Scientific Grant,Forschungsgelder,effect,,localization,resources.assets,2026-09-22,,Effect_AmberForArcheology_Name,scientific_grant
+Scout's Pack,Späherpaket,effect,,localization,resources.assets,2026-09-22,,Reward_ProfCapacity_Scout_Name,scouts_pack
+Scout's Toolbox,Werkzeugkiste des Spähers,effect,,localization,resources.assets,2026-09-22,,Reward_ChestWorkingFaster_Name,scouts_toolbox
 Scouts by Nature,Natürliche Späher,effect,,localization,resources.assets,2026-09-22,,Effect_SpecializationFoxes_Name,scouts_by_nature
+Scroll Delivery Line,Schriftrollen-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Manuscripts_Name,scroll_delivery_line
+Sea Marrow Delivery Line,Seemark-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_SeaMarrow_Name,sea_marrow_delivery_line
 Seal Reforged,Siegel wiederhergestellt,effect,,localization,resources.assets,2026-09-22,,Effect_SealExtraCornerstone_Last_Name,seal_reforged
 Seasonal Crops,Saisonale Feldfrüchte,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_MushroomInFarms_Name,seasonal_crops
 Secure Perimeter,Sicherer Perimeter,effect,,localization,resources.assets,2026-09-22,,Effect_ForbiddenforHostility_Name,secure_perimeter
+Secure Trail,Sicherer Weg,effect,,localization,resources.assets,2026-09-22,,Reward_NewcomersFaster25_Name,secure_trail
+Seed Pouch,Saatgut-Beutel,effect,,localization,resources.assets,2026-09-22,,Reward_PlantingRatePlus25_Name,seed_pouch
 Seized Inheritance,Beschlagnahmtes Erbe,effect,,localization,resources.assets,2026-09-22,,Effect_RandomGoodsforDearth_Name,seized_inheritance
 Sensitivity,Empfindlichkeit,effect,,localization,resources.assets,2026-09-22,,Effect_SlowMaterialsProd_Name,sensitivity
+Settlement Map,Siedlungskarte,effect,,localization,resources.assets,2026-09-22,,Reward_VillagerSpeed10_Name,settlement_map
 Settler's Luck,Siedlerglück,effect,,localization,resources.assets,2026-09-22,,Effect_EasyFoodConsumption_Name,settlers_luck
 Shadowy Figure,Geheimnisvolle Gestalt,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_CreepingShadows_Child_Name,shadowy_figure
 Shaky Hands,Zitternde Hände,effect,,localization,resources.assets,2026-09-22,,Effect_CaravanProd_Name,shaky_hands
+Sharp Sickles,Scharfe Sicheln,effect,,localization,resources.assets,2026-09-22,,Reward_RawProd_Herbs_Name,sharp_sickles
 Shattered Obelisk,Zerschmetterter Obelisk,effect,,localization,resources.assets,2026-09-22,,Effect_PauseBlock_Name,shattered_obelisk
+Shedding Season,Häutungszeit,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_RawProd_Leather_Name,shedding_season
 Shifting Paths,Wandelnde Pfade,effect,,localization,resources.assets,2026-09-22,,Effect_SMod_LongerRoutes_Name,shifting_paths
+Shoe Mold,Leisten,effect,,localization,resources.assets,2026-09-22,,Reward_BootsRawProd_Name,shoe_mold
+Shovels,Schaufeln,effect,,localization,resources.assets,2026-09-22,,Reward_RoadSpeed10_Name,shovels
 Silent Dominion,Reich der Stille,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_CornerstoneLimit_Name,silent_dominion
+Silent Looting,Stille Plünderung,effect,,localization,resources.assets,2026-09-22,,Reward_CachesForHostility_Name,silent_looting
 Sinister Blight,Düstere Fäule,effect,,localization,resources.assets,2026-09-22,,Effect_BlightrotMedium_Name,sinister_blight
 Sinkhole,Erdsenke,effect,,localization,resources.assets,2026-09-22,,Effect_SEDestroyNodes_Child_Name,sinkhole
 Skewers,Fleischspieße,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_SkewerEffect_Name,skewers
+Skewers Delivery Line,Fleischspieße-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Skewers_Name,skewers_delivery_line
+Sloppy Woodcutting,Schlampiges Holzfällen,effect,,localization,resources.assets,2026-09-22,,Reward_WoodcuttingForFuel_Name,sloppy_woodcutting
+Slow Harvest,Langsame Ernte,effect,,localization,resources.assets,2026-09-22,,Reward_HarvestingRate_Minus50_Name,slow_harvest
+Slow Planting,Langsames Pflanzen,effect,,localization,resources.assets,2026-09-22,,Reward_PlantingRate_Minus50_Name,slow_planting
 Small Altar Box,Kleine Altarkiste,effect,,localization,resources.assets,2026-09-22,,Effect_HostilityforDeath_Name,small_altar_box
+Small Ancient Artifact,Kleines uraltes Artefakt,effect,,localization,resources.assets,2026-09-22,,Reward_SmallAncientArtifact_Name,small_ancient_artifact
+Small Distillery,Kleine Destillerie,effect,,localization,resources.assets,2026-09-22,,Reward_CrystalineWater_Name,small_distillery
 Small Miasma Cloud,Kleine Pestwolke,effect,,localization,resources.assets,2026-09-22,,Effect_VaultExplosionT1_Name,small_miasma_cloud
+Small Mystery Box,Kleine Überraschungskiste,effect,,localization,resources.assets,2026-09-22,,Reward_RewardsPack_Small_Name,small_mystery_box
+Small Press,Kleine Presse,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalOil_Name,small_press
 Smuggler's Visit,Besuch des Schmugglers,effect,,localization,resources.assets,2026-09-22,,Effect_WildcardPickCornerstone_Name,smugglers_visit
 Soaked Clothes,Durchnässte Kleidung,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_StormClothes_Penalty_Name,soaked_clothes
 Soft Stems,Weiche Halme,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_GrainInHarvester_Name,soft_stems
 Soil Reclamation,Bodenrückgewinnung,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_FertileNodes_Name,soil_reclamation
+Song of Haste,Lied der Eile,effect,,localization,resources.assets,2026-09-22,,Reward_BeaconEffect_ProductionSpeed_Name,song_of_haste
+Song of Hope,Lied der Hoffnung,effect,,localization,resources.assets,2026-09-22,,Reward_BeaconEffect_SlowerLeaving_Name,song_of_hope
+Song of Prosperity,Lied des Wohlstands,effect,,localization,resources.assets,2026-09-22,,Reward_BeaconEffect_TradeRoute_Name,song_of_prosperity
 Soulstorm,Seelensturm,effect,,localization,resources.assets,2026-09-22,,Effect_StormforgeNegativeMysteries_Name,soulstorm
 Sparkdew Crystals,Funkentaukristalle,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_InitialImpatience_Name,sparkdew_crystals
+Sparkdew Delivery Line,Funkentau-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Sparkdew_Name,sparkdew_delivery_line
+Specialized Mining,Spezialisierter Bergbau,effect,,localization,resources.assets,2026-09-22,,Reward_CoalRawProd_Name,specialized_mining
+Specialized Workwear,Spezialisierte Arbeitskleidung,effect,,localization,resources.assets,2026-09-22,,Reward_HaulerSpeed_Name,specialized_workwear
+Spices,Gewürze,effect,,localization,resources.assets,2026-09-22,,Reward_HerbProdForBiscuits_Name,spices
 Spices from the Citadel,Gewürze aus der Zitadelle,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_SpicesfromtheCapital_Name,spices_from_the_citadel
+Spirit of Cooperation,Im Geiste der Zusammenarbeit,effect,,localization,resources.assets,2026-09-22,,Reward_BeaverResolveForHarpies_Name,spirit_of_cooperation
 Spreading Contamination,Aggressive Kontamination,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_CystImpatience_Name,spreading_contamination
 Stag's Blessing,Segen des Hirschs,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_StagBlessing_Name,stags_blessing
 Stag's Echo,Echo des Hirschs,effect,,localization,resources.assets,2026-09-22,,Effect_StagEcho_Name,stags_echo
 Stalking Shadows,Pirschende Schatten,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_StalkingShadows_Name,stalking_shadows
+Stamping Die,Rohrpresse,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdPipes_Name,stamping_die
 Statue of the Forefathers,Statue der Ahnen,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_OnePerk_Name,statue_of_the_forefathers
+Steel Axes,Stahläxte,effect,,localization,resources.assets,2026-09-22,,Reward_SteelAxe_Name,steel_axes
+Steel Drills,Stahlbohrer,effect,,localization,resources.assets,2026-09-22,,Reward_CopperRawProd_Name,steel_drills
+Steel Focus,Stählerner Fokus,effect,,localization,resources.assets,2026-09-22,,Reward_ProdSpeedForBatSpecialization_Name,steel_focus
+Steel Grater,Stahlreibe,effect,,localization,resources.assets,2026-09-22,,Reward_PasteRawProd_Name,steel_grater
 Steel Gut,Stahlmagen,effect,,localization,resources.assets,2026-09-22,,Effect_BatsLowerFoodConsumption_Name,steel_gut
+Steel Mattocks,Stahlhacken,effect,,localization,resources.assets,2026-09-22,,Reward_StoneInClayPit_Name,steel_mattocks
+Steel Penknives,Stahl-Taschenmesser,effect,,localization,resources.assets,2026-09-22,,Reward_SteelPenknifes_Name,steel_penknives
+Steel Pickaxes,Stahlspitzhacken,effect,,localization,resources.assets,2026-09-22,,Reward_SteelPickaxe_Name,steel_pickaxes
+Steel Shovels,Stahlschaufeln,effect,,localization,resources.assets,2026-09-22,,Reward_SteelShovel_Name,steel_shovels
 Stingy Archivist,Kleinlicher Archivar,effect,,localization,resources.assets,2026-09-22,,Effect_StingyArchivist_Name,stingy_archivist
+Stone Delivery Line,Stein-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Stone_Name,stone_delivery_line
 Stonetooth Swarm,Steinzahnschwarm,effect,,localization,resources.assets,2026-09-22,,Effect_HostilityFromTermites_Name,stonetooth_swarm
 Stonewood Infestation,Steinholzbefall,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_TreeCuttingTime_Name,stonewood_infestation
 Storage Room,Lagerraum,effect,,localization,resources.assets,2026-09-22,,EffectModel_FrogHouseYearlyPacks_Name,storage_room
+Storm Shield,Sturmschild,effect,,localization,resources.assets,2026-09-22,,Reward_ShorterStorm15_Name,storm_shield
 Stormbird's Anger,Zorn des Sturmvogels,effect,,localization,resources.assets,2026-09-22,,Effect_InstantStorm_Name,stormbirds_anger
 Stormbird's Cry,Ruf des Sturmvogels,effect,,localization,resources.assets,2026-09-22,,Effect_StormbirdEggPenalty_Name,stormbirds_cry
+Stormforging,Sturmschmieden,effect,,localization,resources.assets,2026-09-22,,Reward_UpgradeRandomCornerstone_Stormforge_Name,stormforging
+Stormwalker Tax,Sturmläufer-Steuer,effect,,localization,resources.assets,2026-09-22,,Reward_AmberforNewcomers_Name,stormwalker_tax
 Stormwalker Training,Sturmläufer-Ausbildung,effect,,localization,resources.assets,2026-09-22,,Effect_TravelTimeReduction_Name,stormwalker_training
 Straight to the Hearth,Geradewegs zur Feuerstelle,effect,,localization,resources.assets,2026-09-22,,Effect_FasterCorruption_Name,straight_to_the_hearth
 Strange Lights,Seltsame Lichter,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_StrangeLights_Name,strange_lights
 Strange Visions,Seltsame Visionen,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_StrangeVisions_Name,strange_visions
 Strength in Numbers,Gemeinsam sind wir stark,effect,,localization,resources.assets,2026-09-22,,Effect_ResilianceForFrog_Name,strength_in_numbers
+Strider Port,Läuferhafen,effect,,localization,resources.assets,2026-09-22,,Reward_BiomeEffect_StridersPort_Name,strider_port
 Summon Guild Trader,Gildenhändler rufen,effect,,localization,resources.assets,2026-09-22,,Effect_CallTrader_Random_Name,summon_guild_trader
 Summoned Smuggler,Beschworener Schmuggler,effect,,localization,resources.assets,2026-09-22,,Effect_WildcardPickCursed_Name,summoned_smuggler
 Sun Festivities,Sonnenfest,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_SunFestivities_Name,sun_festivities
 Sunken Bones,Versunkene Knochen,effect,,localization,resources.assets,2026-09-22,,Effect_SeaMarrowForCopper_Name,sunken_bones
 Supply Package,Nachschubpaket,effect,,localization,resources.assets,2026-09-22,,CycleEffect_PreparationPoints_Name,supply_package
+Surprise Child,Überraschungskind,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalLizard_Name,surprise_child
+Surveying Equipment,Landvermessungsgeräte,effect,,localization,resources.assets,2026-09-22,,Reward_LocateChest_Name,surveying_equipment
 Survivor Bonding,Überlebenden-Zusammenhalt,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_SurvivorBonding_Name,survivor_bonding
 Swarms,Schwärme,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_Swarms_Name,swarms
 Sweet Aroma,Süßes Aroma,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_HumanResolveIncense_Name,sweet_aroma
 Syndicate Trader,Syndikatshändler,effect,,localization,resources.assets,2026-09-22,,Effect_CallTrader_Syndicate_Name,syndicate_trader
 Tale,Erzählung,effect,,localization,resources.assets,2026-09-22,,Effect_TW_GlobalResolve_Name,tale
+Tales of Discovery,Geschichten von fernen Ländern und mutigen Entdeckern,effect,,localization,resources.assets,2026-09-22,,Reward_ExplorerTales_Name,tales_of_discovery
+Tamed Stormbird,Gezähmter Sturmvogel,effect,,localization,resources.assets,2026-09-22,,Reward_StormbirdPositive_Name,tamed_stormbird
+Tanning Racks,Gerbegestell,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdBonus_Leather_Name,tanning_racks
 Tarnished Necklace,Angelaufene Halskette,effect,,localization,resources.assets,2026-09-22,,CycleEffect_Status_TokenOfGratitude_Name,tarnished_necklace
+Tea Delivery Line,Tee-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Tea_Name,tea_delivery_line
+Tea Infuser,Teekocher,effect,,localization,resources.assets,2026-09-22,,Reward_TeaRawProd_Name,tea_infuser
+Tea Specialization,Teespezialisierung,effect,,localization,resources.assets,2026-09-22,,Reward_HarpyResolveForTeaProd_Name,tea_specialization
 Tempest,Unwetter,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_Tempest_Name,tempest
 Termite Infestation,Termitenbefall,effect,,localization,resources.assets,2026-09-22,,Effect_SlowFarmingTermites_Name,termite_infestation
+Termite Nest,Termitennest,effect,,localization,resources.assets,2026-09-22,,Reward_TermiteNest_Name,termite_nest
+The Crown Chronicles,Die Kronenchronik,effect,,localization,resources.assets,2026-09-22,,Reward_InstitutionResolveForRuins_Name,the_crown_chronicles
 The Elder's Cat,Katze des Ältesten,effect,,localization,resources.assets,2026-09-22,,Effect_WeFirstElderBonus_Name,the_elders_cat
 The Eremite's Way,Der Weg des Eremiten,effect,,localization,resources.assets,2026-09-22,,Effect_WE_BlueprintReroll_Name,the_eremites_way
 The Generous Envoy,Der großzügige Gesandte,effect,,localization,resources.assets,2026-09-22,,Effect_3OrderPicks_Name,the_generous_envoy
+The Green Brew,Grünbräu,effect,,localization,resources.assets,2026-09-22,,Reward_InstitutionLowerHostility_Name,the_green_brew
+The Guild's Welfare,Wohlergehen der Gilde,effect,,localization,resources.assets,2026-09-22,,Reward_InstitutionResolveForSales_Name,the_guilds_welfare
 The Night's Embrace,Umarmung der Nacht,effect,,localization,resources.assets,2026-09-22,,Effect_EmbraceTheNight_Name,the_nights_embrace
 The Other Settlement,Die andere Siedlung,effect,,localization,resources.assets,2026-09-22,,Effect_TheOtherSettlement_Name,the_other_settlement
 The People's Vengeance,Die Rache des Volkes,effect,,localization,resources.assets,2026-09-22,,Effect_WeResilienceResolveDropsFaster_Name,the_peoples_vengeance
 The Procession,Die Prozession,effect,,localization,resources.assets,2026-09-22,,Effect_FuneralFeast_Hostility_Name,the_procession
 The Queen's People,Das Volk der Königin,effect,,localization,resources.assets,2026-09-22,,Effect_AdditionalImpatienceForDeath_Name,the_queens_people
+The Queen's Respect,Der Respekt der Königin,effect,,localization,resources.assets,2026-09-22,,Reward_Queen'sRespects_Name,the_queens_respect
 The Sacred Grove,Der heilige Hain,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_4Races_Name,the_sacred_grove
 The Sparkcaster,Der Funkensprüher,effect,,localization,resources.assets,2026-09-22,,Effect_BlightFighterSpeed_Name,the_sparkcaster
 The heavy rain is unbearable.,Der starke Regen ist unerträglich.,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_StormClothes_Name,the_heavy_rain_is_unbearable
+Thick Clouds,Dicke Wolken,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_ThickClouds_Name,thick_clouds
 Thieving Fishmen,Diebische Fischmenschen,effect,,localization,resources.assets,2026-09-22,,Effect_RemoveFoodOverTime_Outpost_Name,thieving_fishmen
 Third Party,Drittpartei,effect,,localization,resources.assets,2026-09-22,,Effect_ThirdParty_Name,third_party
 Thrill of Exploration,Nervenkitzel der Erkundung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_ThrillOfExploration_Name,thrill_of_exploration
 Thunder,Donner,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_3BuildingsDestroyed_Name,thunder
+Tight Packaging,Dicht gepackt,effect,,localization,resources.assets,2026-09-22,,Reward_PackOfCropsWorthMore_Name,tight_packaging
+Tightened Belt,Festgezogener Gürtel,effect,,localization,resources.assets,2026-09-22,,Reward_TradeRoutesBonusFuel_Name,tightened_belt
 Time of Reflection,Zeit der Einkehr,effect,,localization,resources.assets,2026-09-22,,Effect_FuneralFeast_WorkingSpeed_Name,time_of_reflection
 Tit for Tat,"Wie du mir, so ich dir",effect,,localization,resources.assets,2026-09-22,,Effect_TradersPrices_Name,tit_for_tat
+Tool Delivery Line,Werkzeug-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_CopperTools_Name,tool_delivery_line
 Toolshed,Geräteschuppen,effect,,localization,resources.assets,2026-09-22,,EffectModel_HumanHousesUniqueBonus_Name,toolshed
 Toxic Fumes,Giftige Dämpfe,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_ToxicFumes_Name,toxic_fumes
 Toxic Ooze,Giftiger Schlamm,effect,,localization,resources.assets,2026-09-22,,Effect_ToxicLeak_Name,toxic_ooze
 Toxicity,Toxizität,effect,,localization,resources.assets,2026-09-22,,Effect_ToxicSlug_RemoveFishWater_Name,toxicity
+Trade Contract,Handelsvertrag,effect,,localization,resources.assets,2026-09-22,,Reward_TraderInterval25_Name,trade_contract
+Trade Hub,Handelsposten,effect,,localization,resources.assets,2026-09-22,,Reward_ReputationFromTrade_Name,trade_hub
+Trade Logs,Handelsprotokolle,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_TradingPacks_Name,trade_logs
 Trade Negotiations,Handelsverhandlungen,effect,,localization,resources.assets,2026-09-22,,Effect_MoreAmberFromRoutes_Name,trade_negotiations
+Trade Pack Instructions,Handelspaket-Anweisungen,effect,,localization,resources.assets,2026-09-22,,Reward_Composite_TradePackRecipes_Name,trade_pack_instructions
+Training Gear Delivery Line,Trainingsausrüstung-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_TrainingGear_Name,training_gear_delivery_line
+Training Grounds,Trainingsgelände,effect,,localization,resources.assets,2026-09-22,,Reward_LizardResolveForTrainingGearProd_Name,training_grounds
+Travel Rations,Reiserationen,effect,,localization,resources.assets,2026-09-22,,Reward_HaulerBreak_Name,travel_rations
 Treatment,Behandlung,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_TreatmentEffect_Name,treatment
 Tree Grazer,Baumfresser,effect,,localization,resources.assets,2026-09-22,,Effect_ModTreeEater_Name,tree_grazer
 Unbearable Smell,Unerträglicher Geruch,effect,,localization,resources.assets,2026-09-22,,Effect_BlightRateforResolveReputation_Child_Name,unbearable_smell
+Uncommon Sunken Treasure,Ungewöhnlicher versunkener Schatz,effect,,localization,resources.assets,2026-09-22,,Reward_RewardsPack_Uncommon_Name,uncommon_sunken_treasure
 Under An Open Sky,Unter freiem Himmel,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_UnderTheOpenSky_Name,under_an_open_sky
 Under the Queen's Gaze,Unter den Augen der Königin,effect,,localization,resources.assets,2026-09-22,,Effect_NoOrderChoice_Name,under_the_queens_gaze
 Unearthly Element,Überirdisches Element,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_UnearthlyElement_Name,unearthly_element
@@ -866,33 +1255,54 @@ Unyielding Corruption,Gnadenlose Verderbnis,effect,,localization,resources.asset
 Upgraded Woodcutting,Holzfällen upgegradet,effect,,localization,resources.assets,2026-09-22,,Effect_WE_WoodcuttersCampUpgrades_Name,upgraded_woodcutting
 Urban Planning,Stadtplanung,effect,,localization,resources.assets,2026-09-22,,Effect_HubsForHousingSpots_Name,urban_planning
 Usury,Wucher,effect,,localization,resources.assets,2026-09-22,,Effect_BlackMarketPayment_Name,usury
+Value Added Tax,Mehrwertsteuer,effect,,localization,resources.assets,2026-09-22,,Reward_AmberForTrading_Name,value_added_tax
 Vanishing,Verschwindet,effect,,localization,resources.assets,2026-09-22,,Effect_GhostRemoveSelf_Name,vanishing
 Vanishing Goods,Verschwindende Waren,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_GrowingServiceConsumption_Name,vanishing_goods
 Vanishing Water,Verschwindendes Wasser,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_MoreWaterConsumption_Name,vanishing_water
 Vassal Tax,Vasallensteuer,effect,,localization,resources.assets,2026-09-22,,SeasonalEffect_ImpatienceForAmber_Name,vassal_tax
+Vegetable Delivery Line,Gemüse-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Vegetables_Name,vegetable_delivery_line
+Vessel of Incense,Gefäß mit Weihrauch,effect,,localization,resources.assets,2026-09-22,,Reward_Incense_Name,vessel_of_incense
+Vessels of Sparkdew,Gefäße mit Funkentau,effect,,localization,resources.assets,2026-09-22,,Reward_SparkWater_Name,vessels_of_sparkdew
+Vials of Dye,Fläschchen Färbemittel,effect,,localization,resources.assets,2026-09-22,,Reward_Ink_Name,vials_of_dye
 Viceroy's Survival Guide,Überlebenshandbuch des Statthalters,effect,,localization,resources.assets,2026-09-22,,Effect_FoodProductionSpeed20_Name,viceroys_survival_guide
 Village Mascot,Dorfmaskottchen,effect,,localization,resources.assets,2026-09-22,,Effect_BiomePoroResolve_Name,village_mascot
+Villagers,Dorfbewohner,effect,,localization,resources.assets,2026-09-22,,Reward_NewRandomVillagers_Generic_Name,villagers
+Vineyard Town,Weinbergstadt,effect,,localization,resources.assets,2026-09-22,,Reward_BeaverResolveForWineProd_Name,vineyard_town
 Violent Dusk,Brutale Abenddämmerung,effect,,localization,resources.assets,2026-09-22,,Effect_WorseStorms_Permanent_Name,violent_dusk
 Vitality,Vitalität,effect,,localization,resources.assets,2026-09-22,,Effect_InstitutionResolveForComplexFood_Name,vitality
 Voice of the Forest,Stimme des Waldes,effect,,localization,resources.assets,2026-09-22,,Effect_CystForGlade_Name,voice_of_the_forest
 Voice of the Sealed Ones,Stimme der Versiegelten,effect,,localization,resources.assets,2026-09-22,,Effect_CorruptionKill_Name,voice_of_the_sealed_ones
+Warm Welcome,Herzliches Willkommen,effect,,localization,resources.assets,2026-09-22,,Reward_SeasonalEffect_WarmWelcome_Name,warm_welcome
 Watchtower,Wachturm,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_NoHostility_Name,watchtower
 Water Pipeline,Wasserleitung,effect,,localization,resources.assets,2026-09-22,,EffectModel_FrogHouseResolveForEngines_Name,water_pipeline
+Waterskin Delivery Line,Wasserschlauch-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Waterskins_Name,waterskin_delivery_line
 Watery Grave,Nasses Grab,effect,,localization,resources.assets,2026-09-22,,Effect_WateryGrave_Name,watery_grave
 Ways of the Forest,Wege des Waldes,effect,,localization,resources.assets,2026-09-22,,Effect_HostilityLower_Name,ways_of_the_forest
 Wealth,Reichtum,effect,,localization,resources.assets,2026-09-22,,ResolveEffect_Wealth_Name,wealth
 Weather Anomaly,Wetteranomalie,effect,,localization,resources.assets,2026-09-22,,ModifierEffect_LongStorm_Name,weather_anomaly
+Well-Rested Workers,Gut erholte Arbeiter,effect,,localization,resources.assets,2026-09-22,,Reward_NeedPerkLeisureProd_Name,well_rested_workers
 Wet Soil,Nasser Erdboden,effect,,localization,resources.assets,2026-09-22,,Effect_WetSoil_Name,wet_soil
 Whispering Tombs,Flüsternde Gräber,effect,,localization,resources.assets,2026-09-22,,Effect_WhisperingTombs_Name,whispering_tombs
 Wide Nets,Große Netze,effect,,localization,resources.assets,2026-09-22,,Effect_FishingSpeed_Name,wide_nets
 Wild Growth,Wildwuchs,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_MoreDepositCharges_Name,wild_growth
+Wildfire Presence,Wildfeuer-Präsenz,effect,,localization,resources.assets,2026-09-22,,Reward_FuelConsumptionWildfire_Name,wildfire_presence
+Wine Delivery Line,Wein-Lieferkette,effect,,localization,resources.assets,2026-09-22,,Reward_GoodPerMinute_Wine_Name,wine_delivery_line
 Wine Shortage,Weinknappheit,effect,,localization,resources.assets,2026-09-22,,Effect_WineShortage_Name,wine_shortage
+Without Restrictions,Ohne Einschränkungen,effect,,localization,resources.assets,2026-09-22,,Reward_ConsumptionBlockforProd_Name,without_restrictions
 Woodcutter's Prayer,Das Gebet des Holzfällers,effect,,localization,resources.assets,2026-09-22,,Effect_WoodcuttersPrayer_Name,woodcutters_prayer
+Woodcutter's Song,Das Lied des Holzfällers,effect,,localization,resources.assets,2026-09-22,,Reward_ResolveForGlade_Name,woodcutters_song
+Woodcutter's Tools,Holzfällerwerkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_WoodcuttersCampProdBoost_Name,woodcutters_tools
+Woodpecker Technique,Specht-Technik,effect,,localization,resources.assets,2026-09-22,,Reward_InsectForTree_Name,woodpecker_technique
+Woodworking Tools,Holzbearbeitungswerkzeuge,effect,,localization,resources.assets,2026-09-22,,Reward_RawProdBonus_TrainingGear_Name,woodworking_tools
+Work Safety Guide,Leitfaden zur Arbeitssicherheit,effect,,localization,resources.assets,2026-09-22,,Reward_ProdSpeedForEducation_Name,work_safety_guide
 Workbench,Werkbank,effect,,localization,resources.assets,2026-09-22,,EffectModel_FrogHouseBuildingMatCrit_Name,workbench
 Worker Mobilization,Mobilisierung von Arbeitnehmern,effect,,localization,resources.assets,2026-09-22,,Effect_ExtraProductionForRelicsInProgress_Name,worker_mobilization
 Worker's Rations,Arbeiter-Rationen,effect,,localization,resources.assets,2026-09-22,,Effect_ExtraProdForConsumption_Name,workers_rations
+Working Hard and Smart,Hart arbeiten ... und mit Köpfchen,effect,,localization,resources.assets,2026-09-22,,Reward_NeedPerkEducationProduction_Name,working_hard_and_smart
+Workstation Upgrade,Werkbank-Upgrade,effect,,localization,resources.assets,2026-09-22,,Reward_CrudeWorkstationProd50_Name,workstation_upgrade
 Worms After the Rain,Würmer nach dem Regen,effect,,localization,resources.assets,2026-09-22,,ConditionalNeedEffect_InsectsInScavenger_Name,worms_after_the_rain
 Writing Desk,Schreibpult,effect,,localization,resources.assets,2026-09-22,,EffectModel_BeaverHousesUniqueBonus_Name,writing_desk
+Zhorg's Secret Ingredient,Zhorgs geheime Zutat,effect,,localization,resources.assets,2026-09-22,,Reward_AccidentalSkewers_Name,zhorgs_secret_ingredient
 Zitan Box,Zitan-Schatulle,effect,,localization,resources.assets,2026-09-22,,Effect_BlightrotedViceroyBox_Name,zitan_box
 Altar of Decay,Altar des Verfalls,glade_event,,localization,resources.assets,2026-09-22,,Relic_AltarOfDecay_Name,altar_of_decay
 Ancient Burial Site,Alte Grabstätte,glade_event,,localization,resources.assets,2026-09-22,,Relic_BurrialGrounds_Name,ancient_burial_site
@@ -1007,6 +1417,112 @@ Wandering Merchant - Seer,Fahrender Händler – Seherin,glade_event,,localizati
 Wandering Merchant - Shaman,Fahrender Händler – Schamane,glade_event,,localization,resources.assets,2026-09-22,,Relic_GladeTrader_Shaman_Name,wandering_merchant_shaman
 Wildfire,Wildfeuer,glade_event,,localization,resources.assets,2026-09-22,,Relic_Wildfire_Name,wildfire
 Withered Tree,Verwelkter Baum,glade_event,,localization,resources.assets,2026-09-22,,Relic_InfectedTree_Name,withered_tree
+Absolutely Nothing,Absolut gar nichts,meta,,localization,resources.assets,2026-09-22,,MetaReward_Nothing_Name,absolutely_nothing
+Additional Blueprint Choice,Zusätzliche Entwurfauswahl,meta,,localization,resources.assets,2026-09-22,,MetaReward_ReputationRewardPick_Name,additional_blueprint_choice
+Additional Caravan Choice,Zusätzliche Karawanenwahl,meta,,localization,resources.assets,2026-09-22,,MetaReward_CaravanSlot_Name,additional_caravan_choice
+Additional Cornerstone Choice,Zusätzliche Grundsteinwahl,meta,,localization,resources.assets,2026-09-22,,MetaReward_Cornerstone_Name,additional_cornerstone_choice
+Additional Villager,Zusätzlicher Dorfbewohner,meta,,localization,resources.assets,2026-09-22,,MetaReward_GuaranteedVillager_Name,additional_villager
+Ancient Artifact,Uraltes Artefakt,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Artifact_Name,ancient_artifact
+Blight Post Upgrades,Pestfäuleposten-Upgrades,meta,,localization,resources.assets,2026-09-22,,MetaReward_BlightPostUpgrades_Name,blight_post_upgrades
+Blueprint Reroll,Entwurfzurücksetzung,meta,,localization,resources.assets,2026-09-22,,MetaReward_Reshuffle_Name,blueprint_reroll
+Board Game Piece,Brettspielfigur,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_BoardGame_Name,board_game_piece
+Consumption Control,Verbrauchssteuerung,meta,,localization,resources.assets,2026-09-22,,MetaReward_ConsumptionControlActivation_Name,consumption_control
+Cornerstone Reroll Charge,Zusätzliche Grundstein-Zurücksetzung,meta,,localization,resources.assets,2026-09-22,,MetaReward_CornerstoneReroll_Name,cornerstone_reroll_charge
+Crimson Cloak,Scharlachroter Mantel,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformP20_Name,crimson_cloak
+Decorated Belt,Verzierter Gürtel,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformP5_Name,decorated_belt
+Domesticated Sea Tiger,Gezähmter Seetiger,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Cat_Name,domesticated_sea_tiger
+Dueling Umbrella,Duellregenschirm,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Umbrella_Name,dueling_umbrella
+Embarkation Bonus: {0},Verladungsbonus: {0},meta,,localization,resources.assets,2026-09-22,,MetaReward_EmbarkBonus_Name,embarkation_bonus_0
+Embarkation Points,Verladungspunkte,meta,,localization,resources.assets,2026-09-22,,MetaReward_1PreparationPoints_Name,embarkation_points
+Essential Blueprint: {0},Wesentlicher Entwurf: {0},meta,,localization,resources.assets,2026-09-22,,MetaReward_EssentialBuilding_Name,essential_blueprint_0
+Everlasting Flames,Ewige Flammen,meta,,localization,resources.assets,2026-09-22,,MetaReward_BurningDuration_Name,everlasting_flames
+Extra Merchandise,Zusätzliche Handelswaren,meta,,localization,resources.assets,2026-09-22,,MetaReward_TraderMerch_Name,extra_merchandise
+Factions,Fraktionen,meta,,localization,resources.assets,2026-09-22,,MetaReward_Factions_Name,factions
+Farm Range Increase,Erhöhung der Farm-Reichweite,meta,,localization,resources.assets,2026-09-22,,MetaReward_FarmRange_Name,farm_range_increase
+Farming Speed Increase,Höhere Bewirtschaftungs-Geschwindigkeit,meta,,localization,resources.assets,2026-09-22,,MetaReward_FarmingSpeed_Name,farming_speed_increase
+Faster Building,Schnelleres Bauen,meta,,localization,resources.assets,2026-09-22,,MetaReward_BuildSpeed_Name,faster_building
+Fertile Lands,Fruchtbares Land,meta,,localization,resources.assets,2026-09-22,,MetaReward_FertileSoil_Name,fertile_lands
+Fishman Skull,Fischmenschenschädel,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Skull_Name,fishman_skull
+Gathering Technique,Sammelgeschick,meta,,localization,resources.assets,2026-09-22,,MetaReward_NodeCharges_Name,gathering_technique
+Greater Embarkation Range,Größere Verladungsreichweite,meta,,localization,resources.assets,2026-09-22,,MetaReward_EmbarkRange_Name,greater_embarkation_range
+Haulers - Main Warehouse,Frachtführer – Hauptlagerhaus,meta,,localization,resources.assets,2026-09-22,,MetaReward_MainWarehouseHaulers_Name,haulers_main_warehouse
+Haulers - Small Warehouse,Frachtführer – kleines Lagerhaus,meta,,localization,resources.assets,2026-09-22,,MetaReward_SmallWarehouseHaulers_Name,haulers_small_warehouse
+Hearth Upgrade - District,Feuerstellen-Upgrade – Bezirk,meta,,localization,resources.assets,2026-09-22,,MetaReward_HubTier2_Name,hearth_upgrade_district
+Hearth Upgrade - Neighborhood,Feuerstellen-Upgrade – Nachbarschaft,meta,,localization,resources.assets,2026-09-22,,MetaReward_HubTier1_Name,hearth_upgrade_neighborhood
+Honor Badge,Ehrenabzeichen,meta,,localization,resources.assets,2026-09-22,,MetaReward_Exp_Name,honor_badge
+House Upgrades: Bats,Haus-Upgrades: Fledermäuse,meta,,localization,resources.assets,2026-09-22,,MetaReward_BatsHouseUpgrades_Name,house_upgrades_bats
+House Upgrades: Beavers,Haus-Upgrades: Biber,meta,,localization,resources.assets,2026-09-22,,MetaReward_BeaverHouseUpgrades_Name,house_upgrades_beavers
+House Upgrades: Foxes,Haus-Upgrades: Füchse,meta,,localization,resources.assets,2026-09-22,,MetaReward_FoxHouseUpgrades_Name,house_upgrades_foxes
+House Upgrades: Frogs,Haus-Upgrades: Frösche,meta,,localization,resources.assets,2026-09-22,,MetaReward_FrogHouseUpgrades_Name,house_upgrades_frogs
+House Upgrades: Harpies,Haus-Upgrades: Harpyien,meta,,localization,resources.assets,2026-09-22,,MetaReward_HarpyHouseUpgrades_Name,house_upgrades_harpies
+House Upgrades: Humans,Haus-Upgrades: Menschen,meta,,localization,resources.assets,2026-09-22,,MetaReward_HumanHouseUpgrades_Name,house_upgrades_humans
+House Upgrades: Lizards,Haus-Upgrades: Echsen,meta,,localization,resources.assets,2026-09-22,,MetaReward_LizardHouseUpgrades_Name,house_upgrades_lizards
+Ibex Rug,Steinbockteppich,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Rug_Name,ibex_rug
+Increased Citadel Vision Range,Höhere Zitadellen-Sichtweite,meta,,localization,resources.assets,2026-09-22,,MetaReward_CapitalVision_Name,increased_citadel_vision_range
+Increased Town Vision Range,Höhere Stadt-Sichtweite,meta,,localization,resources.assets,2026-09-22,,MetaReward_TownVision_Name,increased_town_vision_range
+Inscribed Slab,Steintafel mit Inschrift,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_AncientTablet_Name,inscribed_slab
+Landscape Painting,Landschaftsgemälde,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Painting3_Name,landscape_painting
+Larger Storage,Größerer Speicher,meta,,localization,resources.assets,2026-09-22,,MetaReward_BuildingStorage_Name,larger_storage
+Last Stand,Letztes Gefecht,meta,,localization,resources.assets,2026-09-22,,MetaReward_GracePeriod_Name,last_stand
+Marshglow Fungite,Morastglanz-Fungit,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_MarshlandsPlant_Name,marshglow_fungite
+Menu Skin: Calm Settlement,Menü-Skin: Ruhige Siedlung,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_Farming_Name,menu_skin_calm_settlement
+Menu Skin: Cat Utopia,Menü-Skin: Katzen-Utopie,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_Cat_Name,menu_skin_cat_utopia
+Menu Skin: Coral Forest,Menü-Skin: Korallenwald,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_CoralForest_Name,menu_skin_coral_forest
+Menu Skin: Cursed Royal Woodlands,Menü-Skin: Verfluchte Königswälder,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_CursedRoyalWoodlands_Name,menu_skin_cursed_royal_woodlands
+Menu Skin: Industrial Town,Menü-Skin: Industriestadt,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_Industry_Name,menu_skin_industrial_town
+Menu Skin: Marshlands,Menü-Skin: Sümpfe,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_Marshlands_Name,menu_skin_marshlands
+Menu Skin: Mining Colony,Menü-Skin: Bergbaukolonie,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_Salt_Name,menu_skin_mining_colony
+Menu Skin: Paradise,Menü-Skin: Paradies,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_Paradise_Name,menu_skin_paradise
+Menu Skin: Scarlet Orchard,Menü-Skin: Scharlachroter Obstgarten,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_ScarletOrchard_Name,menu_skin_scarlet_orchard
+Menu Skin: Sealed Forest,Menü-Skin: Versiegelter Wald,meta,,localization,resources.assets,2026-09-22,,MetaReward_MenuSkin_SealedForest_Name,menu_skin_sealed_forest
+Mine Upgrades,Minen-Upgrades,meta,,localization,resources.assets,2026-09-22,,MetaReward_MineUpgrades_Name,mine_upgrades
+Mole Trophy,Maulwurfstrophäe,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_MoleTrophy_Name,mole_trophy
+More Citadel Resources,Mehr Zitadellenressourcen,meta,,localization,resources.assets,2026-09-22,,MetaReward_MetaResources_Name,more_citadel_resources
+More Trade Routes,Mehr Handelsrouten,meta,,localization,resources.assets,2026-09-22,,MetaReward_TradeRoutesLimit_Name,more_trade_routes
+More Villagers,Mehr Dorfbewohner,meta,,localization,resources.assets,2026-09-22,,MetaReward_BonusVillagers_Name,more_villagers
+Newcomer Gifts,Neuankömmlingsgeschenke,meta,,localization,resources.assets,2026-09-22,,MetaReward_NewcomerGoods_Name,newcomer_gifts
+Obsidian Archive,Obsidian-Archiv,meta,,localization,resources.assets,2026-09-22,,MetaReward_GoalsUnlock_Name,obsidian_archive
+Painting of the Ancient Hearth,Gemälde der Ur-Feuerstelle,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Painting2_Name,painting_of_the_ancient_hearth
+Pioneer's Mantle,Pioniermantel,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformPioneer_Name,pioneers_mantle
+Plate of Food,Teller mit Essen,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Food_Name,plate_of_food
+Production Speed Increase,Erhöhung der Produktionsgeschwindigkeit,meta,,localization,resources.assets,2026-09-22,,MetaReward_ProdSpeed_Name,production_speed_increase
+Queen's Hand Pauldron,Schulterplatte einer Hand der Königin,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformQueensHand_Name,queens_hand_pauldron
+Queen's Hand Trial,„Hand der Königin“-Prüfung,meta,,localization,resources.assets,2026-09-22,,MetaReward_QueensHandTrial_Name,queens_hand_trial
+Queen's Patience,Geduld der Königin,meta,,localization,resources.assets,2026-09-22,,MetaReward_Impatience_Name,queens_patience
+Quicker Trader Arrival,Schnellere Ankunft des Händlers,meta,,localization,resources.assets,2026-09-22,,MetaReward_TraderArrival_Name,quicker_trader_arrival
+Rainpunk Engines,Regenpunk-Maschinen,meta,,localization,resources.assets,2026-09-22,,MetaReward_Rainpunk_Name,rainpunk_engines
+Reefbloom,Riffblüte,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_CoralPlant_Name,reefbloom
+Rosevine,Rosenranke,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_MoorlandsPlant_Name,rosevine
+Royal Visage,Königliche Visage,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformP10_Name,royal_visage
+Sacrificial Flames,Opferflammen,meta,,localization,resources.assets,2026-09-22,,MetaReward_SacrificeCost_Name,sacrificial_flames
+Scout Proficiency,Späher-Tüchtigkeit,meta,,localization,resources.assets,2026-09-22,,MetaReward_GladeEventTime_Name,scout_proficiency
+Settler's Mask,Siedlermaske,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformSettler_Name,settlers_mask
+Sparkdew Crystal,Funkentaukristall,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Crystal_Name,sparkdew_crystal
+Special Discount,Sonderrabatt,meta,,localization,resources.assets,2026-09-22,,MetaReward_TraderPrices_Name,special_discount
+Special Offers,Sonderangebote,meta,,localization,resources.assets,2026-09-22,,MetaReward_TraderMerchSale_Name,special_offers
+Standard Uniform,Standarduniform,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformBase_Name,standard_uniform
+Starting Ability: Bats,Startfähigkeit: Fledermäuse,meta,,localization,resources.assets,2026-09-22,,MetaReward_BatsPassive_Name,starting_ability_bats
+Starting Ability: Beavers,Startfähigkeit: Biber,meta,,localization,resources.assets,2026-09-22,,MetaReward_BeaverPassive_Name,starting_ability_beavers
+Starting Ability: Foxes,Startfähigkeit: Füchse,meta,,localization,resources.assets,2026-09-22,,MetaReward_FoxPassive_Name,starting_ability_foxes
+Starting Ability: Frogs,Startfähigkeit: Frösche,meta,,localization,resources.assets,2026-09-22,,MetaReward_FrogPassive_Name,starting_ability_frogs
+Starting Ability: Harpies,Startfähigkeit: Harpyien,meta,,localization,resources.assets,2026-09-22,,MetaReward_HarpyPassive_Name,starting_ability_harpies
+Starting Ability: Humans,Startfähigkeit: Menschen,meta,,localization,resources.assets,2026-09-22,,MetaReward_HumanPassive_Name,starting_ability_humans
+Starting Ability: Lizards,Startfähigkeit: Echsen,meta,,localization,resources.assets,2026-09-22,,MetaReward_LizardPassive_Name,starting_ability_lizards
+Starting Resources: {0},Startressourcen: {0},meta,,localization,resources.assets,2026-09-22,,MetaReward_GuaranteedGoods_Name,starting_resources_0
+Stocked Caravans,Größere Karawanen,meta,,localization,resources.assets,2026-09-22,,MetaReward_EmbarkGoods_Name,stocked_caravans
+Storm Orb,Sturmkugel,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_StormOrb_Name,storm_orb
+Stormshroud Attire,Sturmschleier-Gewand,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformP15_Name,stormshroud_attire
+The Commons,Das Gemeindeland,meta,,localization,resources.assets,2026-09-22,,MetaReward_HearthServices_Name,the_commons
+The Sparkcaster,Der Funkensprüher,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Flamethrower_Name,the_sparkcaster
+Timed Orders,Aufträge mit Zeitlimit,meta,,localization,resources.assets,2026-09-22,,MetaReward_TimedOrdersActivation_Name,timed_orders
+Trade Contract,Handelsvertrag,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_Letters_Name,trade_contract
+Trade Routes,Handelsrouten,meta,,localization,resources.assets,2026-09-22,,MetaReward_TradeRoutesActivation_Name,trade_routes
+Unforeseen Riches,Unvorhergesehene Reichtümer,meta,,localization,resources.assets,2026-09-22,,MetaReward_BonusYield_Name,unforeseen_riches
+Veteran's Shoulder Guard,Schulterschutz des Veteranen,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformVeteran_Name,veterans_shoulder_guard
+Viceroy's Cape,Umhang des Statthalters,meta,,localization,resources.assets,2026-09-22,,MetaReward_Home_UniformViceroy_Name,viceroys_cape
+Viceroy's Quarters,Persönliches Quartier,meta,,localization,resources.assets,2026-09-22,,MetaReward_CitadelHomeUnlock_Name,viceroys_quarters
+Villager Speed Increase,Dorfbewohner-Beschleunigung,meta,,localization,resources.assets,2026-09-22,,MetaReward_VillagerSpeed_Name,villager_speed_increase
+Worker Capacity Increase,Stärkere Arbeiter,meta,,localization,resources.assets,2026-09-22,,MetaReward_GlobalCapacity_Name,worker_capacity_increase
 A Place for Rest,Ein Ort zum Ausruhen,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_II_Tavern_Name,a_place_for_rest
 Advanced Cuisine,Gehobene Küche,order,,localization,resources.assets,2026-09-22,,Order_IVATOCooking_Name,advanced_cuisine
 Advanced District,Fortgeschrittener Bezirk,order,,localization,resources.assets,2026-09-22,,Order_HubT3_Name,advanced_district
@@ -1029,11 +1545,15 @@ All at Once,Alles auf einmal,order,,localization,resources.assets,2026-09-22,,Or
 Allies,Verbündete,order,,localization,resources.assets,2026-09-22,,Order_StandingT4_Name,allies
 Amber Trade,Bernsteinhandel,order,,localization,resources.assets,2026-09-22,,Order_IAmber_Name,amber_trade
 Ancient Artifacts,Uralte Artefakte,order,,localization,resources.assets,2026-09-22,,Order_IITablets_Name,ancient_artifacts
+Ancient Knowledge,Uraltes Wissen,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinWithGoods_Name,ancient_knowledge
 Ancient Tablets,Uralte Tafeln,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_DeepExploration_Name,ancient_tablets
+Ancient Vaults,Uralte Gewölbe,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase5_WinWithVaults_Name,ancient_vaults
 Archaeology,Archäologie,order,,localization,resources.assets,2026-09-22,,Order_IIIExploration_Name,archaeology
 Architects,Architekten,order,,localization,resources.assets,2026-09-22,,Order_IBFrogs_Name,architects
 Arena,Arena,order,,localization,resources.assets,2026-09-22,,Order_IIILizardService_Name,arena
+Bandit Camp,Banditenlager,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinGameNearBanditCamp_Name,bandit_camp
 Barbecue,Grillfest,order,,localization,resources.assets,2026-09-22,,Order_IBarbecue_Name,barbecue
+Barren Lands,Unfruchtbares Land,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase2_WinGameNearBarren_Name,barren_lands
 Basic Ingredient,Grundzutat,order,,localization,resources.assets,2026-09-22,,Order_IBasicIngredient_Name,basic_ingredient
 Basic Logistics,Grundlegende Logistik,order,,localization,resources.assets,2026-09-22,,Order_IBPaths_Name,basic_logistics
 Basic Packages,Grundpakete,order,,localization,resources.assets,2026-09-22,,Order_IIITOBasicPacks_Name,basic_packages
@@ -1050,11 +1570,15 @@ Beaver Majority,Biber-Mehrheit,order,,localization,resources.assets,2026-09-22,,
 Beaver Population,Biberbevölkerung,order,,localization,resources.assets,2026-09-22,,Order_IIBeaverPopulation_Name,beaver_population
 Beaver Relatives,Biberverwandte,order,,localization,resources.assets,2026-09-22,,Order_BeaverRelatives_Name,beaver_relatives
 Beaver Resolve,Biber-Entschlossenheit,order,,localization,resources.assets,2026-09-22,,Order_IIIResolveBeavers_Name,beaver_resolve
+Beaver Settlement,Bibersiedlung,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinWithBeavers_Name,beaver_settlement
 Beer Snacks,Biersnacks,order,,localization,resources.assets,2026-09-22,,Order_IVBTOBeerandSnacks_Name,beer_snacks
 Beginner Engineer,Unerfahrener Ingenieur,order,,localization,resources.assets,2026-09-22,,Order_IPump_Name,beginner_engineer
 Big Delivery,Große Lieferung,order,,localization,resources.assets,2026-09-22,,Order_BuildingPacks_Name,big_delivery
+Big Settlement 1,Große Siedlung 1,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase1_WinWithPopulation_Name,big_settlement_1
+Big Settlement 2,Große Siedlung 2,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase2_WinWithPopulation_Name,big_settlement_2
 Blight Fighters,Pestfäulekämpfer,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_IV_Blightpost_Name,blight_fighters
 Bling-Bling,Bling-Bling,order,,localization,resources.assets,2026-09-22,,Order_IIITOShiny_Name,bling_bling
+Blood Flower Farmer,Blutblumen-Bauer,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase5_WinWithBlightrot_Name,blood_flower_farmer
 Blue Metal,Blaues Metall,order,,localization,resources.assets,2026-09-22,,Order_IBlueMetal_Name,blue_metal
 Booming Economy,Florierende Wirtschaft,order,,localization,resources.assets,2026-09-22,,Order_Generic_TraderValueSold_Name,booming_economy
 Botanist,Botaniker,order,,localization,resources.assets,2026-09-22,,Order_Botanist_Name,botanist
@@ -1081,20 +1605,51 @@ Collecting Berries,Beeren sammeln,order,,localization,resources.assets,2026-09-2
 Construction Work,Bauarbeiten,order,,localization,resources.assets,2026-09-22,,Order_IVBTOBuildingTools_Name,construction_work
 Copper Fever,Kupferrausch,order,,localization,resources.assets,2026-09-22,,Order_IIITODiggingOre_Name,copper_fever
 Copper Ingots,Kupferbarren,order,,localization,resources.assets,2026-09-22,,Order_ICopperIngots_Name,copper_ingots
+Coral Forest,Korallenwald,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase4_WinOnCoralBiome_Name,coral_forest
 Cups and Glasses,Tassen und Gläser,order,,localization,resources.assets,2026-09-22,,Order_IIIBreweryAndTawern_Name,cups_and_glasses
+Cursed Lands,Verfluchte Lande,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinOnCursedBiome_Name,cursed_lands
+Cursed Lands 2,Verfluchte Lande 2,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase4_WinOnCursedBiome_Name,cursed_lands_2
+Cursed Lands 3,Verfluchte Lande 3,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase5_WinOnCursedBiome_Name,cursed_lands_3
+Cycle of Defiance,Zyklus des Trotzes,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase5_WinWithoutOrders_Name,cycle_of_defiance
+Cycle of Discovery,Zyklus der Entdeckung,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase4_GladeDiscovery_Name,cycle_of_discovery
+Cycle of Wealth,Zyklus des Reichtums,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase4_TradeGoods_Name,cycle_of_wealth
+Cycle of the Bloodrain,Zyklus des Blutregens,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase3_WinGamesOnMoorlands_Name,cycle_of_the_bloodrain
+Cycle of the Fungi,Zyklus der Pilze,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase3_WinGameOnMarshlands_Name,cycle_of_the_fungi
+Cycle of the Infestation,Zyklus des Befalls,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase4_WinNearStonewood_Name,cycle_of_the_infestation
+Cycle of the Outlaw,Zyklus des Gesetzlosen,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase4_WinNearBanditCamp_Name,cycle_of_the_outlaw
+Cycle of the Queen,Zyklus der Königin,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase5_WinWithoutImpatience_Name,cycle_of_the_queen
+Cycle of the Storm,Zyklus des Sturms,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase5_WinNearWeatherAnomaly_Name,cycle_of_the_storm
+Cycle of the Wilds,Zyklus der Wildnis,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase5_DangeroudGladeDiscovery_Name,cycle_of_the_wilds
 Cyst Cultivation,Zystenkultivierung,order,,localization,resources.assets,2026-09-22,,Order_ICystCultivation_Name,cyst_cultivation
+Deeper Into the Wilds 1,Tiefer in die Wildnis 1,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase1_DistanceFromCitadel_Name,deeper_into_the_wilds_1
+Deeper Into the Wilds 2,Tiefer in die Wildnis 2,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase2_DistanceFromCitadel_Name,deeper_into_the_wilds_2
+Deeper Into the Wilds 3,Tiefer in die Wildnis 3,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase3_DistanceFromCitadel_Name,deeper_into_the_wilds_3
+Deeper Into the Wilds 4,Tiefer in die Wildnis 4,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase4_DistanceFromCitadel_Name,deeper_into_the_wilds_4
 Deeper into the Wilds,Tiefer in die Wildnis,order,,localization,resources.assets,2026-09-22,,Order_IVATabletsAndGlades_Name,deeper_into_the_wilds
+Defying the Crown,Der Krone die Stirn bieten,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase2_WinGameWithoutOrders_Name,defying_the_crown
 Delivery,Lieferung,order,,localization,resources.assets,2026-09-22,,Order_IBProvisionsAndCrops_Name,delivery
 Determined Bats,Entschlossene Fledermäuse,order,,localization,resources.assets,2026-09-22,,Order_ITOBatResolve_Name,determined_bats
 Devil's Bargain,Teufelspakt,order,,localization,resources.assets,2026-09-22,,Order_IVDevilsBargain_Name,devils_bargain
 Devilish Curiosity,Teuflische Neugier,order,,localization,resources.assets,2026-09-22,,Order_IIITOForbiddenGlade_Name,devilish_curiosity
+Dice With Death 1,Würfeln mit dem Tod 1,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase2_WinGameWithRelic_Name,dice_with_death_1
+Dice With Death 2,Würfeln mit dem Tod 2,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase3_WinGameWithRelic_Name,dice_with_death_2
+Dice With Death 3,Würfeln mit dem Tod 3,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase4_WinGameWithRelic_Name,dice_with_death_3
+Dice With Death 4,Würfeln mit dem Tod 4,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase5_WinGameWithRelic_Name,dice_with_death_4
 Dirty Work,Drecksarbeit,order,,localization,resources.assets,2026-09-22,,Order_IIIKiln_Name,dirty_work
+Discovery 1,Entdeckung 1,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase1_GladeDiscovery_Name,discovery_1
+Discovery 2,Entdeckung 2,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase2_GladeDiscovery_Name,discovery_2
+Discovery 3,Entdeckung 3,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase3_GladeDiscovery_Name,discovery_3
+Discovery 4,Entdeckung 4,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase4_GladeDiscovery_Name,discovery_4
+Discovery 5,Entdeckung 5,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase5_GladeDiscovery_Name,discovery_5
+Discovery 6,Entdeckung 6,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase6_GladeDiscovery_Name,discovery_6
 Distant Journey,Fernreise,order,,localization,resources.assets,2026-09-22,,Order_IATODiscoverGlades_Name,distant_journey
 Disturbing the Ancients,Störung der Alten,order,,localization,resources.assets,2026-09-22,,Order_IIITOExploreandDeliver_Name,disturbing_the_ancients
 Dwellings,Unterkünfte,order,,localization,resources.assets,2026-09-22,,Order_IHousesv3_Name,dwellings
 Effects of Technology,Technologie-Effekte,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_IV_WaterAndCysts_Name,effects_of_technology
 Efficiency Test,Effizienztest,order,,localization,resources.assets,2026-09-22,,Order_IITOLumbermill_Name,efficiency_test
 Egg Collection,Eierernte,order,,localization,resources.assets,2026-09-22,,Order_IEggCollection_Name,egg_collection
+Establishing Borders,Grenzziehung,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase4_DistanceFromCitadel_Name,establishing_borders
+Expansion,Erweiterung,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase4_WinWithHearths_Name,expansion
 Expensive Delivery,Üppige Lieferung,order,,localization,resources.assets,2026-09-22,,Order_IVBThreePacks2_Name,expensive_delivery
 Exploration,Erkundung,order,,localization,resources.assets,2026-09-22,,Order_IAGlades_Name,exploration
 Exploring the Wilds,Erkundung der Wildnis,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_IAGlades_Name,exploring_the_wilds
@@ -1103,12 +1658,16 @@ Export Hub,Exportposten,order,,localization,resources.assets,2026-09-22,,Order_I
 Fair Exchange,Fairer Austausch,order,,localization,resources.assets,2026-09-22,,Order_IIIRouteValue_Name,fair_exchange
 Farm Life,Bauernhofleben,order,,localization,resources.assets,2026-09-22,,Order_FarmLife_Name,farm_life
 Farming,Landwirtschaft,order,,localization,resources.assets,2026-09-22,,Order_Farm_Name,farming
+Farming Specialization,Landwirtschaft-Spezialisierung,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinWithSmallFarms_Name,farming_specialization
+Fast Colonization,Schnelle Kolonisation,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase2_WinGames_Name,fast_colonization
 Fearless,Furchtlos,order,,localization,resources.assets,2026-09-22,,Order_IVTOFearless_Name,fearless
 Feast,Festmahl,order,,localization,resources.assets,2026-09-22,,Order_IIOfferingButcher_Name,feast
+Fertile Meadows,Fruchtbare Wiesen,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase1_WinGameNearFertileMeadows_Name,fertile_meadows
 Fighting the Storm,Trotzt dem Sturm,order,,localization,resources.assets,2026-09-22,,Order_IIBlightPost_Name,fighting_the_storm
 Fill the Engines,Fülle die Maschinen,order,,localization,resources.assets,2026-09-22,,Order_IFillTheEngines_Name,fill_the_engines
 Finders Keepers,Finderlohn,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_IV_Caches_Name,finders_keepers
 Firestarter,Feuerteufel,order,,localization,resources.assets,2026-09-22,,Order_IICysts_Name,firestarter
+First Steps,Erste Schritte,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase1_WinGames_Name,first_steps
 First Yield,Erster Ertrag,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_II_Grain_Name,first_yield
 Focus on Farming,Landwirtschaft im Fokus,order,,localization,resources.assets,2026-09-22,,Order_IVATwoPacks1_Name,focus_on_farming
 Folks Gotta Eat!,Die Leute müssen essen!,order,,localization,resources.assets,2026-09-22,,Order_Generic_NeedSatisfiedForTime1_Name,folks_gotta_eat
@@ -1173,6 +1732,7 @@ Human Influx,Menschen-Zustrom,order,,localization,resources.assets,2026-09-22,,O
 Human Majority,Menschen-Mehrheit,order,,localization,resources.assets,2026-09-22,,Order_IVBFuelAndTrade_Name,human_majority
 Human Population,Menschliche Bevölkerung,order,,localization,resources.assets,2026-09-22,,Order_IIHumanPopulation_Name,human_population
 Human Relatives,Menschenverwandte,order,,localization,resources.assets,2026-09-22,,Order_HumanRelatives_Name,human_relatives
+Human Settlement,Menschensiedlung,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinWithHumans_Name,human_settlement
 Human Villagers,Menschliche Dorfbewohner,order,,localization,resources.assets,2026-09-22,,Order_IIIResolveHumans_Name,human_villagers
 Hunters,Jäger,order,,localization,resources.assets,2026-09-22,,Order_IHunters_Name,hunters
 Hurried Expedition,Eilige Expedition,order,,localization,resources.assets,2026-09-22,,Order_ITORelicResolve_Name,hurried_expedition
@@ -1203,7 +1763,9 @@ Lizard Influx,Echsenzustrom,order,,localization,resources.assets,2026-09-22,,Ord
 Lizard Majority,Echsen-Mehrheit,order,,localization,resources.assets,2026-09-22,,Order_IVBLuxury_Name,lizard_majority
 Lizard Population,Echsenbevölkerung,order,,localization,resources.assets,2026-09-22,,Order_IILizardPopulation_Name,lizard_population
 Lizard Relatives,Echsen-Verwandte,order,,localization,resources.assets,2026-09-22,,Order_LizardRelatives_Name,lizard_relatives
+Lizard Settlement,Echsensiedlung,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinWithLizards_Name,lizard_settlement
 Lizard Villagers,Echsen-Dorfbewohner,order,,localization,resources.assets,2026-09-22,,Order_IIIResolveLizards_Name,lizard_villagers
+Lost Colonies,Verlorene Kolonien,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase2_WinGameNearRuins_Name,lost_colonies
 Lost Knowledge,Verlorenes Wissen,order,,localization,resources.assets,2026-09-22,,Order_IIIAncientTablets_Name,lost_knowledge
 Lost Supplies,Verlorene Vorräte,order,,localization,resources.assets,2026-09-22,,Order_IIILostSupplies_Name,lost_supplies
 Lost in the Woods,Im Wald verloren,order,,localization,resources.assets,2026-09-22,,Order_IIILost_Name,lost_in_the_woods
@@ -1226,7 +1788,14 @@ More Houses,Mehr Häuser,order,,localization,resources.assets,2026-09-22,,Order_
 Natural Dye,Natürliches Färbemittel,order,,localization,resources.assets,2026-09-22,,Order_INaturalDye_Name,natural_dye
 Need for Timber,Holzbedarf,order,,localization,resources.assets,2026-09-22,,Order_IITOCutTrees_Name,need_for_timber
 New Clothes,Neue Kleidung,order,,localization,resources.assets,2026-09-22,,Order_IIICoats_Name,new_clothes
+No Deaths,Keine Todesfälle,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase4_WinWithoutVillagersDying_Name,no_deaths
 No Place Like Home,Zu Hause ist es am schönsten,order,,localization,resources.assets,2026-09-22,,Order_IHouses_Name,no_place_like_home
+Orders From the Queen 1,Aufträge der Königin 1,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase1_CompleteOrders_Name,orders_from_the_queen_1
+Orders From the Queen 2,Aufträge der Königin 2,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase2_CompleteOrders_Name,orders_from_the_queen_2
+Orders From the Queen 3,Aufträge der Königin 3,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase3_CompleteOrders_Name,orders_from_the_queen_3
+Orders From the Queen 4,Aufträge der Königin 4,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase4_CompleteOrders_Name,orders_from_the_queen_4
+Orders From the Queen 5,Aufträge der Königin 5,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase5_CompleteOrders_Name,orders_from_the_queen_5
+Orders From the Queen 6,Aufträge der Königin 6,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase6_CompleteOrders_Name,orders_from_the_queen_6
 Ore Mining,Erzabbau,order,,localization,resources.assets,2026-09-22,,Order_IIIUpgradeMineCopper_Name,ore_mining
 Out Fishing,Angelausflug,order,,localization,resources.assets,2026-09-22,,Order_IIFishingTrialFish_Name,out_fishing
 Outerwear,Oberbekleidung,order,,localization,resources.assets,2026-09-22,,Order_ITONeedClothes_Name,outerwear
@@ -1248,6 +1817,12 @@ Problem Solver,Probleme lösen,order,,localization,resources.assets,2026-09-22,,
 Profit Margin,Gewinnspanne,order,,localization,resources.assets,2026-09-22,,Order_IIRouteValue_Name,profit_margin
 Profitable Caution,Einbringliche Vorsicht,order,,localization,resources.assets,2026-09-22,,Order_SolveDangerousRelic_Name,profitable_caution
 Profitable Trade,Profitabler Handel,order,,localization,resources.assets,2026-09-22,,Order_IIICostlyRoute_Name,profitable_trade
+Prosperity 1,Wohlstand 1,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase1_ReputationFromResolve_Name,prosperity_1
+Prosperity 2,Wohlstand 2,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase2_ReputationFromResolve_Name,prosperity_2
+Prosperity 3,Wohlstand 3,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase3_ReputationFromResolve_Name,prosperity_3
+Prosperity 4,Wohlstand 4,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase4_ReputationFromResolve_Name,prosperity_4
+Prosperity 5,Wohlstand 5,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase5_ReputationFromResolve_Name,prosperity_5
+Prosperous Cycle,Zyklus des Wohlstands,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase3_ReputationFromResolve_Name,prosperous_cycle
 Provisions,Proviant,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_II_Provisions_Name,provisions
 Pyromancer,Pyromane,order,,localization,resources.assets,2026-09-22,,Order_IVACysts_Name,pyromancer
 Pyromania,Pyromanie,order,,localization,resources.assets,2026-09-22,,Order_IIICysts_Name,pyromania
@@ -1261,6 +1836,7 @@ Rainpunk Enthusiast,Regenpunk-Enthusiast,order,,localization,resources.assets,20
 Rainpunk Technology,Regenpunk-Technologie,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_IV_Engines_Name,rainpunk_technology
 Raising the Stakes,Höherer Einsatz,order,,localization,resources.assets,2026-09-22,,Order_IMultiplyRoutes_Name,raising_the_stakes
 Ranch Life,Ranchleben,order,,localization,resources.assets,2026-09-22,,Order_RanchLife_Name,ranch_life
+Rare Technology,Seltene Technologie,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinWIthRainpunk_Name,rare_technology
 Rations for the Citadel,Rationen für die Zitadelle,order,,localization,resources.assets,2026-09-22,,Order_IIIProvisionsAndCrops_Name,rations_for_the_citadel
 Ravenous Axes,Hungrige Äxte,order,,localization,resources.assets,2026-09-22,,Order_IVATOWoodandPacks_Name,ravenous_axes
 Reckless Viceroy,Fahrlässiger Statthalter,order,,localization,resources.assets,2026-09-22,,Order_IVTOVeryDangerous_Name,reckless_viceroy
@@ -1271,10 +1847,20 @@ Religious Rites,Religiöse Riten,order,,localization,resources.assets,2026-09-22
 Restoration,Wiederherstellung,order,,localization,resources.assets,2026-09-22,,Order_IIConvert_Name,restoration
 Rich Harvest,Erntesegen,order,,localization,resources.assets,2026-09-22,,Order_IBCrops_Name,rich_harvest
 Risky Expedition,Riskante Expedition,order,,localization,resources.assets,2026-09-22,,Order_Generic_DangerousGladeDiscovery1_Name,risky_expedition
+Rivalry 1,Rivalität 1,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase2_WinGameOnFaction_Name,rivalry_1
+Rivalry 2,Rivalität 2,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinGameOnFaction_Name,rivalry_2
+Rivalry 3,Rivalität 3,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase4_WinOnFaction_Name,rivalry_3
+Rolling in Wealth 1,Stinkend reich 1,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase1_TradeGoods_Name,rolling_in_wealth_1
+Rolling in Wealth 2,Stinkend reich 2,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase2_TradeGoods_Name,rolling_in_wealth_2
+Rolling in Wealth 3,Stinkend reich 3,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase3_TradeGoods_Name,rolling_in_wealth_3
+Rolling in Wealth 4,Stinkend reich 4,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase4_TradeGoods_Name,rolling_in_wealth_4
+Rolling in Wealth 5,Stinkend reich 5,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase5_TradeGoods_Name,rolling_in_wealth_5
+Rolling in Wealth 6,Stinkend reich 6,order,,localization,resources.assets,2026-09-22,,ScalingGoal_Phase6_TradeGoods_Name,rolling_in_wealth_6
 Rotten to the Core,Bis zum Kern verdorben,order,,localization,resources.assets,2026-09-22,,Order_CorruptedBones_Name,rotten_to_the_core
 Royal Gardens,Königliche Gärten,order,,localization,resources.assets,2026-09-22,,Order_IIIRoyalGardens_Name,royal_gardens
 Ruins,Ruinen,order,,localization,resources.assets,2026-09-22,,Order_IIIRuins_Name,ruins
 Sacrificial Ceremony,Opferzeremonie,order,,localization,resources.assets,2026-09-22,,Order_IITOSacrificies_Name,sacrificial_ceremony
+Safe Cycle,Sicherer Zyklus,order,,localization,resources.assets,2026-09-22,,TimedGoal_Phase5_WinWithoutVillagerDying_Name,safe_cycle
 Safe Place,Sicherer Hafen,order,,localization,resources.assets,2026-09-22,,Order_IHousesv2_Name,safe_place
 Salt Fever,Salzfieber,order,,localization,resources.assets,2026-09-22,,Order_IIITODiggingSalt_Name,salt_fever
 Salt Miner,Salzkumpel,order,,localization,resources.assets,2026-09-22,,Order_ISalt_Name,salt_miner
@@ -1291,9 +1877,11 @@ Start Your Engines,Starte die Maschinen,order,,localization,resources.assets,202
 Stay in Shape,In Form bleiben,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_IV_ClanHall_Name,stay_in_shape
 Stone Roads,Steinstraßen,order,,localization,resources.assets,2026-09-22,,Order_IVAStoneRoads_Name,stone_roads
 Stonecutter's Trial,Prüfung des Steinmetzes,order,,localization,resources.assets,2026-09-22,,Order_IITOGatheringStone_Name,stonecutters_trial
+Stonewood Infestation,Steinholzbefall,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase1_WinGameNearStonewood_Name,stonewood_infestation
 Storekeeper,Ladenbesitzer,order,,localization,resources.assets,2026-09-22,,Order_IVATOThreePacks_Name,storekeeper
 Supply Thy Neighbor,Nachbarschaftshilfe,order,,localization,resources.assets,2026-09-22,,Order_ITOTradeROutesWithValue_Name,supply_thy_neighbor
 Surviving Requires Sacrifice,Überleben erfordert Opfer,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_III_Sacrifice_Name,surviving_requires_sacrifice
+Swamp Wheat Farmer,Sumpfweizenbauer,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase1_WinGameWithGrain_Name,swamp_wheat_farmer
 Technological Progress,Technologischer Fortschritt,order,,localization,resources.assets,2026-09-22,,Order_IVBTOEnginesAmount_Name,technological_progress
 The Clan,Der Clan,order,,localization,resources.assets,2026-09-22,,Order_ILizardResolve_Name,the_clan
 The Collegium,Das Kollegium,order,,localization,resources.assets,2026-09-22,,Order_IFrogResolve_Name,the_collegium
@@ -1303,14 +1891,20 @@ The Forum,Das Forum,order,,localization,resources.assets,2026-09-22,,Order_IIIFo
 The Grove,Der Hain,order,,localization,resources.assets,2026-09-22,,Order_IBHardBeavers_Name,the_grove
 The Guild,Die Gilde,order,,localization,resources.assets,2026-09-22,,Order_IBeaverResolve_Name,the_guild
 The Marketplace,Der Marktplatz,order,,localization,resources.assets,2026-09-22,,Order_IIIMarket_Name,the_marketplace
+The Marshlands,Die Sümpfe,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase2_WinGameOnMarshlands_Name,the_marshlands
 The Nest,Das Nest,order,,localization,resources.assets,2026-09-22,,Order_IBHardHarpies_Name,the_nest
 The Pack,Das Rudel,order,,localization,resources.assets,2026-09-22,,Order_IFoxResolve_Name,the_pack
+The Patient Queen 1,Die Geduldige Königin 1,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase3_WinWithoutImpatience_Name,the_patient_queen_1
+The Patient Queen 2,Die Geduldige Königin 2,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase4_WinWithoutImpatience_Name,the_patient_queen_2
+The Patient Queen 3,Die Geduldige Königin 3,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase5_WinWithoutImpatience_Name,the_patient_queen_3
 The Purge,Die Läuterung,order,,localization,resources.assets,2026-09-22,,Order_IThePurge_Name,the_purge
+The Scarlet Orchard,Der Scharlachrote Obstgarten,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase2_WinGameOnMoorlands_Name,the_scarlet_orchard
 The Source,Die Quelle,order,,localization,resources.assets,2026-09-22,,Order_IIITOWaterUsed_Name,the_source
 Thirsty Trader,Durstiger Händler,order,,localization,resources.assets,2026-09-22,,Order_IIITOTraderandRain_Name,thirsty_trader
 Three Packs,Drei Pakete,order,,localization,resources.assets,2026-09-22,,Order_IBWorkstation_Name,three_packs
 Tick Tock,Ticktack,order,,localization,resources.assets,2026-09-22,,Order_Generic_DangerousRelicResolved_Name,tick_tock
 Time of Courage,Zeit des Muts,order,,localization,resources.assets,2026-09-22,,Order_IVATOGladesTabletsRelics_Name,time_of_courage
+Tool Hoarder,Werkzeughamsterer,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase5_WinWithTools_Name,tool_hoarder
 Tooled Up,Startwerkzeug,order,,localization,resources.assets,2026-09-22,,Order_ITODeliverMaterials_Name,tooled_up
 Trade Baron,Handelsbaron,order,,localization,resources.assets,2026-09-22,,Order_FinishRouteT4_Name,trade_baron
 Trade Connections,Handelsverbindungen,order,,localization,resources.assets,2026-09-22,,Order_IITradeConnections_Name,trade_connections
@@ -1331,10 +1925,13 @@ Urgent Shipment,Eilige Lieferung,order,,localization,resources.assets,2026-09-22
 Utopia,Utopie,order,,localization,resources.assets,2026-09-22,,Order_IVBValuables_Name,utopia
 Varied Delivery,Vielseitige Lieferung,order,,localization,resources.assets,2026-09-22,,Order_IIILuxuryGoods_Name,varied_delivery
 Venturesome Leader,Kühner Anführer,order,,localization,resources.assets,2026-09-22,,Order_IITOGladesDiscovery_Name,venturesome_leader
+Victory Through Prosperity,Sieg durch Wohlstand,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase5_WinWithResolve_Name,victory_through_prosperity
+Victory Through Resolve,Sieg durch Entschlossenheit,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase2_WinGameWithResolve_Name,victory_through_resolve
 Water Delivery,Wasserlieferung,order,,localization,resources.assets,2026-09-22,,Order_IIRainwater_Name,water_delivery
 Water Extraction,Wasser-Extraktion,order,,localization,resources.assets,2026-09-22,,Order_IWaterExtraction_Name,water_extraction
 Water Industry,Wasserindustrie,order,,localization,resources.assets,2026-09-22,,Order_PumpUpgrade_Name,water_industry
 Wealthy Trader,Reicher Händler,order,,localization,resources.assets,2026-09-22,,Order_IIITORichTrader_Name,wealthy_trader
+Weather Anomaly,Wetteranomalie,order,,localization,resources.assets,2026-09-22,,UniqueGoal_Phase4_WinNearWeatherAnomaly_Name,weather_anomaly
 Winemaking,Weinproduktion,order,,localization,resources.assets,2026-09-22,,Order_Tutorial_III_Wine_Name,winemaking
 Wood Delivery,Holzlieferung,order,,localization,resources.assets,2026-09-22,,Order_IBWood_Name,wood_delivery
 Wood and Provisions,Holz und Proviant,order,,localization,resources.assets,2026-09-22,,Order_IVAWood_Name,wood_and_provisions

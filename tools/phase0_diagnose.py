@@ -45,14 +45,25 @@ SCHEMA_VERSION = 1
 # --------------------------------------------------------------------------
 # Fundorte
 # --------------------------------------------------------------------------
+#
+# Die Suche steht in ats_assistant.orte, damit `ats-watch` und die
+# Kommandozeile dieselbe benutzen. Dieses Werkzeug ist aber das erste, das
+# laeuft -- vor jeder Installation. Findet es das Paket nicht, sucht es
+# selbst weiter.
 
-SAVE_SUBPATH = Path("AppData") / "LocalLow" / "Eremite Games" / "Against the Storm"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+try:
+    from ats_assistant.orte import (SAVE_SUBPATH, PROTON_APPID,   # noqa: F401
+                                    candidate_dirs, resolve_dir)
+except ImportError:                                               # pragma: no cover
+    SAVE_SUBPATH = Path("AppData") / "LocalLow" / "Eremite Games" / "Against the Storm"
+    PROTON_APPID = "1336490"
+    _eigenstaendig = True
+else:
+    _eigenstaendig = False
 
-# Steam-AppID von Against the Storm, fuer Proton-Praefixe unter Linux.
-PROTON_APPID = "1336490"
 
-
-def candidate_dirs() -> list[Path]:
+def _candidate_dirs_fallback() -> list[Path]:
     """Mutmassliche Speicherorte, plattformabhaengig, ohne Existenzpruefung."""
     out: list[Path] = []
     userprofile = os.environ.get("USERPROFILE")
@@ -90,10 +101,9 @@ def candidate_dirs() -> list[Path]:
     return uniq
 
 
-def resolve_dir(explicit: str | None) -> tuple[Path | None, list[dict]]:
-    """Liefert den ersten existierenden Kandidaten plus Protokoll aller Versuche."""
+def _resolve_dir_fallback(explicit: str | None) -> tuple[Path | None, list[dict]]:
     tried: list[dict] = []
-    cands = [Path(explicit).expanduser()] if explicit else candidate_dirs()
+    cands = [Path(explicit).expanduser()] if explicit else _candidate_dirs_fallback()
     found: Path | None = None
     for c in cands:
         exists = c.is_dir()
@@ -101,6 +111,11 @@ def resolve_dir(explicit: str | None) -> tuple[Path | None, list[dict]]:
         if exists and found is None:
             found = c
     return found, tried
+
+
+if _eigenstaendig:                                                # pragma: no cover
+    candidate_dirs = _candidate_dirs_fallback
+    resolve_dir = _resolve_dir_fallback
 
 
 # Die drei Dateien, um die es geht: laufende Siedlung, Weltkarte,
