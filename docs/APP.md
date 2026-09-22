@@ -59,6 +59,12 @@ setx ANTHROPIC_API_KEY sk-ant-...
 (danach ein **neues** PowerShell-Fenster, `setx` wirkt nicht rückwirkend),
 oder `ant auth login` — das SDK findet beides von selbst.
 
+Ob eine Anmeldung da ist, steht **unter dem Reiter, bevor man fragt**. Früher
+kam die Auskunft erst nach dem Druck auf „Fragen" — eine Runde zu spät, und am
+Spielrechner stand dort der englische Rohtext des SDK. Geprüft wird ohne eine
+einzige Anfrage: dieselben drei Quellen, die das SDK selbst nimmt
+(`api_key`, `auth_token`, das Profil aus `ant auth login`).
+
 **Ohne Anmeldung läuft alles andere unverändert.** Der Knopf „Lage kopieren"
 legt dasselbe JSON in die Zwischenablage; das fügst du in Claude ein und
 bekommst dieselbe Auskunft, nur von Hand.

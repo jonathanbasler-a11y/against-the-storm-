@@ -56,6 +56,7 @@ BEISPIELE = {
          "seltenheit": "Epic", "wirkung": "+1 Pilze je 25 Produktion"}]},
     "rat": {"ok": True, "text": "Nimm die Räucherei.", "fuss": "claude-opus-5"},
     "umgebung": {"fehlt": [], "namen": 2266, "mitschriften_da": 2},
+    "anmeldung": False,
     "fehler": "irgendwas ist schiefgegangen",
 }
 

@@ -214,3 +214,73 @@ def test_client_ohne_anmeldung_wirft_keinzugang(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "anthropic", modul)
     with pytest.raises(berater.KeinZugang, match="ant auth login"):
         berater._client()
+
+
+# --------------------------------------------------------------------------
+# Ist überhaupt eine Anmeldung da? -- gefragt, bevor jemand fragt
+#
+# Am Spielrechner stand die Fehlermeldung erst da, nachdem "Fragen" gedrückt
+# war. Eine Runde zu spät: das Fenster kann es vorher wissen, ohne eine
+# einzige Anfrage zu senden. Gemessen in anthropic 1.7.0 zieht das SDK die
+# Anmeldung aus drei Quellen -- api_key, auth_token, credentials --, und
+# genau die drei prüft es beim Bauen der Kopfzeilen.
+# --------------------------------------------------------------------------
+
+
+def _sdk(monkeypatch, **felder):
+    import types as _types
+
+    modul = _types.ModuleType("anthropic")
+
+    class Anthropic:
+        def __init__(self, *args, **kwargs):
+            for name, wert in felder.items():
+                setattr(self, name, wert)
+
+    modul.Anthropic = Anthropic
+    monkeypatch.setitem(sys.modules, "anthropic", modul)
+
+
+def test_ein_schluessel_zaehlt_als_anmeldung(monkeypatch) -> None:
+    _sdk(monkeypatch, api_key="sk-ant-xyz", auth_token=None, _token_cache=None)
+    assert berater.anmeldung_gefunden() is True
+
+
+def test_auch_ein_profil_zaehlt(monkeypatch) -> None:
+    """`ant auth login` legt keinen Schlüssel ab, sondern einen Zwischenspeicher."""
+    _sdk(monkeypatch, api_key=None, auth_token=None, _token_cache=object())
+    assert berater.anmeldung_gefunden() is True
+
+
+def test_ohne_jede_quelle_ist_keine_da(monkeypatch) -> None:
+    _sdk(monkeypatch, api_key=None, auth_token=None, _token_cache=None)
+    assert berater.anmeldung_gefunden() is False
+
+
+def test_ein_werfendes_sdk_heisst_keine_anmeldung(monkeypatch) -> None:
+    import types as _types
+
+    modul = _types.ModuleType("anthropic")
+
+    def Anthropic(*args, **kwargs):
+        raise TypeError('"Could not resolve authentication method … api_key …"')
+
+    modul.Anthropic = Anthropic
+    monkeypatch.setitem(sys.modules, "anthropic", modul)
+    assert berater.anmeldung_gefunden() is False
+
+
+def test_ohne_sdk_laesst_es_sich_nicht_sagen(monkeypatch) -> None:
+    """Nicht False -- das wäre eine Behauptung über etwas Ungeprüftes."""
+    import builtins
+
+    echt = builtins.__import__
+
+    def ohne(name, *args, **kwargs):
+        if name == "anthropic":
+            raise ImportError("kein anthropic")
+        return echt(name, *args, **kwargs)
+
+    monkeypatch.setitem(sys.modules, "anthropic", None)
+    monkeypatch.setattr(builtins, "__import__", ohne)
+    assert berater.anmeldung_gefunden() is None
