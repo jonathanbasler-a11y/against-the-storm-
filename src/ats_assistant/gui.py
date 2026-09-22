@@ -73,6 +73,9 @@ class App:
         leiste.pack(fill="x", padx=8, pady=6)
         self.status = ttk.Label(leiste, text="wird gelesen …", anchor="w")
         self.status.pack(side="left", fill="x", expand=True)
+        self.status_alles = ""
+        # Was nicht in die Zeile passt, steht im Kurzhinweis.
+        self.status.bind("<Enter>", self._status_hinweis)
         ttk.Button(leiste, text="Neu lesen",
                    command=lambda: self.rechner.bitte("lage")).pack(side="right")
         self.suche = ttk.Entry(leiste, width=22)
@@ -203,6 +206,10 @@ class App:
         self.root.clipboard_append(json.dumps(auszug, ensure_ascii=False, indent=1))
         self.rat_fuss.configure(text="Lage in der Zwischenablage – in Claude einfügen.")
 
+    def _status_hinweis(self, _ereignis=None) -> None:
+        if self.status_alles and "\n" in self.status_alles:
+            self.status.configure(text=self.status_alles.replace("\n", "   ·   ")[:200])
+
     def _nachschlagen(self) -> None:
         name = self.suche.get().strip()
         if name:
@@ -258,10 +265,19 @@ class App:
             self.rat_fuss.configure(text=fuss)
         elif art == "umgebung":
             offen = wert.get("fehlt") or []
-            self.status.configure(
-                text="  ·  ".join(offen) if offen
-                else f"Alles bereit – {wert.get('namen', 0)} Namen, "
-                     f"{wert.get('mitschriften_da', 0)} Mitschriften")
+            if not offen:
+                text = (f"Alles bereit – {wert.get('namen', 0)} Namen, "
+                        f"{wert.get('mitschriften_da', 0)} Mitschriften")
+            else:
+                # Drei Sätze nebeneinander laufen rechts aus dem Fenster und
+                # werden abgeschnitten -- dann fehlt ausgerechnet das Ende,
+                # in dem steht, was zu tun ist. Einer steht da, der Rest
+                # gezählt; alle zusammen im Kurzhinweis.
+                text = offen[0]
+                if len(offen) > 1:
+                    text += f"   (+{len(offen) - 1} weitere)"
+            self.status.configure(text=text)
+            self.status_alles = "\n".join(offen)
         elif art == "fehler":
             self.status.configure(text=f"Fehler: {wert}")
 

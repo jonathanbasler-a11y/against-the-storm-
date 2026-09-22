@@ -83,13 +83,10 @@ schweigt über etwas Erwartbares — eine halb geschriebene Datei, eine Tabelle,
 die es noch nicht gibt, ein Wikiabschnitt ohne Zahlen. Wo das Schweigen etwas
 verdeckt hätte, steht jetzt eine Meldung.
 
-**Das Fenster selbst ist hier nicht gestartet worden.** In dieser Umgebung
-gibt es kein tkinter und keine Möglichkeit, es nachzuinstallieren. Geprüft ist
-die Verdrahtung mit eingesetztem tkinter: dass sich das Fenster aufbaut, dass
-`_anzeigen` **jede** der neun Nachrichtenarten kennt, und dass auch die leeren
-Fälle nicht werfen. Was offen bleibt, ist das Aussehen und die
-Selbstaktualisierung am echten Spielstand — die stehen in `docs/APP.md` als
-Schritte, die am Spielrechner zu gehen sind.
+**Das Fenster ist inzwischen gestartet worden** — siehe die zweite Runde
+unten. Was weiter offen bleibt, ist die Windows-Seite: der Doppelklick auf
+`.pyw`, die Bildschirmaufnahme über PowerShell, die Texterkennung über
+`winsdk`.
 
 ## Warum diese Tests und nicht mehr
 
@@ -103,3 +100,65 @@ Dazu drei Tests auf Einstiegspunkte — `mcp_start`, `lage`, `ats-gui` —, weil
 genau das die Lücke war.
 
 **Stand: 217 Tests, alle grün.**
+
+
+---
+
+# Zweite Runde: das Fenster wirklich starten (2026-09-22)
+
+Die Frage war, ob eine neue Sitzung mit tkinter nötig sei. Nein — und der
+Grund war ein Befund für sich.
+
+## Die Suite lief gegen die falsche Python-Version
+
+| | |
+|---|---|
+| `python3` (Vorgabe) | **3.11.15**, kein tkinter |
+| `/usr/bin/python3.12` | **3.12.3, tkinter 8.6** |
+| `pyproject.toml` | `requires-python = ">=3.12"` |
+
+**217 Tests liefen wochenlang auf einer Version, die das Projekt nicht
+unterstützt.** Jedes „alle Tests grün" sprach über die falsche Laufzeit. Nicht
+die Umgebung fehlte, sondern der Blick darauf, welchen Interpreter ich
+benutze.
+
+`tests/test_laufzeit.py` macht daraus eine rote Zeile statt einer stillen
+Abweichung: er liest `requires-python` und vergleicht mit `sys.version_info`.
+Auf 3.11 schlägt **er** fehl, mit den Versionen und dem Pfad des Interpreters
+im Text.
+
+## Der Stub-Test lief in den echten aus
+
+`tests/test_gui_echt.py` (echtes Tk unter `xvfb-run`) war allein grün und in
+der Gesamtsuite achtmal rot: `Egal has no len()`.
+
+Grund: `sys.modules.pop("ats_assistant.gui")` entfernt das Modul aus der
+Tabelle, **aber nicht das Attribut am Paket**. `from ats_assistant import gui`
+holt es von dort — am Importsystem vorbei. Die echte Fassung prüfte also
+dieselben Attrappen wie die Stub-Fassung.
+
+Das ist die unangenehmste Sorte Fehler: ein Test, der grün ist, ohne etwas zu
+prüfen. Jetzt räumt die Vorrichtung beides ab, und ein eigener Test wacht
+darüber.
+
+## Was echtes Tk gezeigt hat
+
+Sieben von acht Prüfungen liefen auf Anhieb durch — die Oberfläche hält, was
+der Stub versprochen hatte. Zwei Funde kamen vom Hinsehen:
+
+**Die Statuszeile lief rechts aus dem Bild.** Drei offene Punkte nebeneinander
+werden abgeschnitten, und zwar am Ende — dort, wo steht, was zu tun ist. Jetzt
+steht einer da, der Rest gezählt, alle beim Überfahren.
+
+**Waren standen englisch neben deutschen Gebäuden.** „Räucherei: 40 **Meat**",
+Engpass „**Meat**" — ausgerechnet dort, wofür die 2266 Namen belegt wurden.
+`Zutat` trägt jetzt ihren deutschen Namen mit, `food_advice` gibt beides
+zurück (`ware` deutsch, `ware_en` daneben).
+
+## Bilder
+
+Drei Aufnahmen des laufenden Fensters unter Xvfb: Lage mit Balken für
+Reputation, Ungeduld und Nahrungsreichweite; Nahrung mit drei Sätzen und der
+Kettentabelle; Auswahl mit zwei erkannten Grundsteinen samt Güte und Wirkung.
+
+**Stand: 228 Tests, alle grün, auf Python 3.12 mit echtem Tk.**

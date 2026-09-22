@@ -69,10 +69,27 @@ def gui(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "tkinter", tk)
     monkeypatch.setitem(sys.modules, "tkinter.ttk", ttk)
-    sys.modules.pop("ats_assistant.gui", None)
+    _vergiss_das_fenstermodul()
     modul = importlib.import_module("ats_assistant.gui")
     yield modul
+    # Aufräumen ist hier keine Höflichkeit. Bliebe das mit Stubs gebaute
+    # Modul liegen, prüfte der Test mit echtem Tk (test_gui_echt.py) in
+    # Wahrheit dieselben Attrappen -- und wäre grün, ohne etwas zu zeigen.
+    _vergiss_das_fenstermodul()
+
+
+def _vergiss_das_fenstermodul() -> None:
+    """Modul **und** Paketattribut entfernen.
+
+    `sys.modules.pop` allein genügt nicht: nach dem ersten Import hängt
+    `gui` auch als Attribut am Paket, und `from ats_assistant import gui`
+    holt es von dort -- am Importsystem vorbei.
+    """
+    import ats_assistant
+
     sys.modules.pop("ats_assistant.gui", None)
+    if hasattr(ats_assistant, "gui"):
+        delattr(ats_assistant, "gui")
 
 
 def test_das_fenster_laesst_sich_aufbauen(gui, tmp_path: Path) -> None:
@@ -153,3 +170,15 @@ def test_lage_kopieren_legt_json_ohne_bild_in_die_zwischenablage(gui, tmp_path: 
 def test_main_existiert_und_nimmt_argumente(gui) -> None:
     """Der Starter `ats-gui.pyw` importiert genau das."""
     assert callable(gui.main)
+
+
+def test_der_stub_laeuft_nicht_in_andere_tests_aus() -> None:
+    """Nach der Vorrichtung muss wieder das echte tkinter gelten.
+
+    Genau das war kaputt: die Tests mit echtem Tk liefen allein durch und
+    scheiterten in der Gesamtsuite an `Egal has no len()`.
+    """
+    import ats_assistant
+
+    assert "ats_assistant.gui" not in sys.modules
+    assert not hasattr(ats_assistant, "gui")
