@@ -12,6 +12,8 @@ import queue
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from ats_assistant import rechner
 
 
@@ -93,7 +95,31 @@ def test_ein_fehlender_spielordner_laesst_den_takt_weiterlaufen(tmp_path: Path) 
     r._nachsehen()
 
 
-def test_der_rat_reicht_die_lage_weiter_ohne_bild(tmp_path: Path) -> None:
+# Der Wortlaut des SDK bei fehlender Anmeldung -- gemessen in anthropic 1.7.0.
+SDK_WORTLAUT = ('"Could not resolve authentication method. Expected one of '
+                'api_key, auth_token, or credentials to be set."')
+
+
+@pytest.fixture
+def ohne_anmeldung(monkeypatch):
+    """Kein Aufruf hinaus, auch wenn auf diesem Rechner ein Schlüssel liegt.
+
+    Vorher hing dieser Test daran, dass die Umgebung keine Anmeldung hat --
+    auf einem Rechner mit Schlüssel hätte er Geld gekostet.
+    """
+    class OhneSchluessel:
+        """So verhält sich das SDK gemessen: es wirft erst beim Senden."""
+
+        def __init__(self):
+            self.messages = self
+
+        def create(self, **kwargs):
+            raise TypeError(SDK_WORTLAUT)
+
+    monkeypatch.setattr(rechner.berater, "_client", lambda: (None, OhneSchluessel()))
+
+
+def test_der_rat_reicht_die_lage_weiter_ohne_bild(tmp_path: Path, ohne_anmeldung) -> None:
     ausgang: queue.Queue = queue.Queue()
     r = rechner.Rechner(tmp_path / "save", tmp_path / "runs",
                         tmp_path / "kb.sqlite", ausgang)
@@ -103,6 +129,22 @@ def test_der_rat_reicht_die_lage_weiter_ohne_bild(tmp_path: Path) -> None:
     assert antwort["ok"] is False
     assert antwort["auszug"]["siedlung"]["jahr"] == 3
     assert "bild" not in json.dumps(antwort["auszug"]).lower()
+
+
+def test_ohne_anmeldung_steht_der_deutsche_satz_da(tmp_path: Path, ohne_anmeldung) -> None:
+    """Am Spielrechner stand im Reiter „Rat" der englische Rohtext des SDK.
+
+    `zugang` ist der Schalter, an dem das Fenster entscheidet, ob es auf
+    „Lage kopieren" hinweist. Er stand auf True, weil das TypeError des SDK
+    an allen except-Zweigen vorbeilief.
+    """
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(tmp_path / "save", tmp_path / "runs",
+                        tmp_path / "kb.sqlite", ausgang)
+    antwort = r._rat({"zustand": {"jahr": 3}})
+    assert antwort["zugang"] is False
+    assert "ANTHROPIC_API_KEY" in antwort["text"]
+    assert "Could not resolve" not in antwort["text"]
 
 
 # --------------------------------------------------------------------------
