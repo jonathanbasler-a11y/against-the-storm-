@@ -74,7 +74,14 @@ def cmd_lage(args) -> int:
 def cmd_nahrung(args) -> int:
     rat = tools_api.food_advice(args.runs, args.db)
     if not rat.get("verfuegbar"):
-        print(rat.get("grund") or rat.get("empfehlung", "Nichts zu sagen."))
+        if rat.get("grund"):
+            print(rat["grund"])
+            return 0
+        # Auch ohne tragende Kette gibt es etwas zu sagen -- und der zweite
+        # Satz ist der, der weiterhilft.
+        for schluessel in ("empfehlung", "begruendung", "alternative"):
+            if rat.get(schluessel):
+                print(rat[schluessel])
         return 0
     for satz in (rat["empfehlung"], rat["begruendung"], rat["alternative"]):
         print(satz)

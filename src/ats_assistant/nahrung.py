@@ -149,7 +149,8 @@ def _deutsch(conn: sqlite3.Connection) -> dict[str, str]:
 def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
                 verbrauch_pro_sekunde: float | None = None,
                 mindestgewinn: float = 1.0,
-                nur_belegt: bool = True) -> list[Vorschlag]:
+                nur_belegt: bool = True,
+                huerden: list[dict] | None = None) -> list[Vorschlag]:
     """Jedes Rezept gegen den Bestand rechnen, nach Gewinn sortiert.
 
     `verbrauch_pro_sekunde` kommt aus `food_forecast().rate_per_second` --
@@ -175,6 +176,7 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
     verbrauch = abs(verbrauch_pro_sekunde) if verbrauch_pro_sekunde else None
 
     out: list[Vorschlag] = []
+    gescheitert: list[dict] = []
     for r in conn.execute("SELECT * FROM recipes WHERE product IS NOT NULL"):
         je_stueck = saettigung.get(r["product"])
         if not je_stueck:
@@ -192,6 +194,15 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
             moeglich = [z for z in gruppe
                         if lager.get(z["ware"], 0.0) >= z["menge"] > 0]
             if not moeglich:
+                # Woran es scheitert, ist die eigentliche Auskunft: "lohnt
+                # sich nicht" schickt den Spieler in dieselbe Sackgasse
+                # zurueck, "es fehlt der Brennstoff" nicht.
+                gescheitert.append({
+                    "produkt": r["product"],
+                    "fehlt": [z["ware"] for z in gruppe if z.get("ware")],
+                    "menge": min((z["menge"] for z in gruppe if z.get("menge")),
+                                 default=None),
+                })
                 vollstaendig = False
                 break
             gewaehlt = min(moeglich,
@@ -242,6 +253,14 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
             einmalig[schluessel] = v
     out = sorted(einmalig.values(),
                  key=lambda v: (-v.gewinn, v.dauer or 0.0, v.produkt))
+    if huerden is not None:
+        # Nur die knappsten: wer zwanzig Rezepte aufzaehlt, sagt nichts.
+        gesehen: set[str] = set()
+        for e in sorted(gescheitert, key=lambda e: len(e["fehlt"])):
+            if e["produkt"] in gesehen:
+                continue
+            gesehen.add(e["produkt"])
+            huerden.append(e)
     return out
 
 
@@ -262,14 +281,35 @@ def rat(conn: sqlite3.Connection, bestand: dict[str, float],
         verbrauch_pro_sekunde: float | None = None,
         reichweite_sekunden: float | None = None) -> Rat:
     """Aus den Vorschlaegen die Ausgabe bauen, die die Spec verlangt."""
-    liste = vorschlaege(conn, bestand, verbrauch_pro_sekunde)
+    huerden: list[dict] = []
+    liste = vorschlaege(conn, bestand, verbrauch_pro_sekunde, huerden=huerden)
     if not liste:
+        namen = _deutsch(conn)
+
+        def deutsch(ware: str) -> str:
+            return namen.get(ware, ware)
+
+        if huerden:
+            naechste = huerden[0]
+            fehlt = " oder ".join(deutsch(w) for w in naechste["fehlt"][:5])
+            produkt = deutsch(naechste["produkt"])
+            menge = f"{naechste['menge']:.0f} " if naechste.get("menge") else ""
+            begruendung = (f"{produkt} scheitert an einer Zutat: es fehlt "
+                           f"{menge}{fehlt} im Lager.")
+            weitere = {deutsch(h["produkt"]) for h in huerden[1:4]}
+            alternative = (
+                f"Dasselbe gilt für {', '.join(sorted(weitere))} — "
+                "erst Rohware sammeln, dann verarbeiten."
+                if weitere else
+                "Erst die fehlende Zutat beschaffen, dann trägt die Kette.")
+        else:
+            begruendung = ("Für kein Nahrungsrezept liegt ein voller Satz Zutaten "
+                           "bereit — es fehlt an Rohware, nicht an Verarbeitung.")
+            alternative = ("Sammellager erweitern oder eine Farm setzen; verarbeiten "
+                           "lohnt erst, wenn ein Rezept einen Durchlauf trägt.")
         return Rat(
             empfehlung="Kein Verarbeitungsschritt lohnt sich mit diesem Lager.",
-            begruendung=("Für kein Nahrungsrezept liegt ein voller Satz Zutaten "
-                         "bereit — es fehlt an Rohware, nicht an Verarbeitung."),
-            alternative=("Sammellager erweitern oder eine Farm setzen; verarbeiten "
-                         "lohnt erst, wenn ein Rezept einen Durchlauf trägt."),
+            begruendung=begruendung, alternative=alternative,
         )
 
     bester = liste[0]

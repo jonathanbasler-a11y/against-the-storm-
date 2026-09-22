@@ -95,8 +95,13 @@ def compare_runs(records: Iterable[dict], n: int | None = None) -> Laufvergleich
     if n:
         alle = alle[:n]
 
-    siege = [r for r in alle if r.get("hasWon")]
-    niederlagen = [r for r in alle if not r.get("hasWon")]
+    # Ein Lauf ohne `hasWon` ist kein verlorener Lauf, sondern einer ohne
+    # Ausgang -- ein abgebrochener Eintrag, ein geaendertes Format. Wer ihn
+    # zu den Niederlagen schlaegt, verschiebt jeden Vergleich in dieselbe
+    # Richtung, und zwar lautlos.
+    siege = [r for r in alle if r.get("hasWon") is True]
+    niederlagen = [r for r in alle if r.get("hasWon") is False]
+    ohne_ausgang = len(alle) - len(siege) - len(niederlagen)
 
     belastbar = len(siege) >= MINDEST_LAEUFE and len(niederlagen) >= MINDEST_LAEUFE
     hinweis = None
@@ -104,6 +109,10 @@ def compare_runs(records: Iterable[dict], n: int | None = None) -> Laufvergleich
         knapp = "Siege" if len(siege) < MINDEST_LAEUFE else "Niederlagen"
         hinweis = (f"Nur {len(siege)} Siege und {len(niederlagen)} Niederlagen in dieser "
                    f"Auswahl -- zu wenige {knapp}, um Unterschiede von Zufall zu trennen.")
+    if ohne_ausgang:
+        zusatz = (f"{ohne_ausgang} Lauf/Laeufe ohne verzeichneten Ausgang bleiben "
+                  "aussen vor.")
+        hinweis = f"{hinweis} {zusatz}" if hinweis else zusatz
 
     nach_biom: dict[str, dict[str, int]] = {}
     nach_schwierigkeit: dict[str, dict[str, int]] = {}
@@ -113,6 +122,8 @@ def compare_runs(records: Iterable[dict], n: int | None = None) -> Laufvergleich
             if not isinstance(wert, str):
                 continue
             eintrag = ziel.setdefault(wert, {"siege": 0, "niederlagen": 0})
+            if lauf.get("hasWon") is None:
+                continue
             eintrag["siege" if lauf.get("hasWon") else "niederlagen"] += 1
 
     return Laufvergleich(
