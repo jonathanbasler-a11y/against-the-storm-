@@ -71,6 +71,13 @@ PRAEFIX_ART = {
     "Biome": "biome",
     "Race": "species",
     "Effect": "effect",
+    # Der grosse Teil der Grundsteine steht unter Reward_, nicht unter
+    # Effect_: "Pilzfuehrer" ist Reward_MushroomSpecialization_Name. Das
+    # aufzulassen hiess, ausgerechnet die Kategorie auszulassen, um die es
+    # in der Spec geht.
+    "Reward": "effect",
+    "MetaReward": "meta",
+    "CycleReward": "effect",
     "ResolveEffect": "effect",
     "ConditionalNeedEffect": "effect",
     "SeasonalEffect": "effect",
@@ -84,6 +91,9 @@ PRAEFIX_ART = {
     "Trader": "trader",
     "WorldEvent": "world_event",
     "Order": "order",
+    "UniqueGoal": "order",
+    "ScalingGoal": "order",
+    "TimedGoal": "order",
     "Seal": "concept",
 }
 
