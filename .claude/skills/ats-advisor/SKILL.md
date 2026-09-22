@@ -30,6 +30,7 @@ Rate nichts, was ein Werkzeug beantwortet:
 | Wie steht die Siedlung? | `get_state` |
 | Reicht die Nahrung? | `food_forecast` |
 | Was tun, wenn sie nicht reicht? | `food_advice` |
+| Was steht gerade zur Wahl? | `read_choice` |
 | Wie lange bis zur Niederlage? | `impatience_forecast` |
 | Was ist das auf Deutsch, was kostet es? | `query_kb` |
 | Was unterschied gewonnene Läufe? | `analyze_runs` |
@@ -100,6 +101,14 @@ Regel.
 
 ## Auswahlbildschirme
 
-`read_choice` gibt es noch nicht — die Auswahlbildschirme stehen nicht im
-Spielstand und kommen erst mit Phase 3. Bis dahin: den Spieler die Optionen
-nennen lassen, dann beraten. Nicht so tun, als hättest du sie gesehen.
+Die angebotenen Grundsteine stehen **nicht** im Spielstand — gemessen, nicht
+vermutet. `read_choice` liest deshalb den Bildschirm: aufnehmen, Text
+erkennen, gegen die belegten deutschen Namen abgleichen.
+
+Was dabei zurückkommt, sind Namen mit einer **Güte**. Eine Lesung, die nicht
+eindeutig ist, steht unter `unklar` mit ihren Kandidaten — und dann wird
+gefragt, nicht geraten: „Stand da *Pilzführer* oder *Pilzsämlinge*?"
+
+Kommt gar nichts zurück (keine Texterkennung installiert, Bild nicht
+getroffen), den Spieler die Optionen nennen lassen. Nicht so tun, als hättest
+du sie gesehen.

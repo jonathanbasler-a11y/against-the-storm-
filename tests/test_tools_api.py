@@ -152,11 +152,50 @@ def test_query_kb_sagt_wenn_nichts_da_ist(tmp_path: Path) -> None:
     assert "hinweis" in out
 
 
-def test_read_choice_sagt_klar_dass_phase_3_fehlt() -> None:
-    """Und nennt den Weg, auf dem sich klaeren laesst, was Phase 3 braucht."""
+def test_read_choice_ohne_eingabe_sagt_was_fehlt() -> None:
+    """Kein Bild, kein Text -- dann steht da, was zu tun waere."""
     out = tools_api.read_choice()
-    assert out["verfuegbar"] is False and "Phase 3" in out["grund"]
-    assert "find_choice.py" in out["grund"]
+    assert out["verfuegbar"] is False
+    assert "Bildschirmfoto" in out["grund"]
+    # Und was die Umgebung hergibt, statt nur dass etwas fehlt.
+    assert "erkennung" in out["umgebung"] and "rat" in out["umgebung"]
+
+
+def test_read_choice_bildet_gelesene_titel_auf_belegte_namen_ab(tmp_path: Path) -> None:
+    """Der Weg ohne Texterkennung: die gelesenen Titel direkt uebergeben.
+
+    Die zwei Namen standen am 22.09.2026 auf dem Auswahlbildschirm; die
+    Grossschrift und der fehlende Umlaut sind das, was eine Texterkennung
+    daraus macht.
+    """
+    from ats_assistant import localization
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Reward_MushroomSpecialization_Name",
+                             "Fungal Guide", "Pilzführer", "effect"),
+        localization.Eintrag("Reward_PacksRawProd_Name", "Export Specialization",
+                             "Exportspezialisierung", "effect"),
+    ])
+    conn.execute("INSERT INTO cornerstones (en, rarity, effect_text) "
+                 "VALUES ('Fungal Guide', 'Epic', '+1 Pilze je 25 Produktion')")
+    conn.commit()
+    conn.close()
+
+    out = tools_api.read_choice(text=["PlLZFUHRER", "EXPORTSPEZIALISIERUNG"], db=db)
+    assert out["verfuegbar"] is True
+    assert [a["en"] for a in out["angebot"]] == ["Fungal Guide", "Export Specialization"]
+    assert out["angebot"][0]["de"] == "Pilzführer"
+    # Die Wissensbasis haengt dran, was sie weiss.
+    assert out["angebot"][0]["seltenheit"] == "Epic"
+
+
+def test_read_choice_raet_nicht_bei_unlesbarem(tmp_path: Path) -> None:
+    out = tools_api.read_choice(text=["~~~~~", ""], db=tmp_path / "leer.sqlite")
+    assert out["verfuegbar"] is False
+    assert out["angebot"] == []
+    assert "Auswahlbildschirm offen" in out["grund"]
 
 
 def test_food_advice_rechnet_gegen_den_lagerbestand(tmp_path: Path) -> None:

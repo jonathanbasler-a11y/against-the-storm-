@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import analysis, kb, nahrung
+from . import analysis, kb, nahrung, namen_match, screen
 from .forecast import food_forecast as _food_forecast
 from .forecast import impatience_forecast as _impatience_forecast
 from .save_reader import GameState, append_run_log, read_state
@@ -77,21 +77,73 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
     return out
 
 
-def read_choice() -> dict:
-    """Auswahlbildschirm -- noch nicht gebaut, und die Frage ist offen.
+def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
+                db: str | Path = "kb.sqlite", arten: tuple[str, ...] = ("effect",),
+                aufnehmen: bool = False) -> dict:
+    """Der Auswahlbildschirm als Namen und Zahlen -- nie als Bild.
 
-    Die Spec sieht dafuer Bildschirmauslesung vor. Ob es die braucht, ist
-    aber nicht geprueft: das Spiel muss die angebotenen Grundsteine
-    irgendwo im Zustand halten, sonst ueberstuende eine offene Auswahl
-    kein Laden. `tools/find_choice.py` beantwortet das an einem echten
-    Spielstand, statt es zu vermuten.
+    Gemessen am 22.09.2026: die angebotenen Grundsteine stehen nicht im
+    Spielstand, auch nicht als Text. Deshalb der Bildschirm. Das Lesen
+    passiert hier, lokal und deterministisch; was zurueckgeht, sind
+    belegte Namen und die Angaben aus der Wissensbasis dazu.
+
+    Drei Eingaenge, damit eine fehlende Abhaengigkeit nicht die ganze
+    Kette stilllegt: ein aufgenommenes Bild, eine vorhandene Bilddatei,
+    oder der bereits gelesene Text.
     """
+    zeilen: list[str] = []
+    quelle = "text"
+    if text:
+        zeilen = [t for t in text if (t or "").strip()]
+    else:
+        pfad = Path(bild) if bild else None
+        if pfad is None and aufnehmen:
+            try:
+                pfad = screen.aufnehmen()
+            except Exception as exc:
+                return {"verfuegbar": False, "grund": str(exc),
+                        "umgebung": screen.verfuegbar()}
+        if pfad is None:
+            return {
+                "verfuegbar": False,
+                "grund": ("Kein Bild und kein Text. Entweder `bild` auf ein "
+                          "Bildschirmfoto zeigen lassen, `aufnehmen=True` setzen, "
+                          "oder die gelesenen Kartentitel als `text` uebergeben."),
+                "umgebung": screen.verfuegbar(),
+            }
+        quelle = str(pfad)
+        try:
+            erkannt = screen.sortiere_nach_karten(screen.erkenne(pfad))
+        except Exception as exc:
+            return {"verfuegbar": False, "grund": str(exc),
+                    "umgebung": screen.verfuegbar()}
+        zeilen = [z.text for z in erkannt]
+
+    conn = kb.connect(db)
+    try:
+        gelesen = namen_match.lies_auswahl(conn, zeilen, arten=arten)
+        angebot = [g for g in gelesen if g["eindeutig"]]
+        for eintrag in angebot:
+            zusatz = conn.execute(
+                "SELECT rarity, effect_text, origin FROM cornerstones WHERE en = ?",
+                (eintrag["en"],)).fetchone()
+            if zusatz:
+                eintrag.update({"seltenheit": zusatz["rarity"],
+                                "wirkung": zusatz["effect_text"],
+                                "herkunft": zusatz["origin"]})
+    finally:
+        conn.close()
+
+    unklar = [g for g in gelesen if not g["eindeutig"] and g["kandidaten"]]
     return {
-        "verfuegbar": False,
-        "grund": ("Noch nicht gebaut. Ob der Spielstand die Auswahl mitfuehrt, "
-                  "klaert `python tools/find_choice.py scan --save <Save.save>` "
-                  "bei offenem Auswahlbildschirm -- erst danach steht fest, ob "
-                  "Phase 3 Bildschirmauslesung braucht."),
+        "verfuegbar": bool(angebot),
+        "quelle": quelle,
+        "angebot": angebot,
+        "unklar": unklar[:5],
+        "gelesene_zeilen": len(zeilen),
+        "grund": None if angebot else (
+            "Nichts erkannt, was einem belegten Namen nahekommt. Stand der "
+            "Auswahlbildschirm offen, als das Bild entstand?"),
     }
 
 

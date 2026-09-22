@@ -40,9 +40,22 @@ def werkzeuge(save_dir: Path, runs_dir: Path, db: Path) -> list[dict]:
         {
             "name": "read_choice",
             "description": ("Aktueller Auswahlbildschirm (Grundsteine, Baupläne). "
-                            "Kommt aus Phase 3 und ist noch nicht gebaut."),
-            "inputSchema": {"type": "object", "properties": {}},
-            "handler": lambda **kw: tools_api.read_choice(),
+                            "Liest den Bildschirm lokal, gleicht gegen die belegten "
+                            "deutschen Namen ab und liefert Namen und Zahlen -- nie "
+                            "ein Bild."),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "bild": {"type": "string",
+                             "description": "Pfad zu einem Bildschirmfoto; ohne Angabe "
+                                            "wird eines aufgenommen"},
+                    "text": {"type": "array", "items": {"type": "string"},
+                             "description": "bereits gelesene Kartentitel, "
+                                            "falls keine Texterkennung da ist"},
+                },
+            },
+            "handler": lambda bild=None, text=None, **kw: tools_api.read_choice(
+                bild=bild, text=text, db=db, aufnehmen=bild is None and not text),
         },
         {
             "name": "query_kb",
