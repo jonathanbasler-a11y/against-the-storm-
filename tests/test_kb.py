@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
 
 import pytest
@@ -259,4 +260,92 @@ def test_rezept_ohne_gebaeudespalte_bekommt_die_seite(tmp_path: Path) -> None:
     kb.import_recipes(conn, zeilen, source_page="Coastal Grove",
                       gebaeude_default="Coastal Grove")
     assert conn.execute("SELECT building FROM recipes").fetchone()[0] is None
+    conn.close()
+
+
+def test_produktionszuordnung_aus_list_of_resources(tmp_path: Path) -> None:
+    """Woertlich aus dem Bericht: Jerky, zwei Zutatengruppen, drei Gebaeude."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    for w in ("Meat", "Insects", "Coal", "Oil", "Salt", "Sea Marrow", "Wood"):
+        conn.execute("INSERT INTO resources (en) VALUES (?)", (w,))
+    conn.commit()
+    n = kb.import_production(conn, [
+        {"Complex Food": "Jerky", "Species Preferences": "Harpies Lizards",
+         "Ingredients and Options": "Meat Insects",
+         "Ingredients and Options_4": "Coal Oil Salt Sea Marrow Wood",
+         "Production Buildings": "Smokehouse (★★★) Apothecary (★★) Butcher (★)"},
+    ], kategorie="Complex Food", produktspalte="Complex Food",
+        source_page="List of Resources")
+    assert n == 3
+    zeile = conn.execute(
+        "SELECT * FROM production WHERE building = 'Smokehouse'").fetchone()
+    assert zeile["stars"] == 3 and zeile["species_pref"] == "Harpies Lizards"
+    # "Sea Marrow" ist eine Ware, nicht zwei.
+    assert json.loads(zeile["inputs"]) == [["Meat", "Insects"],
+                                           ["Coal", "Oil", "Salt", "Sea Marrow", "Wood"]]
+    conn.close()
+
+
+def test_widerspruch_beim_gebaeude_wird_gemeldet_nicht_geglaettet(tmp_path: Path) -> None:
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    conn.execute("INSERT INTO production (product, building, stars) "
+                 "VALUES ('Jerky', 'Smokehouse', 3)")
+    conn.execute("INSERT INTO recipes (building, product) VALUES ('Flawless Smelter', 'Jerky')")
+    conn.execute("INSERT INTO recipes (building, product) VALUES ('Smokehouse', 'Jerky')")
+    conn.commit()
+    streit = kb.pruefe_rezept_gebaeude(conn)
+    assert [s["gebaeude"] for s in streit] == ["Flawless Smelter"]
+    assert streit[0]["laut_liste"] == ["Smokehouse"]
+    conn.close()
+
+
+def test_baukosten_und_arbeitsplaetze_aus_der_gebaeudeliste(tmp_path: Path) -> None:
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    for w in ("Parts", "Wood", "Planks", "Fabric", "Sea Marrow"):
+        conn.execute("INSERT INTO resources (en) VALUES (?)", (w,))
+    conn.commit()
+    n = kb.import_buildings_list(conn, [
+        {"Building": "Stonecutters' Camp", "Workplaces": "2",
+         "Specialization": "Masonry", "Cost to build": "3 Parts 10 Wood"},
+        {"Building": "Main Warehouse", "Workplaces": "3", "Specialization": "none"},
+    ], source_page="List of Buildings")
+    assert n == 2
+    zeile = conn.execute(
+        "SELECT * FROM buildings WHERE en = \"Stonecutters' Camp\"").fetchone()
+    assert json.loads(zeile["cost"]) == {"Parts": 3.0, "Wood": 10.0}
+    assert zeile["worker_slots"] == 2 and zeile["specialization"] == "Masonry"
+    # "none" ist keine Spezialisierung.
+    lager = conn.execute("SELECT * FROM buildings WHERE en = 'Main Warehouse'").fetchone()
+    assert lager["specialization"] is None and lager["worker_slots"] == 3
+    conn.close()
+
+
+def test_biom_sagt_was_es_hergibt(tmp_path: Path) -> None:
+    """Die Spec führt drei Faustregeln über Biome. Nachschlagen schlägt erinnern."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    for w in ("Algae", "Vegetables", "Berries", "Grain", "Kelpwood"):
+        conn.execute("INSERT INTO resources (en) VALUES (?)", (w,))
+    conn.commit()
+    assert kb.import_biome(
+        conn, "Coastal Grove",
+        effekte=[["Gift of the Depths", "After using bait 150 times ..."]],
+        baeume=[{"Trees": "Kelpwood tree", "Charges": "2",
+                 "Bonus Resources": "Algae Algae 30% + Vegetables Vegetables 20%"}],
+        rohstoffe=[{"Primary Resources": "Berries Berries",
+                    "Charges → Resource Deposits": "70 → Dewberry Bush",
+                    "Gathering Building": "Herbalists' Camp Herbalists' Camp ★★",
+                    "Speed per Unit": "00:17"}],
+        source_page="Coastal Grove") is True
+
+    zeile = conn.execute("SELECT * FROM biomes WHERE en = 'Coastal Grove'").fetchone()
+    baum = json.loads(zeile["tree_species"])[0]
+    assert baum["bonus"] == [{"ware": "Algae", "anteil": 30.0},
+                             {"ware": "Vegetables", "anteil": 20.0}]
+    knoten = json.loads(zeile["node_weights"])[0]
+    assert knoten["ressourcen"] == ["Berries"]          # nicht doppelt
+    assert knoten["lager"] == "Herbalists' Camp"        # nicht doppelt
+
+    assert kb.biom_hat(conn, "Coastal Grove", "Berries") is True
+    assert kb.biom_hat(conn, "Coastal Grove", "Grain") is False
+    assert kb.biom_hat(conn, "Bamboo Marshes", "Grain") is None    # nicht erfasst
     conn.close()

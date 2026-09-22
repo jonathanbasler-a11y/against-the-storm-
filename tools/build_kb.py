@@ -432,7 +432,7 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
         # sammeln sich bei jedem Lauf Altlasten an -- nach der Korrektur der
         # doppelten Namen standen "Bats" und "Bats Bats" nebeneinander.
         for tabelle in ("species", "difficulty", "cornerstones", "glade_events",
-                        "recipes", "prestige"):
+                        "recipes", "prestige", "production", "biomes"):
             conn.execute(f"DELETE FROM {tabelle}")
         conn.commit()
         # Spezies: zwei Seiten mit teils verschiedenen Spalten, die sich ergaenzen.
@@ -468,18 +468,6 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
                     if n:
                         meldungen.append(f"prestige: {n} Stufen aus {pfad.stem}")
 
-        # Die Entwurfslisten: welches Gebaeude ab welcher Stufe zur Wahl
-        # steht. Sechzehn Tabellen, je eine Kategorie.
-        pfad = nach_titel.get("buildings")
-        if pfad:
-            entwuerfe = 0
-            for t in tabellen_aus_datei(pfad):
-                if _hat(t.kopf, "blueprint", "unlock"):
-                    entwuerfe += kb.import_blueprints(conn, t.als_dicts,
-                                                      source_page=pfad.stem)
-            if entwuerfe:
-                meldungen.append(f"buildings: {entwuerfe} Entwuerfe aus {pfad.stem}")
-
         # Erst die grosse Liste (Name, Seltenheit, Text), dann die drei
         # Herkunftslisten -- die tragen nur die Herkunft nach.
         for titel in ("list of cornerstones and perks", "list of perks"):
@@ -506,6 +494,71 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
                                                source_page=pfad.stem)
                     meldungen.append(f"cornerstones: {n} mal Herkunft '{herkunft}'")
 
+        # "List of Buildings": Arbeitsplaetze, Spezialisierung, Baukosten.
+        # Acht Tabellen mit verschiedenen Koepfen, gemeinsam ist "Building"
+        # und "Workplaces".
+        for titel in ("list of buildings", "list of essential blueprints", "buildings"):
+            pfad = nach_titel.get(titel)
+            if not pfad:
+                continue
+            gebaeude = entwuerfe = 0
+            for t in tabellen_aus_datei(pfad):
+                if _hat(t.kopf, "building", "workplaces"):
+                    gebaeude += kb.import_buildings_list(conn, t.als_dicts,
+                                                         source_page=pfad.stem)
+                elif _hat(t.kopf, "blueprint", "unlock"):
+                    entwuerfe += kb.import_blueprints(conn, t.als_dicts,
+                                                      source_page=pfad.stem)
+            if gebaeude:
+                meldungen.append(f"buildings: {gebaeude} Zeilen mit Kosten und "
+                                 f"Arbeitsplaetzen aus {pfad.stem}")
+            if entwuerfe:
+                meldungen.append(f"buildings: {entwuerfe} Entwuerfe aus {pfad.stem}")
+
+        # "List of Resources" fuehrt je Erzeugnis die Gebaeude mit Sterngrad,
+        # beide Zutatengruppen und die Spezies, die es bevorzugen. Das ist die
+        # belastbare Zuordnung Produkt -> Gebaeude.
+        pfad = nach_titel.get("list of resources")
+        if pfad:
+            for t in tabellen_aus_datei(pfad):
+                if not _hat(t.kopf, "production buildings"):
+                    continue
+                kategorie = t.kopf[0] if t.kopf else None
+                n = kb.import_production(conn, t.als_dicts, kategorie=kategorie,
+                                         produktspalte=kategorie,
+                                         source_page=pfad.stem)
+                if n:
+                    meldungen.append(
+                        f"production: {n} Zuordnungen fuer '{kategorie}' aus {pfad.stem}")
+
+        # Biome: eine Seite je Biom, erkannt an den 21 belegten Biomnamen aus
+        # der Lokalisierung. Drei Tabellen je Seite -- Effekte, Baumarten,
+        # Rohstoffe mit erntendem Lager.
+        biomnamen = [r["en"] for r in conn.execute(
+            "SELECT en FROM name_map WHERE kind = 'biome' AND en IS NOT NULL")]
+        biome = 0
+        for biom in sorted(set(biomnamen)):
+            biompfad = nach_titel.get(biom.lower())
+            if not biompfad:
+                continue
+            try:
+                tabellen = tabellen_aus_datei(biompfad)
+            except Exception:
+                continue
+            effekte, baeume, rohstoffe = [], [], []
+            for t in tabellen:
+                if _hat(t.kopf, "trees", "charges"):
+                    baeume = t.als_dicts
+                elif _hat(t.kopf, "primary resources", "gathering building"):
+                    rohstoffe = t.als_dicts
+                elif not any(t.kopf) and t.zeilen and len(t.zeilen[0]) >= 2:
+                    effekte = effekte or [list(z) for z in t.zeilen]
+            if kb.import_biome(conn, biom, effekte, baeume, rohstoffe,
+                               source_page=biompfad.stem):
+                biome += 1
+        if biome:
+            meldungen.append(f"biomes: {biome} Biome mit Baumarten und Rohstoffen")
+
         # Rezepte stehen auf den Gebaeudeseiten, nicht nur auf "Recipes" --
         # 435 Aufrufe der Vorlage verteilen sich ueber den ganzen Abzug.
         rezepte = 0
@@ -528,6 +581,17 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
                 seiten_mit_rezepten += 1
         if rezepte:
             meldungen.append(f"recipes: {rezepte} Rezepte von {seiten_mit_rezepten} Seiten")
+
+        # Gegenprobe: die Gebaeude der Seitenrezepte gegen die Zuordnung aus
+        # "List of Resources". Wo beide sich widersprechen, wird das gemeldet
+        # und nicht still angeglichen.
+        streit = kb.pruefe_rezept_gebaeude(conn)
+        if streit:
+            beispiele = "; ".join(
+                f"{e['produkt']} in {e['gebaeude']} statt {'/'.join(e['laut_liste'][:2])}"
+                for e in streit[:3])
+            meldungen.append(
+                f"WIDERSPRUCH: {len(streit)} Rezepte mit fraglichem Gebaeude ({beispiele})")
 
         pfad = nach_titel.get("glade events")
         if pfad:
