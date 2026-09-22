@@ -110,3 +110,18 @@ die Konfiguration keine Umgebungsvariablen und kein installiertes Paket.
 `logs/mcp_server.log` im Projektordner, unabhängig vom Arbeitsverzeichnis.
 Beim Start steht dort, was gefunden wurde und was fehlt — das ist die erste
 Stelle, an der man nachsieht, wenn die Antworten leer bleiben.
+
+
+## Ohne MCP: die Kommandozeile
+
+Dieselben Werkzeuge, ohne Server und ohne Claude:
+
+```powershell
+python tools\lage.py                      Zustand, Nahrung, Ungeduld, Rat
+python tools\lage.py nahrung              alle Ketten mit Engpass und Dauer
+python tools\lage.py nachschlag Imbiss    ein Name, deutsch oder englisch
+```
+
+`python -m ats_assistant.cli` tut es **nicht**: das Paket liegt unter `src/`
+und ist nicht installiert. `tools/lage.py` legt es selbst in den Suchpfad,
+genau wie `tools/mcp_start.py`.
