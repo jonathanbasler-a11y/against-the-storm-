@@ -29,6 +29,7 @@ Rate nichts, was ein Werkzeug beantwortet:
 |---|---|
 | Wie steht die Siedlung? | `get_state` |
 | Reicht die Nahrung? | `food_forecast` |
+| Was tun, wenn sie nicht reicht? | `food_advice` |
 | Wie lange bis zur Niederlage? | `impatience_forecast` |
 | Was ist das auf Deutsch, was kostet es? | `query_kb` |
 | Was unterschied gewonnene Läufe? | `analyze_runs` |
@@ -57,6 +58,10 @@ aus den Spieldaten: Rohnahrung 1,0, Haferbrei/Dörrfleisch/Kekse/Paste 2,0,
 Eingelegte Nahrung/Pastete/Fleischspieße 3,0. Ein Rezept, das aus 5 roh 10 verarbeitet
 macht, vervierfacht damit die Sättigung. Das ist der stärkste Hebel gegen das
 Kernproblem — und größer, als gemeinhin angenommen.
+
+Welche Kette sich bei *diesem* Lager lohnt, rechnet `food_advice` aus: jedes
+Rezept gegen den Bestand, mit Durchläufen, Engpass und gewonnener Reichweite
+in Sekunden. Diese Zahl nicht schätzen — sie steht da.
 
 **Ab Prestige 10 schlägt Feindseligkeitssenkung fast jeden Wirtschaftsbonus.**
 

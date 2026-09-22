@@ -159,10 +159,48 @@ def test_read_choice_sagt_klar_dass_phase_3_fehlt() -> None:
     assert "find_choice.py" in out["grund"]
 
 
+def test_food_advice_rechnet_gegen_den_lagerbestand(tmp_path: Path) -> None:
+    """Die Antwort auf "was soll ich bauen" -- aus Rezepten, Bestand, Verbrauch."""
+    save_dir = buendel(tmp_path / "save")
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    for en, save_id, fuelle in (("Meat", "[Food Raw] Meat", 1.0),
+                                ("Jerky", "[Food Processed] Jerky", 2.0)):
+        conn.execute("INSERT INTO resources (en, save_id, eatable, eating_fullness) "
+                     "VALUES (?,?,1,?)", (en, save_id, fuelle))
+    conn.execute(
+        "INSERT INTO recipes (id, building, inputs, stars, seconds, product, "
+        " product_amount) VALUES (1, 'Smokehouse', ?, 1, 60, 'Jerky', 10)",
+        (json.dumps([[{"menge": 5, "ware": "Meat"}]]),))
+    conn.commit()
+    conn.close()
+
+    out = tools_api.food_advice(runs, db, run_id="lauf")
+    assert out["verfuegbar"] is True
+    kette = out["ketten"][0]
+    assert kette["gebaeude"] == "Smokehouse"
+    assert kette["durchlaeufe"] == 8.4             # 42 Fleisch, 5 je Durchlauf
+    assert kette["faktor"] == 4.0
+    assert "Smokehouse" in out["empfehlung"]
+    # Ein Zustand reicht fuer den Rat, aber nicht fuer den Verbrauch.
+    assert out["verbrauch_je_spielzeitsekunde"] is None
+
+
+def test_food_advice_ohne_mitschrift_sagt_das(tmp_path: Path) -> None:
+    out = tools_api.food_advice(tmp_path / "leer", tmp_path / "kb.sqlite")
+    assert out["verfuegbar"] is False and "Mitschrift" in out["grund"]
+
+
 def test_werkzeugliste_entspricht_der_spec(tmp_path: Path) -> None:
     namen = {w["name"] for w in werkzeuge(tmp_path, tmp_path, tmp_path / "kb.sqlite")}
     assert {"get_state", "read_choice", "query_kb", "food_forecast",
             "log_event", "analyze_runs"} <= namen
+    # Ergaenzung ueber die Spec hinaus, mit demselben Leitprinzip: gerechnet
+    # wird hier, geurteilt im Modell.
+    assert "food_advice" in namen
 
 
 def test_jedes_werkzeug_hat_ein_schema(tmp_path: Path) -> None:

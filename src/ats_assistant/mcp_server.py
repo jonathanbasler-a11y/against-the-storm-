@@ -78,6 +78,14 @@ def werkzeuge(save_dir: Path, runs_dir: Path, db: Path) -> list[dict]:
                 runs_dir, jahreszeit_sekunden=jahreszeit_sekunden),
         },
         {
+            "name": "food_advice",
+            "description": ("Was gegen den Nahrungsmangel zu bauen wäre: jedes Rezept "
+                            "gegen den Lagerbestand gerechnet, nach gewonnener Sättigung "
+                            "sortiert. Ergänzung zur Werkzeugliste der Spec."),
+            "inputSchema": {"type": "object", "properties": {}},
+            "handler": lambda **kw: tools_api.food_advice(runs_dir, db),
+        },
+        {
             "name": "impatience_forecast",
             "description": ("Ungeduldsvorhersage. Das Modell ist an drei Messintervallen "
                             "geprüft: Zuwachs je Spielzeitsekunde, Abzug von 1,0 je "
