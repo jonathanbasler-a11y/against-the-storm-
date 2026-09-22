@@ -12,6 +12,8 @@ import queue
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from ats_assistant import rechner
 
 
@@ -93,7 +95,31 @@ def test_ein_fehlender_spielordner_laesst_den_takt_weiterlaufen(tmp_path: Path) 
     r._nachsehen()
 
 
-def test_der_rat_reicht_die_lage_weiter_ohne_bild(tmp_path: Path) -> None:
+# Der Wortlaut des SDK bei fehlender Anmeldung -- gemessen in anthropic 1.7.0.
+SDK_WORTLAUT = ('"Could not resolve authentication method. Expected one of '
+                'api_key, auth_token, or credentials to be set."')
+
+
+@pytest.fixture
+def ohne_anmeldung(monkeypatch):
+    """Kein Aufruf hinaus, auch wenn auf diesem Rechner ein Schlüssel liegt.
+
+    Vorher hing dieser Test daran, dass die Umgebung keine Anmeldung hat --
+    auf einem Rechner mit Schlüssel hätte er Geld gekostet.
+    """
+    class OhneSchluessel:
+        """So verhält sich das SDK gemessen: es wirft erst beim Senden."""
+
+        def __init__(self):
+            self.messages = self
+
+        def create(self, **kwargs):
+            raise TypeError(SDK_WORTLAUT)
+
+    monkeypatch.setattr(rechner.berater, "_client", lambda: (None, OhneSchluessel()))
+
+
+def test_der_rat_reicht_die_lage_weiter_ohne_bild(tmp_path: Path, ohne_anmeldung) -> None:
     ausgang: queue.Queue = queue.Queue()
     r = rechner.Rechner(tmp_path / "save", tmp_path / "runs",
                         tmp_path / "kb.sqlite", ausgang)
@@ -103,3 +129,66 @@ def test_der_rat_reicht_die_lage_weiter_ohne_bild(tmp_path: Path) -> None:
     assert antwort["ok"] is False
     assert antwort["auszug"]["siedlung"]["jahr"] == 3
     assert "bild" not in json.dumps(antwort["auszug"]).lower()
+
+
+def test_ohne_anmeldung_steht_der_deutsche_satz_da(tmp_path: Path, ohne_anmeldung) -> None:
+    """Am Spielrechner stand im Reiter „Rat" der englische Rohtext des SDK.
+
+    `zugang` ist der Schalter, an dem das Fenster entscheidet, ob es auf
+    „Lage kopieren" hinweist. Er stand auf True, weil das TypeError des SDK
+    an allen except-Zweigen vorbeilief.
+    """
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(tmp_path / "save", tmp_path / "runs",
+                        tmp_path / "kb.sqlite", ausgang)
+    antwort = r._rat({"zustand": {"jahr": 3}})
+    assert antwort["zugang"] is False
+    assert "ANTHROPIC_API_KEY" in antwort["text"]
+    assert "Could not resolve" not in antwort["text"]
+
+
+# --------------------------------------------------------------------------
+# Feindseligkeit
+#
+# Am Spielrechner stand im Feld: {'level': 3, 'points': 72, 'sources':
+# -- abgeschnitten am rechten Rand. Das Fenster suchte nach 'current', ein
+# Schlüssel aus der erfundenen Testvorlage; das Spiel schreibt 'level' und
+# 'points'. Die Vorlage war die Quelle des Irrtums, nicht das Fenster.
+# --------------------------------------------------------------------------
+
+
+def test_feindseligkeit_wird_zum_satz() -> None:
+    assert rechner.feindseligkeit({"level": 3, "points": 72,
+                                   "sources": {"a": 1}}) == "Stufe 3 · 72 Punkte"
+
+
+def test_feindseligkeit_ohne_stufe_zeigt_die_punkte() -> None:
+    assert rechner.feindseligkeit({"points": 180}) == "180 Punkte"
+
+
+def test_feindseligkeit_kennt_auch_die_alte_form() -> None:
+    assert rechner.feindseligkeit({"current": 180}) == "180 Punkte"
+
+
+def test_feindseligkeit_zeigt_nie_ein_dictionary() -> None:
+    """Was auch kommt -- eine geschweifte Klammer im Fenster ist ein Fehler."""
+    for wert in ({"unbekannt": 7}, {}, None, 4, "hoch"):
+        assert "{" not in rechner.feindseligkeit(wert)
+
+
+def test_der_handweg_fasst_den_bildschirm_nie_an(tmp_path: Path, monkeypatch) -> None:
+    """Am Spielrechner riet der Auswahlreiter zur Texterkennung, obwohl im
+    Feld getippter Text stand. Wer tippt, braucht keine."""
+    def nicht_anfassen(*args, **kwargs):
+        raise AssertionError("Der Handweg hat den Bildschirm angefasst.")
+
+    monkeypatch.setattr(rechner.tools_api.screen, "aufnehmen", nicht_anfassen)
+    monkeypatch.setattr(rechner.tools_api.screen, "erkenne", nicht_anfassen)
+
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(tmp_path / "save", tmp_path / "runs",
+                        tmp_path / "kb.sqlite", ausgang)
+    r._ausfuehren(rechner.Auftrag("auswahl", {"text": ["handelsverhandlungen"]}))
+    art, wert = ausgang.get_nowait()
+    assert art == "auswahl"
+    assert wert["quelle"] == "hand"

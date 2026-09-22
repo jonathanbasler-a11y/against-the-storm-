@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ats_assistant.save_reader import GameState
-from ats_assistant.watcher import Mitschreiber, run_id_fuer
+from ats_assistant.save_reader import GameState, read_state
+from ats_assistant.watcher import (Mitschreiber, lauf_kennung, mitschreiben,
+                                   run_id_fuer)
 
 
 def buendel(pfad: Path, spielzeit: float, jahr: int = 5, biom: str = "Coral Forest") -> Path:
@@ -88,3 +89,82 @@ def test_zwei_laeufe_am_selben_tag_bekommen_verschiedene_kennungen() -> None:
     erste = run_id_fuer(state)
     _t.sleep(1.05)
     assert run_id_fuer(state) != erste
+
+
+# --------------------------------------------------------------------------
+# Welche Mitschrift ein Zustand fortschreibt
+#
+# Gemessen am Spielrechner: 22 Dateien in `runs/`, jede mit einem einzigen
+# Eintrag, und `food_forecast` meldete dauerhaft "Es braucht zwei
+# Spielstände". Die Kennung enthielt die Spielzeit, also bekam jeder Aufruf
+# eine eigene Datei. Kein Test hat das gesehen, weil jeder seine Kennung
+# selbst mitgab.
+# --------------------------------------------------------------------------
+
+
+def test_lauf_kennung_schreibt_dieselbe_siedlung_fort(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    save = buendel(tmp_path / "save", 1000.0)
+    mit = Mitschreiber(save, runs)
+    mit.einmal_lesen(wait=False)
+
+    spaeter, _ = read_state(buendel(save, 1300.0), wait=False)
+    assert lauf_kennung(spaeter, runs) == mit.run_id
+
+
+def test_lauf_kennung_beginnt_neu_wenn_die_uhr_zurueckspringt(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    save = buendel(tmp_path / "save", 8000.0)
+    mit = Mitschreiber(save, runs)
+    mit.einmal_lesen(wait=False)
+
+    neue_siedlung, _ = read_state(buendel(save, 120.0), wait=False)
+    assert lauf_kennung(neue_siedlung, runs) != mit.run_id
+
+
+def test_lauf_kennung_beginnt_neu_in_einem_anderen_biom(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    save = buendel(tmp_path / "save", 1000.0, biom="Coral Forest")
+    mit = Mitschreiber(save, runs)
+    mit.einmal_lesen(wait=False)
+
+    anderswo, _ = read_state(buendel(save, 1100.0, biom="Marshlands"), wait=False)
+    assert lauf_kennung(anderswo, runs) != mit.run_id
+
+
+def test_lauf_kennung_ohne_mitschrift_legt_eine_an(tmp_path: Path) -> None:
+    zustand, _ = read_state(buendel(tmp_path / "save", 500.0), wait=False)
+    kennung = lauf_kennung(zustand, tmp_path / "runs")
+    assert "Coral_Forest" in kennung
+
+
+def test_ein_neu_gestarteter_mitschreiber_verlaengert_den_lauf(tmp_path: Path) -> None:
+    """Wer `ats-watch` neu startet, soll nicht in einer neuen Datei landen --
+    sonst fehlt der Vorhersage nach jedem Neustart wieder der zweite Stand."""
+    runs = tmp_path / "runs"
+    save = buendel(tmp_path / "save", 1000.0)
+    erster = Mitschreiber(save, runs)
+    erster.einmal_lesen(wait=False)
+
+    buendel(save, 1300.0)
+    zweiter = Mitschreiber(save, runs)
+    zweiter.einmal_lesen(wait=False)
+
+    assert zweiter.run_id == erster.run_id
+    assert len(list(runs.glob("*.jsonl"))) == 1
+
+
+def test_dieselbe_spielzeit_verlaengert_die_datei_nicht(tmp_path: Path) -> None:
+    """Zwei Aufrufe auf demselben Spielstand sind ein Zustand, kein zweiter --
+    sonst rechnet die Vorhersage eine Steigung über null Sekunden."""
+    runs = tmp_path / "runs"
+    save = buendel(tmp_path / "save", 1000.0)
+    zustand, _ = read_state(save, wait=False)
+
+    kennung, geschrieben = mitschreiben(zustand, runs)
+    assert geschrieben is True
+    kennung_2, nochmal = mitschreiben(zustand, runs)
+    assert (kennung_2, nochmal) == (kennung, False)
+
+    zeilen = (runs / f"{kennung}.jsonl").read_text(encoding="utf-8").strip().splitlines()
+    assert len(zeilen) == 1

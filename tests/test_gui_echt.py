@@ -40,7 +40,7 @@ BEISPIELE = {
     "zustand": {"jahr": 3, "biom": "Coastal Grove", "prestige": 13,
                 "bevoelkerung": 24, "reputation": 8.0, "reputation_ziel": 18,
                 "ungeduld": 4.0, "ungeduld_schwelle": 14,
-                "feindseligkeit": {"current": 180},
+                "feindseligkeit": {"level": 3, "points": 72},
                 "zeitpunkt": "2026-09-22T10:00:00+00:00"},
     "nahrung": {"reichweite_sekunden": 340.0, "warnung": "Nahrung reicht 340 s"},
     "ungeduld": {"sekunden_bis_verlust": 1200.0},
@@ -50,7 +50,8 @@ BEISPIELE = {
                            "einsatz": [{"menge": 40, "ware": "Meat"}],
                            "gewinn": 120.0, "faktor": 4.0, "engpass": "Meat",
                            "sekunden": 480.0, "reichweite_plus_sekunden": 1200}]},
-    "auswahl": {"verfuegbar": True, "angebot": [
+    "auswahl": {"verfuegbar": True, "quelle": "hand", "gelesene_zeilen": 2,
+                "angebot": [
         {"de": "Pilzführer", "en": "Fungal Guide", "guete": 0.98,
          "seltenheit": "Epic", "wirkung": "+1 Pilze je 25 Produktion"}]},
     "rat": {"ok": True, "text": "Nimm die Räucherei.", "fuss": "claude-opus-5"},
@@ -75,7 +76,9 @@ def test_nach_dem_anzeigen_steht_auch_etwas_da(app) -> None:
     kopf = app.kopf.cget("text")
     assert "Jahr 3" in kopf and "Coastal Grove" in kopf and "Prestige 13" in kopf
     assert app.felder["bevoelkerung"].cget("text") == "24"
-    assert app.felder["feindseligkeit"].cget("text") == "180"
+    # Nicht das rohe Dictionary: am Spielrechner stand hier
+    # {'level': 3, 'points': 72, 'sources': -- rechts abgeschnitten.
+    assert app.felder["feindseligkeit"].cget("text") == "Stufe 3 · 72 Punkte"
     assert "8.0 von 18" in app.felder["reputation"].cget("text")
     # 8 von 18 sind rund 44 Prozent.
     assert 43 < float(app.balken["reputation"]["value"]) < 46
@@ -159,3 +162,48 @@ def test_lage_kopieren_benutzt_die_echte_zwischenablage(app) -> None:
 
     auszug = json.loads(app.root.clipboard_get())
     assert auszug["siedlung"]["jahr"] == 2
+
+
+# --------------------------------------------------------------------------
+# Welcher Weg gelaufen ist
+#
+# Am Spielrechner stand im Auswahlreiter der Rat zu `pip install winsdk`,
+# während im Handfeld `handelsverhandlungen` stand. Es war der Bildweg --
+# nur stand das nirgends. Ein Feld, das nicht sagt, woher seine Zeilen
+# kommen, macht aus einem Bedienfehler einen Programmfehler.
+# --------------------------------------------------------------------------
+
+
+def _auswahlfeld(app) -> str:
+    app.root.update_idletasks()
+    return app.auswahl_text.get("1.0", "end")
+
+
+def test_der_handweg_steht_ueber_dem_ergebnis(app) -> None:
+    app._anzeigen("auswahl", BEISPIELE["auswahl"])
+    text = _auswahlfeld(app)
+    assert "Von Hand abgeglichen" in text
+    assert "Pilzführer" in text
+
+
+def test_der_bildweg_nennt_sich_auch_so(app) -> None:
+    app._anzeigen("auswahl", {"verfuegbar": False, "quelle": "/tmp/schirm.png",
+                              "gelesene_zeilen": 0, "grund": "Nichts erkannt."})
+    assert "Vom Bildschirmfoto gelesen" in _auswahlfeld(app)
+
+
+def test_gescheiterter_bildweg_weist_auf_das_handfeld(app) -> None:
+    """Der Fall vom Spielrechner: Text im Feld, gelaufen ist der Bildweg."""
+    app.hand.insert(0, "handelsverhandlungen")
+    app._anzeigen("auswahl", {
+        "verfuegbar": False, "quelle": "/tmp/schirm.png", "gelesene_zeilen": 0,
+        "grund": "Fuer die Texterkennung: pip install winsdk."})
+    text = _auswahlfeld(app)
+    assert "Abgleichen" in text
+
+
+def test_der_handweg_weist_nicht_auf_sich_selbst(app) -> None:
+    app.hand.insert(0, "handelsverhandlungen")
+    app._anzeigen("auswahl", {"verfuegbar": False, "quelle": "hand",
+                              "gelesene_zeilen": 1, "grund": "Nichts getroffen."})
+    assert "Abgleichen" not in _auswahlfeld(app)

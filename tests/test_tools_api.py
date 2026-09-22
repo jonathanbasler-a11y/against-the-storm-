@@ -15,7 +15,7 @@ def buendel(tmp_path: Path) -> Path:
     tmp_path.mkdir(parents=True, exist_ok=True)
     save = {
         "time": 8746.9, "year": 13, "season": 0,
-        "hostility": {"current": 180},
+        "hostility": {"level": 3, "points": 72, "sources": {}},
         "reputation": 18.0, "reputationToWin": 18,
         "reputationPenalty": 6.6, "reputationPenaltyToLoose": 14,
         "reputationPenaltyPerSec": 0.00425,
@@ -192,10 +192,39 @@ def test_read_choice_bildet_gelesene_titel_auf_belegte_namen_ab(tmp_path: Path) 
 
 
 def test_read_choice_raet_nicht_bei_unlesbarem(tmp_path: Path) -> None:
+    """Von Hand getippt und nichts getroffen -- dann sagt das auch der Grund.
+
+    Am Spielrechner stand im Feld `handelsverhandlungen`, und die Ausgabe
+    riet zu `pip install winsdk`. Die Frage nach dem Bildschirmfoto passt
+    zum Bildweg; wer tippt, hat keines gemacht.
+    """
     out = tools_api.read_choice(text=["~~~~~", ""], db=tmp_path / "leer.sqlite")
     assert out["verfuegbar"] is False
     assert out["angebot"] == []
-    assert "Auswahlbildschirm offen" in out["grund"]
+    assert out["quelle"] == "hand"
+    assert "eingetippt" in out["grund"]
+    assert "Bild" not in out["grund"]
+
+
+def test_read_choice_nimmt_eine_zeichenkette_als_eine_zeile(tmp_path: Path) -> None:
+    """Sonst wird aus einem Namen eine Liste von Buchstaben.
+
+    Das Fenster übergibt immer eine Liste, der MCP-Server und die
+    Kommandozeile nicht zwingend.
+    """
+    out = tools_api.read_choice(text="Pilzführer", db=tmp_path / "leer.sqlite")
+    assert out["gelesene_zeilen"] == 1
+
+
+def test_read_choice_nennt_das_bild_als_quelle(tmp_path: Path, monkeypatch) -> None:
+    """Welcher Weg gelaufen ist, muss am Ergebnis stehen -- in beiden Fällen."""
+    bild = tmp_path / "schirm.png"
+    bild.write_bytes(b"kein echtes PNG")
+    monkeypatch.setattr(tools_api.screen, "erkenne", lambda pfad, **kw: [])
+    monkeypatch.setattr(tools_api.screen, "sortiere_nach_karten", lambda zeilen: [])
+    out = tools_api.read_choice(bild=bild, db=tmp_path / "leer.sqlite")
+    assert out["quelle"] == str(bild)
+    assert "Bild" in out["grund"]
 
 
 def test_food_advice_rechnet_gegen_den_lagerbestand(tmp_path: Path) -> None:
@@ -270,3 +299,52 @@ def test_get_state_meldet_ein_halbes_buendel(tmp_path: Path) -> None:
     assert out["verfuegbar"] is True            # Save.save reicht fuer den Kern
     assert out["fehlende_dateien"] == ["MetaSave.save"]
     assert out["jahr"] == 13
+
+
+def test_zwei_aufrufe_landen_in_einer_mitschrift(tmp_path: Path) -> None:
+    """Der Fehler vom Spielrechner: 22 Dateien mit je einem Eintrag.
+
+    `get_state` baute die Kennung aus der Spielzeit, also bekam jeder
+    Aufruf eine eigene Datei -- und `food_forecast`, das zwei Stände
+    braucht, blieb stumm, solange das Fenster lief.
+    """
+    save_dir = buendel(tmp_path / "save")
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, auf_ruhe_warten=False)
+
+    inhalt = json.loads((save_dir / "Save.save").read_text(encoding="utf-8"))
+    inhalt["time"] = 9046.9
+    (save_dir / "Save.save").write_text(json.dumps(inhalt), encoding="utf-8")
+    zweiter = tools_api.get_state(save_dir, runs, auf_ruhe_warten=False)
+
+    dateien = sorted(runs.glob("*.jsonl"))
+    assert len(dateien) == 1, [p.name for p in dateien]
+    assert len(dateien[0].read_text(encoding="utf-8").strip().splitlines()) == 2
+    assert zweiter["mitschrift"] == dateien[0].stem
+
+
+def test_zwei_aufrufe_auf_demselben_stand_verlaengern_nichts(tmp_path: Path) -> None:
+    save_dir = buendel(tmp_path / "save")
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, auf_ruhe_warten=False)
+    tools_api.get_state(save_dir, runs, auf_ruhe_warten=False)
+    dateien = sorted(runs.glob("*.jsonl"))
+    assert len(dateien) == 1
+    assert len(dateien[0].read_text(encoding="utf-8").strip().splitlines()) == 1
+
+
+def test_nach_zwei_staenden_sagt_die_nahrungsvorhersage_etwas(tmp_path: Path) -> None:
+    """Der Weg, der beim Nutzer tot war: lesen, lesen, vorhersagen."""
+    save_dir = buendel(tmp_path / "save")
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, auf_ruhe_warten=False)
+
+    inhalt = json.loads((save_dir / "Save.save").read_text(encoding="utf-8"))
+    inhalt["time"] = 9046.9
+    inhalt["trends"]["goodsCategoriesTrends"]["Food"] = [97.0 - i * 0.1 for i in range(180)]
+    (save_dir / "Save.save").write_text(json.dumps(inhalt), encoding="utf-8")
+    tools_api.get_state(save_dir, runs, auf_ruhe_warten=False)
+
+    out = tools_api.food_forecast(runs)
+    assert out.get("grund") is None, out.get("grund")
+    assert out["verfuegbar"] is True

@@ -8,6 +8,7 @@ wird.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -165,3 +166,51 @@ def test_das_modul_laesst_sich_ohne_das_sdk_einlesen(monkeypatch) -> None:
     # Und ohne Client kommt ein Satz, der sagt, was zu tun ist.
     with pytest.raises(berater.KeinZugang, match="pip install anthropic"):
         berater.frage({"siedlung": {}}, regeln="x")
+
+
+# --------------------------------------------------------------------------
+# Der Fehler, der am Spielrechner im Reiter "Rat" stand
+#
+# Das SDK wirft für eine fehlende Anmeldung kein AuthenticationError,
+# sondern ein schlichtes TypeError -- nachgesehen in anthropic 1.7.0,
+# _client.py, geworfen aus _validate_headers beim Bauen der Kopfzeilen.
+# Es lief deshalb an allen vier except-Zweigen vorbei, und im Fenster stand
+# der englische Rohtext statt des Satzes, der weiterhilft.
+# --------------------------------------------------------------------------
+
+SDK_WORTLAUT = ('"Could not resolve authentication method. Expected one of '
+                'api_key, auth_token, or credentials to be set. Or for one of '
+                'the `X-Api-Key` or `Authorization` headers to be explicitly '
+                'omitted"')
+
+
+def test_anmeldefehler_des_sdk_wird_zu_keinzugang() -> None:
+    with pytest.raises(berater.KeinZugang, match="ANTHROPIC_API_KEY"):
+        berater.frage({"siedlung": {}},
+                      client=FalscherClient(fehler=TypeError(SDK_WORTLAUT)), regeln="x")
+
+
+def test_ein_anderer_typfehler_bleibt_ein_typfehler() -> None:
+    """Sonst sähe ein falsches Schlüsselwort wie ein fehlender Schlüssel aus.
+
+    `budget_tokens` ist genau so schon einmal danebengegangen; als
+    Anmeldeproblem verkleidet wäre es nicht zu finden gewesen.
+    """
+    fehler = TypeError("create() got an unexpected keyword argument 'output_config'")
+    with pytest.raises(TypeError, match="output_config"):
+        berater.frage({"siedlung": {}}, client=FalscherClient(fehler=fehler), regeln="x")
+
+
+def test_client_ohne_anmeldung_wirft_keinzugang(monkeypatch) -> None:
+    """Ältere SDK-Fassungen prüfen schon beim Anlegen, neuere erst beim Senden."""
+    import types as _types
+
+    modul = _types.ModuleType("anthropic")
+
+    def Anthropic(*args, **kwargs):
+        raise TypeError(SDK_WORTLAUT)
+
+    modul.Anthropic = Anthropic
+    monkeypatch.setitem(sys.modules, "anthropic", modul)
+    with pytest.raises(berater.KeinZugang, match="ant auth login"):
+        berater._client()

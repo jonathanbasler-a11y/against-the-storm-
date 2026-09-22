@@ -112,7 +112,7 @@ def test_jede_nachrichtenart_wird_angezeigt(gui, tmp_path: Path) -> None:
         "zustand": {"jahr": 3, "biom": "Coastal Grove", "prestige": 13,
                     "bevoelkerung": 24, "reputation": 8.0, "reputation_ziel": 18,
                     "ungeduld": 4.0, "ungeduld_schwelle": 14,
-                    "feindseligkeit": {"current": 180},
+                    "feindseligkeit": {"level": 3, "points": 72},
                     "zeitpunkt": "2026-09-22T10:00:00+00:00"},
         "nahrung": {"reichweite_sekunden": 340.0, "warnung": "reicht nicht"},
         "ungeduld": {"sekunden_bis_verlust": 1200.0},

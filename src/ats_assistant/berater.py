@@ -50,6 +50,33 @@ class KeinZugang(RuntimeError):
     """Keine Anmeldung gefunden -- kein Fehler, nur ein fehlender Schlüssel."""
 
 
+# Ein Satz, zwei Stellen. Er steht hier, damit beide woertlich dasselbe sagen.
+HINWEIS_ANMELDUNG = (
+    "Keine gültige Anmeldung. Entweder ANTHROPIC_API_KEY setzen "
+    "(`setx ANTHROPIC_API_KEY ...`, danach neues Fenster) oder "
+    "`ant auth login`.")
+
+
+def _ist_anmeldefehler(exc: BaseException) -> bool:
+    """Ob dieses TypeError in Wahrheit eine fehlende Anmeldung ist.
+
+    Gemessen in anthropic 1.7.0: fuer eine fehlende Anmeldung wirft das SDK
+    kein `AuthenticationError`, sondern ein schlichtes `TypeError` aus
+    `_validate_headers` -- und zwar beim Bauen der Kopfzeilen, also mitten
+    in `messages.create()`. Am Spielrechner stand dessen englischer Rohtext
+    im Fenster.
+
+    Absichtlich eng: ein `TypeError` ueber ein falsches Schluesselwort --
+    `budget_tokens` ging genau so schon einmal daneben -- muss ein
+    `TypeError` bleiben. Als Anmeldeproblem verkleidet waere es nicht zu
+    finden.
+    """
+    if not isinstance(exc, TypeError):
+        return False
+    text = str(exc).lower()
+    return "authentication" in text and "api_key" in text
+
+
 @dataclass
 class Antwort:
     text: str
@@ -175,7 +202,13 @@ def _client():
         raise KeinZugang(
             "Das Paket `anthropic` fehlt. `pip install anthropic` -- alles "
             "andere im Fenster läuft ohne es weiter.") from exc
-    return anthropic, anthropic.Anthropic()
+    try:
+        return anthropic, anthropic.Anthropic()
+    except TypeError as exc:
+        # Aeltere SDK-Fassungen pruefen schon hier, neuere erst beim Senden.
+        if not _ist_anmeldefehler(exc):
+            raise
+        raise KeinZugang(HINWEIS_ANMELDUNG) from exc
 
 
 def frage(auszug: dict, modell: str = MODELL, wahl_steht_an: bool = False,
@@ -206,10 +239,11 @@ def frage(auszug: dict, modell: str = MODELL, wahl_steht_an: bool = False,
                 auszug, ensure_ascii=False, indent=1, default=str)}],
         )
     except Anmeldung as exc:
-        raise KeinZugang(
-            "Keine gültige Anmeldung. Entweder ANTHROPIC_API_KEY setzen "
-            "(`setx ANTHROPIC_API_KEY ...`, danach neues Fenster) oder "
-            "`ant auth login`.") from exc
+        raise KeinZugang(HINWEIS_ANMELDUNG) from exc
+    except TypeError as exc:
+        if not _ist_anmeldefehler(exc):
+            raise
+        raise KeinZugang(HINWEIS_ANMELDUNG) from exc
     except ZuViel as exc:
         wartezeit = getattr(getattr(exc, "response", None), "headers", {})
         sekunden = (wartezeit or {}).get("retry-after", "60")

@@ -28,7 +28,8 @@ from tkinter import ttk
 from . import berater
 from .mcp_server import aufloesen
 from .orte import finde_spielordner
-from .rechner import ABHOLEN_MS, Rechner, alter as _alter, minuten as _minuten
+from .rechner import (ABHOLEN_MS, Rechner, alter as _alter,
+                      feindseligkeit as _feindseligkeit, minuten as _minuten)
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +37,21 @@ log = logging.getLogger(__name__)
 # --------------------------------------------------------------------------
 # Das Fenster
 # --------------------------------------------------------------------------
+
+
+def _herkunft(a: dict) -> str:
+    """Welcher Weg diese Zeilen geliefert hat.
+
+    Am Spielrechner stand im Auswahlreiter der Rat zur Texterkennung,
+    während im Handfeld getippter Text stand -- und nirgends stand, welcher
+    Weg überhaupt gelaufen war. Seitdem steht es in beiden Fällen oben.
+    """
+    quelle = a.get("quelle")
+    zeilen = a.get("gelesene_zeilen")
+    woher = ("Von Hand abgeglichen" if quelle == "hand"
+             else "Vom Bildschirmfoto gelesen" if quelle
+             else "Nichts gelesen")
+    return f"{woher} – {zeilen} Zeile(n)" if zeilen else woher
 
 
 class App:
@@ -290,10 +306,8 @@ class App:
             text=f"Jahr {z.get('jahr', '?')} · {z.get('biom') or '?'} · "
                  f"Prestige {z.get('prestige', '?')} · {_alter(z.get('zeitpunkt'))}")
         self.felder["bevoelkerung"].configure(text=str(z.get("bevoelkerung") or "–"))
-        feind = z.get("feindseligkeit")
-        if isinstance(feind, dict):
-            feind = feind.get("current", feind)
-        self.felder["feindseligkeit"].configure(text=str(feind or "–"))
+        self.felder["feindseligkeit"].configure(
+            text=_feindseligkeit(z.get("feindseligkeit")))
 
         for schluessel, jetzt, ziel in (
                 ("reputation", z.get("reputation"), z.get("reputation_ziel")),
@@ -328,14 +342,21 @@ class App:
                 _minuten(k.get("reichweite_plus_sekunden"))))
 
     def _zeige_auswahl(self, a: dict) -> None:
+        zeilen = [_herkunft(a), ""]
         if not a.get("verfuegbar"):
-            zeilen = [a.get("grund") or a.get("fehler", "Nichts erkannt.")]
+            zeilen.append(a.get("grund") or a.get("fehler", "Nichts erkannt."))
             for u in a.get("unklar", []):
                 nahe = ", ".join(f"{k['de']} ({k['guete']})" for k in u["kandidaten"])
                 zeilen.append(f"  gelesen {u['gelesen']!r} → {nahe}")
+            # Der Bildweg ist gescheitert, während im Handfeld etwas steht.
+            # Der Knopf bleibt, was er heißt -- aber es darf nicht daran
+            # liegen, dass niemand den zweiten Weg sieht.
+            if a.get("quelle") != "hand" and self.hand.get().strip():
+                zeilen.append("")
+                zeilen.append("Im Feld unten steht Text -- „Abgleichen“ nimmt ihn, "
+                              "ganz ohne Texterkennung.")
             self._schreiben(self.auswahl_text, "\n".join(zeilen))
             return
-        zeilen = []
         for eintrag in a["angebot"]:
             kopf = f"{eintrag['de']}  ({eintrag['en']}"
             if eintrag.get("seltenheit"):
