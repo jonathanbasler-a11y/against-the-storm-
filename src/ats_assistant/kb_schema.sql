@@ -66,6 +66,8 @@ CREATE TABLE IF NOT EXISTS buildings (
     cost         TEXT,          -- JSON: {"Planks": 5, ...}
     specialization TEXT,
     worker_slots INTEGER,
+    unlock       TEXT,          -- "(always available)", "Unlocked on Level 3"
+    category     TEXT,          -- die Ueberschrift, unter der der Entwurf steht
     source_page  TEXT REFERENCES source_pages(title)
 );
 

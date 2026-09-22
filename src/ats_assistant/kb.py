@@ -578,11 +578,98 @@ def parse_grad(text: str | None) -> tuple[int | None, float | None]:
     return sterne, sekunden
 
 
-def import_recipes(conn: sqlite3.Connection, zeilen: list[dict],
-                   source_page: str | None = None) -> int:
+def _ist_gebaeude(conn: sqlite3.Connection, name: str) -> bool:
+    """Kennt die Wissensbasis diesen Namen als Gebaeude?
+
+    Seit die Namen aus der Lokalisierung kommen, stehen 226 Gebaeudenamen
+    belegt in name_map. Damit laesst sich pruefen, ob eine Seite ein Gebaeude
+    ist -- und nur dann darf ihr Titel als Gebaeude eines Rezepts gelten.
+    """
+    if not name:
+        return False
+    if conn.execute("SELECT 1 FROM buildings WHERE en = ?", (name,)).fetchone():
+        return True
+    return bool(conn.execute(
+        "SELECT 1 FROM name_map WHERE kind = 'building' AND (en = ? OR en_id = ?)",
+        (name, _normalform(name))).fetchone())
+
+
+def import_prestige(conn: sqlite3.Connection, zeilen: list[dict],
+                    source_page: str | None = None) -> int:
+    """Die Prestigestufen von der Seite Difficulty.
+
+    Der Tabellenkopf heisst dort zweimal "Description": die erste Spalte ist
+    die Stufe, die zweite der Satz dazu. Der Leser des HTML haengt an den
+    zweiten ein _2, und genau darueber wird sie geholt.
+    """
     n = 0
     for z in zeilen:
-        gebaeude = _spalte(z, "Building")
+        stufe = _zahl(_spalte(z, "Description", "Level", "Prestige"))
+        modifikator = _spalte(z, "Modifier")
+        if stufe is None or not modifikator:
+            continue
+        wirkung = _spalte(z, "Description_2", "Effect") or ""
+        erklaerung = _spalte(z, "Explanation") or ""
+        if erklaerung and erklaerung not in wirkung:
+            wirkung = f"{wirkung} {erklaerung}".strip()
+        conn.execute(
+            "INSERT OR REPLACE INTO prestige (level, modifier_en, effect, source_page) "
+            "VALUES (?,?,?,?)",
+            (int(stufe), modifikator, wirkung or None, source_page),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def import_blueprints(conn: sqlite3.Connection, zeilen: list[dict],
+                      kategorie: str | None = None,
+                      source_page: str | None = None) -> int:
+    """Die Entwurfsliste: welches Gebaeude ab welcher Stufe zur Wahl steht.
+
+    Das ist die halbe Antwort auf die zweite Frage der Spec. Ein Entwurf, den
+    es auf dieser Stufe noch gar nicht gibt, kann nicht im Angebot stehen --
+    und was immer verfuegbar ist, ist nie eine Ueberraschung.
+
+    Ergaenzend, nicht ersetzend: die Baukosten kommen aus dem Wikitext und
+    duerfen hier nicht verlorengehen.
+    """
+    n = 0
+    for z in zeilen:
+        name = _spalte(z, "Blueprint", "Building", "Name")
+        if not name or name.lower() in ("blueprint", "building", "name"):
+            continue
+        freischaltung = _spalte(z, "Unlock or Upgrade", "Unlock", "Upgrade")
+        conn.execute(
+            "INSERT INTO buildings (en, unlock, category, source_page) VALUES (?,?,?,?) "
+            "ON CONFLICT(en) DO UPDATE SET "
+            "  unlock = COALESCE(excluded.unlock, buildings.unlock), "
+            "  category = COALESCE(excluded.category, buildings.category), "
+            "  source_page = COALESCE(buildings.source_page, excluded.source_page)",
+            (name, freischaltung, kategorie, source_page),
+        )
+        n += 1
+    conn.commit()
+    return n
+
+
+def import_recipes(conn: sqlite3.Connection, zeilen: list[dict],
+                   source_page: str | None = None,
+                   gebaeude_default: str | None = None) -> int:
+    """Rezepte uebernehmen.
+
+    Auf einer Gebaeudeseite steht keine Spalte "Building" -- das Gebaeude ist
+    die Seite. Ohne diesen Rueckgriff haetten 193 von 193 Rezepten kein
+    Gebaeude, und `food_advice` koennte sagen, was zu kochen waere, aber
+    nicht worin. Gegriffen wird nur, wenn der Seitentitel wirklich ein
+    Gebaeude ist; sonst stuenden Rezepte unter Biomnamen.
+    """
+    rueckgriff = (gebaeude_default
+                  if gebaeude_default and _ist_gebaeude(conn, gebaeude_default)
+                  else None)
+    n = 0
+    for z in zeilen:
+        gebaeude = _spalte(z, "Building") or rueckgriff
         produkt = _spalte(z, "Product")
         if not produkt or (gebaeude or "").lower() == "building":
             continue

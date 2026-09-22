@@ -195,3 +195,68 @@ def test_index_auf_neuer_spalte_scheitert_nicht(tmp_path: Path) -> None:
     indizes = {r["name"] for r in conn.execute("PRAGMA index_list(recipes)")}
     assert "recipes_product" in indizes
     conn.close()
+
+
+# --------------------------------------------------------------------------
+# Tabellen von der Seite Difficulty und der Seite Buildings
+#
+# Die Zeilen unten sind woertlich aus dem Bericht vom 22.09.2026 uebernommen
+# (diagnostics/wiki-html-20260922-065530.txt). Geschrieben wird gegen Belege,
+# nicht gegen vermutete Spaltennamen.
+# --------------------------------------------------------------------------
+
+
+def test_prestige_kommt_von_der_seite_difficulty(tmp_path: Path) -> None:
+    """Der Kopf heisst dort zweimal "Description" -- Stufe und Satz."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    n = kb.import_prestige(conn, [
+        {"Description": "1", "Description_2": "More Reputation required to win.",
+         "Modifier": "Prestigious Expedition",
+         "Explanation": "Only the best Viceroys can embark on a Prestigious Expedition."},
+        {"Description": "2", "Description_2": "The Storm Season lasts longer.",
+         "Modifier": "Crumbling Seal", "Explanation": "One of the seals is loosening."},
+        {"Description": "Level", "Modifier": "Modifier"},      # Kopfzeile
+    ], source_page="Difficulty")
+    assert n == 2
+    zeile = conn.execute("SELECT * FROM prestige WHERE level = 2").fetchone()
+    assert zeile["modifier_en"] == "Crumbling Seal"
+    assert zeile["effect"].startswith("The Storm Season lasts longer.")
+    assert "loosening" in zeile["effect"]                       # Erklaerung haengt dran
+    conn.close()
+
+
+def test_entwuerfe_ergaenzen_die_baukosten_statt_sie_zu_loeschen(tmp_path: Path) -> None:
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    conn.execute("INSERT INTO buildings (en, cost) VALUES ('Smokehouse', '{\"Planks\": 5}')")
+    conn.commit()
+    n = kb.import_blueprints(conn, [
+        {"Blueprint": "Smokehouse", "Unlock or Upgrade": "Unlocked on Level 3"},
+        {"Blueprint": "Woodcutters' Camp", "Unlock or Upgrade": "(always available)"},
+        {"Blueprint": "Blueprint", "Unlock or Upgrade": "Unlock or Upgrade"},
+    ], source_page="Buildings")
+    assert n == 2
+    zeile = conn.execute("SELECT * FROM buildings WHERE en = 'Smokehouse'").fetchone()
+    assert zeile["unlock"] == "Unlocked on Level 3"
+    assert zeile["cost"] == '{"Planks": 5}'                     # nicht verloren
+    conn.close()
+
+
+def test_rezept_ohne_gebaeudespalte_bekommt_die_seite(tmp_path: Path) -> None:
+    """193 Rezepte standen ohne Gebaeude da -- sie stehen auf Gebaeudeseiten."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    kb.seed_name_map(conn, schreibe_csv(tmp_path / "namen.csv", [
+        {"en": "Smokehouse", "de": "Räucherei", "kind": "building",
+         "confidence": "localization"},
+    ]))
+    zeilen = [{"Ingredient #1": "5 Meat", "Product": "Jerky", "#": "10",
+               "Grade": "★★ 2:06"}]
+    assert kb.import_recipes(conn, zeilen, source_page="Smokehouse",
+                             gebaeude_default="Smokehouse") == 1
+    assert conn.execute("SELECT building FROM recipes").fetchone()[0] == "Smokehouse"
+
+    # Eine Seite, die kein Gebaeude ist, darf nicht als eines durchgehen.
+    conn.execute("DELETE FROM recipes")
+    kb.import_recipes(conn, zeilen, source_page="Coastal Grove",
+                      gebaeude_default="Coastal Grove")
+    assert conn.execute("SELECT building FROM recipes").fetchone()[0] is None
+    conn.close()

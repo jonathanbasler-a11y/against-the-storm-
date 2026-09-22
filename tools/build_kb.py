@@ -431,7 +431,8 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
         # Diese Tabellen stammen vollstaendig aus dem Wiki. Ohne Leeren
         # sammeln sich bei jedem Lauf Altlasten an -- nach der Korrektur der
         # doppelten Namen standen "Bats" und "Bats Bats" nebeneinander.
-        for tabelle in ("species", "difficulty", "cornerstones", "glade_events", "recipes"):
+        for tabelle in ("species", "difficulty", "cornerstones", "glade_events",
+                        "recipes", "prestige"):
             conn.execute(f"DELETE FROM {tabelle}")
         conn.commit()
         # Spezies: zwei Seiten mit teils verschiedenen Spalten, die sich ergaenzen.
@@ -459,6 +460,25 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
                 if _hat(t.kopf, "difficulty", "hostility multiplier"):
                     n = kb.import_difficulty(conn, t.als_dicts, source_page=pfad.stem)
                     meldungen.append(f"difficulty: {n} Zeilen aus {pfad.stem}")
+                # Die Prestigestufen stehen auf derselben Seite, unter einem
+                # Kopf, der zweimal "Description" heisst: Stufe, Satz,
+                # Modifikatorname, Erklaerung.
+                elif _hat(t.kopf, "modifier", "explanation"):
+                    n = kb.import_prestige(conn, t.als_dicts, source_page=pfad.stem)
+                    if n:
+                        meldungen.append(f"prestige: {n} Stufen aus {pfad.stem}")
+
+        # Die Entwurfslisten: welches Gebaeude ab welcher Stufe zur Wahl
+        # steht. Sechzehn Tabellen, je eine Kategorie.
+        pfad = nach_titel.get("buildings")
+        if pfad:
+            entwuerfe = 0
+            for t in tabellen_aus_datei(pfad):
+                if _hat(t.kopf, "blueprint", "unlock"):
+                    entwuerfe += kb.import_blueprints(conn, t.als_dicts,
+                                                      source_page=pfad.stem)
+            if entwuerfe:
+                meldungen.append(f"buildings: {entwuerfe} Entwuerfe aus {pfad.stem}")
 
         # Erst die grosse Liste (Name, Seltenheit, Text), dann die drei
         # Herkunftslisten -- die tragen nur die Herkunft nach.
@@ -498,8 +518,11 @@ def _schreiben(nach_titel: dict[str, Path], db: str) -> list[str]:
             gefunden_hier = 0
             for t in tabellen:
                 if _hat(t.kopf, "ingredient", "product"):
-                    gefunden_hier += kb.import_recipes(conn, t.als_dicts,
-                                                       source_page=rezeptpfad.stem)
+                    # Auf einer Gebaeudeseite steht keine Spalte "Building" --
+                    # das Gebaeude ist die Seite.
+                    gefunden_hier += kb.import_recipes(
+                        conn, t.als_dicts, source_page=rezeptpfad.stem,
+                        gebaeude_default=rezeptpfad.stem)
             if gefunden_hier:
                 rezepte += gefunden_hier
                 seiten_mit_rezepten += 1
