@@ -51,6 +51,10 @@ class Vorschlag:
     gebaeude_de: str | None = None
     produkt_de: str | None = None
     verbrauch: float | None = None   # Saettigung je Spielzeitsekunde
+    # Was die Gebaeudeseite behauptet hat. Weicht es von `gebaeude` ab, hat
+    # die Produktionstabelle widersprochen -- und die gilt, denn sie fuehrt
+    # die Zuordnung ausdruecklich statt aus dem Seitentitel geraten.
+    gebaeude_laut_seite: str | None = None
 
     @property
     def gewinn(self) -> float:
@@ -113,6 +117,26 @@ def _bestand_auf_waren(conn: sqlite3.Connection,
     return out
 
 
+def _produktionsgebaeude(conn: sqlite3.Connection) -> dict[str, tuple[str, int | None]]:
+    """Produkt -> das Gebaeude mit dem hoechsten Sterngrad.
+
+    Die Rezepte von den Gebaeudeseiten tragen die Mengen, aber ihr Gebaeude
+    ist der Seitentitel -- das ergab "Doerrfleisch in der Makellosen
+    Schmelzerei". Die Seite "List of Resources" fuehrt die Zuordnung
+    ausdruecklich, also gilt sie. Drei Sterne heisst: beste Ausbeute.
+    """
+    out: dict[str, tuple[str, int | None]] = {}
+    try:
+        zeilen = conn.execute(
+            "SELECT product, building, stars FROM production "
+            "ORDER BY stars DESC NULLS LAST, building").fetchall()
+    except sqlite3.DatabaseError:
+        return out
+    for z in zeilen:
+        out.setdefault(z["product"], (z["building"], z["stars"]))
+    return out
+
+
 def _deutsch(conn: sqlite3.Connection) -> dict[str, str]:
     return {
         r["en"]: r["de"]
@@ -138,6 +162,7 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
     }
     lager = _bestand_auf_waren(conn, bestand)
     namen = _deutsch(conn)
+    zustaendig = _produktionsgebaeude(conn)
     verbrauch = abs(verbrauch_pro_sekunde) if verbrauch_pro_sekunde else None
 
     out: list[Vorschlag] = []
@@ -173,19 +198,35 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
         engpass = min(zutaten, key=lambda z: z.zyklen).ware
         raus_je_zyklus = je_stueck * float(r["product_amount"] or 1.0)
 
+        belegt, grad = zustaendig.get(r["product"], (None, None))
+        gebaeude = belegt or r["building"]
         vorschlag = Vorschlag(
-            gebaeude=r["building"], produkt=r["product"], zutaten=zutaten,
+            gebaeude=gebaeude, produkt=r["product"], zutaten=zutaten,
             zyklen=zyklen,
             saettigung_rein=rein_je_zyklus * zyklen,
             saettigung_raus=raus_je_zyklus * zyklen,
-            sterne=r["stars"], sekunden=r["seconds"], engpass=engpass,
-            gebaeude_de=namen.get(r["building"] or ""),
+            sterne=grad if grad is not None else r["stars"],
+            sekunden=r["seconds"], engpass=engpass,
+            gebaeude_de=namen.get(gebaeude or ""),
             produkt_de=namen.get(r["product"]), verbrauch=verbrauch,
+            gebaeude_laut_seite=(r["building"]
+                                 if r["building"] and r["building"] != gebaeude
+                                 else None),
         )
         if vorschlag.gewinn >= mindestgewinn:
             out.append(vorschlag)
 
-    out.sort(key=lambda v: (-v.gewinn, v.dauer or 0.0, v.produkt))
+    # Dasselbe Rezept steht auf mehreren Gebaeudeseiten. Nach der Umstellung
+    # auf die Produktionstabelle stuende es sonst mehrfach im Rat.
+    einmalig: dict[tuple, Vorschlag] = {}
+    for v in out:
+        schluessel = (v.produkt, v.gebaeude,
+                      tuple((z.menge, z.ware) for z in v.zutaten))
+        vorhanden = einmalig.get(schluessel)
+        if vorhanden is None or (v.sekunden or 0) < (vorhanden.sekunden or 0):
+            einmalig[schluessel] = v
+    out = sorted(einmalig.values(),
+                 key=lambda v: (-v.gewinn, v.dauer or 0.0, v.produkt))
     return out
 
 

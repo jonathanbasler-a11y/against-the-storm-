@@ -721,8 +721,16 @@ def food_amplification(conn: sqlite3.Connection) -> list[dict]:
             eingesetzt.append(f"{zutat['menge']:.0f} {zutat['ware']}")
         if rein <= 0:
             continue
+        belegt = conn.execute(
+            "SELECT building, stars FROM production WHERE product = ? "
+            "ORDER BY stars DESC, building LIMIT 1", (r["product"],)).fetchone()
         out.append({
-            "rezept": r["product"], "gebaeude": r["building"],
+            "rezept": r["product"],
+            # Die Produktionstabelle nennt das Gebaeude ausdruecklich; der
+            # Seitentitel war nur ein Rueckgriff.
+            "gebaeude": (belegt["building"] if belegt else r["building"]),
+            "gebaeude_laut_seite": r["building"],
+            "belegt": bool(belegt),
             "eingesetzt": " + ".join(eingesetzt),
             "saettigung_rein": rein, "saettigung_raus": raus,
             "faktor": round(raus / rein, 2),

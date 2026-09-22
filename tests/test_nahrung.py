@@ -140,3 +140,32 @@ def test_deutsche_namen_kommen_aus_der_namenstabelle(tmp_path: Path) -> None:
     r = nahrung.rat(conn, {"[Food Raw] Meat": 20})
     assert "Räucherei" in r.empfehlung and "Dörrfleisch" in r.empfehlung
     conn.close()
+
+
+def test_produktionstabelle_schlaegt_den_seitentitel(tmp_path: Path) -> None:
+    """"Dörrfleisch in der Makellosen Schmelzerei" war der Seitentitel."""
+    conn = wissensbasis(tmp_path)
+    conn.execute("UPDATE recipes SET building = 'Flawless Smelter' WHERE product = 'Jerky'")
+    conn.execute("INSERT INTO production (product, building, stars) "
+                 "VALUES ('Jerky', 'Smokehouse', 3), ('Jerky', 'Butcher', 1)")
+    conn.commit()
+    v = [x for x in nahrung.vorschlaege(conn, {"[Food Raw] Meat": 20})][0]
+    assert v.gebaeude == "Smokehouse"            # drei Sterne gewinnen
+    assert v.sterne == 3
+    assert v.gebaeude_laut_seite == "Flawless Smelter"   # der Widerspruch bleibt sichtbar
+    conn.close()
+
+
+def test_dasselbe_rezept_auf_mehreren_seiten_steht_nur_einmal_im_rat(tmp_path: Path) -> None:
+    conn = wissensbasis(tmp_path)
+    conn.execute("INSERT INTO recipes (id, building, inputs, stars, seconds, product, "
+                 " product_amount) VALUES (9, 'Butcher', ?, 1, 90, 'Jerky', 10)",
+                 (json.dumps([[{"menge": 5, "ware": "Meat"}]]),))
+    conn.execute("INSERT INTO production (product, building, stars) "
+                 "VALUES ('Jerky', 'Smokehouse', 3)")
+    conn.commit()
+    doerr = [v for v in nahrung.vorschlaege(conn, {"[Food Raw] Meat": 20})
+             if v.produkt == "Jerky"]
+    assert len(doerr) == 1
+    assert doerr[0].sekunden == 60               # der schnellere Eintrag gewinnt
+    conn.close()

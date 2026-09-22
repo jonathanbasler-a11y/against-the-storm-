@@ -700,6 +700,32 @@ def cmd_status(args) -> int:
                 print(f"  {e['eingesetzt']:<28} -> {e['saettigung_raus']:.0f} Sättigung "
                       f"(Faktor {e['faktor']}) in {e['gebaeude'] or '?'}")
 
+        # Woher das Gebaeude eines Rezepts kommt. Der Seitentitel war ein
+        # Rueckgriff und hat "Doerrfleisch in der Makellosen Schmelzerei"
+        # ergeben; die Produktionstabelle nennt die Zuordnung ausdruecklich.
+        zuordnung = conn.execute(
+            "SELECT COUNT(*) gesamt, "
+            "  SUM(CASE WHEN p.product IS NULL THEN 1 ELSE 0 END) ohne, "
+            "  SUM(CASE WHEN p.product IS NOT NULL AND r.building <> p.building "
+            "           THEN 1 ELSE 0 END) anders "
+            "FROM recipes r LEFT JOIN production p ON p.product = r.product "
+            "  AND p.building = r.building").fetchone()
+        if zuordnung and zuordnung["gesamt"]:
+            print(f"\nGebäude je Rezept: {zuordnung['gesamt']} Rezepte, "
+                  f"{zuordnung['ohne']} ohne Eintrag in der Produktionstabelle")
+            offen = conn.execute(
+                "SELECT DISTINCT r.product, r.building FROM recipes r "
+                "LEFT JOIN production p ON p.product = r.product "
+                "WHERE p.product IS NULL AND r.product IS NOT NULL LIMIT 6").fetchall()
+            for z in offen:
+                print(f"  {z['product']:<24} laut Seite {z['building'] or '--'}")
+            beispiele = conn.execute(
+                "SELECT product, building, stars FROM production "
+                "ORDER BY stars DESC, product LIMIT 5").fetchall()
+            for z in beispiele:
+                print(f"  {z['product']:<24} laut Liste {z['building']} "
+                      f"({z['stars']} Sterne)")
+
         warnungen = conn.execute(
             "SELECT COUNT(*) n FROM source_pages WHERE warning IS NOT NULL").fetchone()["n"]
         seiten = conn.execute("SELECT COUNT(*) n FROM source_pages").fetchone()["n"]
