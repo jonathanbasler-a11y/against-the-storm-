@@ -719,12 +719,21 @@ def cmd_status(args) -> int:
                 "WHERE p.product IS NULL AND r.product IS NOT NULL LIMIT 6").fetchall()
             for z in offen:
                 print(f"  {z['product']:<24} laut Seite {z['building'] or '--'}")
-            beispiele = conn.execute(
-                "SELECT product, building, stars FROM production "
-                "ORDER BY stars DESC, product LIMIT 5").fetchall()
-            for z in beispiele:
-                print(f"  {z['product']:<24} laut Liste {z['building']} "
-                      f"({z['stars']} Sterne)")
+            # Welche Erzeugnisse die Produktionstabelle ueberhaupt kennt --
+            # es sind wenige, also stehen sie vollstaendig da. Danach die
+            # essbaren Produkte, die ihr fehlen. Aus dem Vergleich beider
+            # Listen faellt heraus, woran die Zuordnung haengt.
+            kennt = [z["product"] for z in conn.execute(
+                "SELECT DISTINCT product FROM production ORDER BY product")]
+            print(f"  Produktionstabelle kennt ({len(kennt)}): {', '.join(kennt)}")
+            fehlend = [z["product"] for z in conn.execute(
+                "SELECT DISTINCT r.product FROM recipes r "
+                "JOIN resources g ON g.en = r.product AND g.eatable = 1 "
+                "LEFT JOIN production p ON p.product = r.product "
+                "WHERE p.product IS NULL ORDER BY r.product")]
+            if fehlend:
+                print(f"  Essbar, aber ohne Zuordnung ({len(fehlend)}): "
+                      f"{', '.join(fehlend)}")
 
         warnungen = conn.execute(
             "SELECT COUNT(*) n FROM source_pages WHERE warning IS NOT NULL").fetchone()["n"]
