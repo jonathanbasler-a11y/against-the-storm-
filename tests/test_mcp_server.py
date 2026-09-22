@@ -101,3 +101,42 @@ def test_lage_benennt_was_fehlt(tmp_path: Path) -> None:
                              tmp_path / "keine.sqlite")
     text = " ".join(befund["fehlt"])
     assert "Spielordner" in text and "Wissensbasis" in text and "Mitschriften" in text
+
+
+# --------------------------------------------------------------------------
+# Die Kommandozeile
+#
+# Beim Umbau auf mcp 2.x ist `main` verschwunden -- ein Block wurde ersetzt,
+# und die Funktion lag mittendrin. Alle Tests blieben gruen, weil keiner sie
+# anfasste; gemerkt hat es der Nutzer beim Start. Diese Tests rufen auf, was
+# der Starter aufruft.
+# --------------------------------------------------------------------------
+
+
+def test_starter_findet_die_einstiegsfunktion() -> None:
+    """tools/mcp_start.py importiert genau das hier."""
+    from ats_assistant.mcp_server import main
+    assert callable(main)
+
+
+def test_list_tools_nennt_jedes_werkzeug(capsys) -> None:
+    assert mcp_server.main(["--list-tools"]) == 0
+    ausgabe = capsys.readouterr().out
+    for name in ("get_state", "read_choice", "query_kb", "food_forecast",
+                 "food_advice", "impatience_forecast", "log_event", "analyze_runs"):
+        assert name in ausgabe, name
+
+
+def test_pruefen_laeuft_auch_gegen_eine_leere_umgebung(tmp_path: Path, capsys) -> None:
+    """Der Prueflauf muss gerade dann etwas sagen, wenn nichts da ist."""
+    code = mcp_server.main(["--pruefen",
+                            "--save-dir", str(tmp_path / "kein-spiel"),
+                            "--runs-dir", str(tmp_path / "keine-runs"),
+                            "--db", str(tmp_path / "keine.sqlite")])
+    ausgabe = capsys.readouterr().out
+    assert code == 0                      # nichts abgestuerzt
+    assert "Was der Server vorfindet" in ausgabe
+    assert "Spielordner nicht gefunden" in ausgabe
+    # Jedes Werkzeug kommt vor, keines mit FEHLER.
+    assert "FEHLER" not in ausgabe
+    assert "log_event" in ausgabe         # uebersprungen, aber genannt

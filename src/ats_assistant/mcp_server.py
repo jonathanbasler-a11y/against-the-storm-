@@ -369,5 +369,46 @@ def _pruefen(save_dir: Path, runs_dir: Path, db: Path) -> int:
     return 0
 
 
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--save-dir", default=str(STANDARD_SAVE_DIR))
+    ap.add_argument("--runs-dir", default="runs")
+    ap.add_argument("--db", default="kb.sqlite")
+    ap.add_argument("--log-level", default="INFO")
+    ap.add_argument("--list-tools", action="store_true",
+                    help="Werkzeuge auflisten und beenden, ohne MCP zu starten")
+    ap.add_argument("--pruefen", action="store_true",
+                    help="jedes Werkzeug einmal aufrufen und zeigen, was es sagt")
+    args = ap.parse_args(argv)
+
+    save_dir = aufloesen(args.save_dir)
+    runs_dir = aufloesen(args.runs_dir)
+    db = aufloesen(args.db)
+
+    protokoll = aufloesen("logs")
+    protokoll.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        handlers=[logging.FileHandler(protokoll / "mcp_server.log", encoding="utf-8")],
+    )
+
+    if args.list_tools:
+        for w in werkzeuge(save_dir, runs_dir, db):
+            print(f"{w['name']:<22} {w['description']}")
+        return 0
+
+    if args.pruefen:
+        return _pruefen(save_dir, runs_dir, db)
+
+    befund = lage(save_dir, runs_dir, db)
+    log.info("Start mit %s", json.dumps(befund, ensure_ascii=False, default=str))
+    for satz in befund["fehlt"]:
+        log.warning("%s", satz)
+
+    asyncio.run(serve(save_dir, runs_dir, db))
+    return 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
