@@ -7,22 +7,44 @@ Der vollständige Entwurf steht in [SPEC.md](SPEC.md). Leitprinzip: das Sehen
 passiert lokal und deterministisch, das Urteilen im Modell — es geht nie ein
 Screenshot an ein Sprachmodell, nur kompaktes JSON.
 
+## Einrichten
+
+Von Null auf dem Spielrechner: **[docs/INSTALLATION.md](docs/INSTALLATION.md)**
+— Python 3.12, Projekt holen, Wissensbasis bauen, Fenster starten, und was zu
+tun ist, wenn etwas klemmt.
+
+Kurzfassung für alle, die schon alles haben:
+
+```powershell
+git clone https://github.com/jonathanbasler-a11y/against-the-storm-.git
+cd against-the-storm-
+python -m pip install -e .
+python tools\build_kb.py seed
+python tools\build_kb.py namen --write
+python ats-gui.pyw
+```
+
+Auffrischen mit `git fetch origin` und `git reset --hard origin/main` — **nicht**
+mit `git pull`, die Arbeit kommt per Squash-Merge herein.
+
 ## Stand
 
 | Phase | Inhalt | Status |
 |---|---|---|
 | 0 | Machbarkeit: Save-Format, Schreibzeitpunkt, Sprache | **beantwortet** |
-| 1 | Wissensbasis `kb.sqlite` | Waren vollständig, Grundsteine und Rezepte offen |
+| 1 | Wissensbasis `kb.sqlite` | **fertig**, soweit das Wiki trägt: 2273 Namen, 117 Gebäude, 398 Grundsteine, 193 Rezepte |
 | 2 | Save-Parser und Mitschrift | **fertig** |
-| 3 | Bildschirmauslesung | offen — nur noch Auswahlbildschirme |
-| 4 | MCP-Server | **fertig** bis auf `read_choice` |
+| 3 | Bildschirmauslesung | **fertig** für Auswahlbildschirme (Windows-Texterkennung über `winsdk`) |
+| 4 | MCP-Server | **fertig**, acht Werkzeuge |
 | 5 | Entscheidungslogik `ats-advisor` | **fertig**, wächst mit der Wissensbasis |
+| — | Desktop-Fenster | **fertig**, vier Reiter, siehe [docs/APP.md](docs/APP.md) |
 
 ## Im Betrieb
 
 ```powershell
-uv run ats-watch     # läuft mit und schreibt jeden Zustand mit
-uv run ats-mcp       # MCP-Server für Claude Code
+python ats-gui.pyw   # das Fenster neben dem Spiel
+ats-watch            # läuft mit und schreibt jeden Zustand mit
+ats-mcp              # MCP-Server für Claude Code
 ```
 
 Befunde aus Phase 0 stehen in [docs/PHASE0.md](docs/PHASE0.md): der Spielstand
