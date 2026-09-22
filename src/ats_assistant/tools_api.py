@@ -66,14 +66,35 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
     also wird gewartet, bis sich nichts mehr ruehrt. Wer weiss, dass gerade
     nicht geschrieben wird, spart sich das.
     """
-    state, notes = read_state(Path(save_dir), wait=auf_ruhe_warten)
+    ordner = Path(save_dir)
+    # `read_state` wirft nicht, wenn Dateien fehlen -- das ist richtig, denn
+    # ein halbes Buendel ist besser als ein Absturz. Ein leerer Zustand sieht
+    # dann aber aus wie eine Siedlung ohne Bevoelkerung, und niemand sagt,
+    # dass in Wahrheit der Ordner fehlt. Also wird es hier gesagt.
+    fehlende_dateien = [name for name in ("Save.save", "WorldSave.save", "MetaSave.save")
+                        if not (ordner / name).exists()]
+    if len(fehlende_dateien) == 3:
+        return {
+            "verfuegbar": False,
+            "grund": (f"Unter {ordner} liegt kein Spielstand. "
+                      "Mit --save-dir den Spielordner angeben."),
+            "spielordner": str(ordner),
+        }
+
+    state, notes = read_state(ordner, wait=auf_ruhe_warten)
     if protokollieren and state.game_time is not None:
         kennung = run_id or f"{state.biome or 'lauf'}-{int(state.game_time)}"
         append_run_log(state, kennung, Path(runs_dir))
     fehlend = [n.field for n in notes if n.how == "fehlt"]
     out = _zustand_als_dict(state)
+    out["verfuegbar"] = state.game_time is not None
+    if fehlende_dateien:
+        out["fehlende_dateien"] = fehlende_dateien
     if fehlend:
         out["nicht_gefunden"] = fehlend
+    if not out["verfuegbar"]:
+        out["grund"] = ("Der Spielstand liess sich lesen, enthaelt aber keine "
+                        "Spielzeit. Laeuft gerade eine Siedlung?")
     return out
 
 

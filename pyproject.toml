@@ -5,6 +5,8 @@ description = "Lokaler Spielassistent für Against the Storm 1.10.4"
 requires-python = ">=3.12"
 dependencies = [
     "watchdog>=4.0",
+    # 1.x und 2.x sind beide bedient -- die Anbindung sieht nach, welche
+    # Fassung installiert ist. Siehe docs/MCP.md.
     "mcp>=1.0",
 ]
 

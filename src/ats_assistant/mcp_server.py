@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -24,6 +25,60 @@ STANDARD_SAVE_DIR = (
     Path(os.environ.get("USERPROFILE", Path.home()))
     / "AppData" / "LocalLow" / "Eremite Games" / "Against the Storm"
 )
+
+# Claude Desktop startet den Server mit einem Arbeitsverzeichnis, das
+# niemand bestimmt hat. Ein relatives "kb.sqlite" zeigt dann irgendwohin --
+# und weil `kb.connect` eine fehlende Datenbank anlegt, entsteht dort eine
+# leere. Der Server laeuft, antwortet auf jede Frage "nichts gefunden", und
+# nichts sagt einem, warum. Deshalb werden relative Pfade gegen das
+# Projektverzeichnis aufgeloest.
+def _projektwurzel() -> Path | None:
+    wurzel = Path(__file__).resolve().parents[2]
+    return wurzel if (wurzel / "pyproject.toml").exists() else None
+
+
+def aufloesen(pfad: Path | str) -> Path:
+    """Relative Pfade gegen das Projekt, nicht gegen das Arbeitsverzeichnis."""
+    p = Path(pfad)
+    if p.is_absolute():
+        return p
+    if p.exists():
+        return p.resolve()
+    wurzel = _projektwurzel()
+    return (wurzel / p) if wurzel else p.resolve()
+
+
+def lage(save_dir: Path, runs_dir: Path, db: Path) -> dict:
+    """Was der Server vorfindet -- damit ein leerer Start auffaellt."""
+    befund: dict = {
+        "spielordner": str(save_dir),
+        "spielordner_da": save_dir.is_dir(),
+        "mitschriften": str(runs_dir),
+        "mitschriften_da": len(list(runs_dir.glob("*.jsonl"))) if runs_dir.is_dir() else 0,
+        "wissensbasis": str(db),
+        "wissensbasis_da": db.exists(),
+    }
+    if db.exists():
+        from . import kb
+        conn = kb.connect(db)
+        try:
+            abdeckung = kb.coverage(conn)
+            befund["namen"] = sum(abdeckung["name_map"].values())
+            befund["tabellen"] = {k: v for k, v in abdeckung["tabellen"].items() if v}
+        finally:
+            conn.close()
+    fehlt = []
+    if not befund["spielordner_da"]:
+        fehlt.append("Spielordner nicht gefunden -- mit --save-dir angeben.")
+    if not befund["wissensbasis_da"]:
+        fehlt.append("Keine Wissensbasis. Erst `build_kb.py seed` und `namen --write`.")
+    elif not befund.get("namen"):
+        fehlt.append("Wissensbasis ohne Namen -- `build_kb.py namen --write` fehlt.")
+    if not befund["mitschriften_da"]:
+        fehlt.append("Keine Mitschriften. Ohne sie bleiben Vorhersagen stumm; "
+                     "`ats-watch` legt sie an.")
+    befund["fehlt"] = fehlt
+    return befund
 
 
 def werkzeuge(save_dir: Path, runs_dir: Path, db: Path) -> list[dict]:
@@ -133,12 +188,86 @@ def werkzeuge(save_dir: Path, runs_dir: Path, db: Path) -> list[dict]:
     ]
 
 
+# JSON-Schema -> Python-Typ. Die neue MCP-Fassung liest das Schema nicht
+# mehr aus einem Dictionary, sondern aus der Signatur der Funktion.
+SCHEMA_TYPEN = {"string": str, "number": float, "integer": int,
+                "boolean": bool, "array": list, "object": dict}
+
+
+def funktion_aus_schema(werkzeug: dict):
+    """Aus einem Werkzeug eine Funktion mit passender Signatur bauen.
+
+    In mcp 1.x wurde die Werkzeugliste mitsamt `inputSchema` uebergeben. In
+    2.x leitet der Server das Schema aus der Signatur ab -- also muss es
+    eine Signatur geben. Gebaut wird sie aus demselben Schema, damit beide
+    Wege dieselbe Quelle haben und nicht auseinanderlaufen.
+    """
+    schema = werkzeug.get("inputSchema") or {}
+    eigenschaften = schema.get("properties") or {}
+    pflicht = set(schema.get("required") or ())
+
+    parameter = []
+    annotationen = {}
+    for name, angabe in eigenschaften.items():
+        typ = SCHEMA_TYPEN.get(angabe.get("type"), str)
+        annotationen[name] = typ if name in pflicht else (typ | None)
+        parameter.append(inspect.Parameter(
+            name, inspect.Parameter.KEYWORD_ONLY,
+            default=inspect.Parameter.empty if name in pflicht else None,
+            annotation=annotationen[name]))
+    parameter.sort(key=lambda p: p.default is not inspect.Parameter.empty)
+
+    def aufruf(**kwargs):
+        # Was nicht gesetzt wurde, gar nicht erst weiterreichen: die
+        # Werkzeuge haben eigene Vorgaben, und None ist nicht dasselbe.
+        return werkzeug["handler"](**{k: v for k, v in kwargs.items() if v is not None})
+
+    aufruf.__name__ = werkzeug["name"]
+    aufruf.__doc__ = werkzeug["description"]
+    aufruf.__signature__ = inspect.Signature(parameter)
+    aufruf.__annotations__ = {**annotationen, "return": dict}
+    return aufruf
+
+
+def neue_fassung() -> bool:
+    """Traegt die installierte MCP-Fassung die Dekoratoren noch?
+
+    mcp 2.x hat `@server.list_tools()` und `@server.call_tool()` fallen
+    lassen und dafuer `MCPServer.add_tool`. Beides ist hier bedient --
+    was installiert ist, entscheidet, nicht was in pyproject.toml steht.
+    """
+    try:
+        from mcp.server import Server
+    except ImportError:
+        return True
+    return not hasattr(Server("pruefung"), "list_tools")
+
+
 async def serve(save_dir: Path, runs_dir: Path, db: Path) -> None:
+    liste = werkzeuge(save_dir, runs_dir, db)
+    if neue_fassung():
+        await _serve_neu(liste)
+    else:
+        await _serve_alt(liste)
+
+
+async def _serve_neu(liste: list[dict]) -> None:
+    """mcp 2.x: Werkzeuge als Funktionen, Schema aus der Signatur."""
+    from mcp.server import MCPServer
+
+    server = MCPServer("ats-assistant")
+    for werkzeug in liste:
+        server.add_tool(funktion_aus_schema(werkzeug),
+                        name=werkzeug["name"], description=werkzeug["description"])
+    await server.run_stdio_async()
+
+
+async def _serve_alt(liste: list[dict]) -> None:
+    """mcp 1.x: Werkzeugliste und Aufruf ueber Dekoratoren."""
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
     from mcp.types import TextContent, Tool
 
-    liste = werkzeuge(save_dir, runs_dir, db)
     nach_name = {w["name"]: w for w in liste}
     server = Server("ats-assistant")
 
@@ -165,6 +294,86 @@ async def serve(save_dir: Path, runs_dir: Path, db: Path) -> None:
         await server.run(read, write, server.create_initialization_options())
 
 
+# Womit ein Werkzeug beim Pruefen aufgerufen wird. Ohne das faende der
+# Lauf nur heraus, dass query_kb einen Namen braucht -- was im Schema steht.
+PRUEFARGUMENTE: dict[str, dict] = {
+    "query_kb": {"name": "Holz"},
+    # Ohne Text wuerde read_choice ein Bildschirmfoto aufnehmen. Beim
+    # Pruefen geht es um die Kette dahinter, nicht um den Bildschirm.
+    "read_choice": {"text": ["PILZFÜHRER"]},
+}
+
+# Was beim Pruefen nicht aufgerufen wird, weil es schreibt.
+UEBERSPRUNGEN = {
+    "log_event": "schreibt in die Mitschrift, deshalb nicht im Prueflauf",
+}
+
+
+def _pruefen(save_dir: Path, runs_dir: Path, db: Path) -> int:
+    """Jedes Werkzeug einmal aufrufen, bevor der Server in Claude haengt.
+
+    Ein Server, der laeuft und auf alles "nichts gefunden" antwortet, ist
+    schwerer zu finden als einer, der gar nicht startet. Deshalb dieser
+    Lauf: er zeigt, was jedes Werkzeug jetzt gerade sagen wuerde.
+    """
+    befund = lage(save_dir, runs_dir, db)
+    print("Was der Server vorfindet:")
+    print(f"  Spielordner   {befund['spielordner']}"
+          f"   {'gefunden' if befund['spielordner_da'] else 'NICHT GEFUNDEN'}")
+    print(f"  Mitschriften  {befund['mitschriften']}   {befund['mitschriften_da']} Datei(en)")
+    print(f"  Wissensbasis  {befund['wissensbasis']}"
+          f"   {befund.get('namen', 0)} Namen")
+    if befund.get("tabellen"):
+        print("                " + ", ".join(f"{k}={v}" for k, v in
+                                             sorted(befund["tabellen"].items())))
+    if befund["fehlt"]:
+        print("\nOffen:")
+        for satz in befund["fehlt"]:
+            print(f"  - {satz}")
+
+    try:
+        import mcp                                        # noqa: F401
+        from importlib.metadata import version
+        fassung = version("mcp")
+        weg = "MCPServer.add_tool" if neue_fassung() else "Dekoratoren"
+        print(f"\nMCP: Fassung {fassung}, angebunden ueber {weg}")
+    except ImportError:
+        print("\nMCP: nicht installiert (pip install mcp). Die Werkzeuge "
+              "laufen trotzdem, nur die Anbindung an Claude fehlt.")
+    except Exception as exc:
+        print(f"\nMCP: Fassung nicht feststellbar ({type(exc).__name__})")
+
+    print("\nWerkzeuge:")
+    fehler = 0
+    for w in werkzeuge(save_dir, runs_dir, db):
+        if w["name"] in UEBERSPRUNGEN:
+            print(f"  --      {w['name']:<20} {UEBERSPRUNGEN[w['name']]}")
+            continue
+        try:
+            ergebnis = w["handler"](**PRUEFARGUMENTE.get(w["name"], {}))
+        except Exception as exc:
+            print(f"  FEHLER  {w['name']:<20} {type(exc).__name__}: {exc}")
+            fehler += 1
+            continue
+        if isinstance(ergebnis, dict) and ergebnis.get("verfuegbar") is False:
+            # Nicht jedes Werkzeug nennt sein Warum `grund`: food_advice legt
+            # seine Auskunft in `empfehlung`, weil sie auch dann eine ist,
+            # wenn keine Kette taugt. Ein leeres "stumm" wäre die
+            # nutzloseste Zeile im ganzen Prueflauf.
+            grund = (ergebnis.get("grund") or ergebnis.get("empfehlung")
+                     or ergebnis.get("warnung") or "ohne Angabe")
+            print(f"  stumm   {w['name']:<20} {grund.split('.')[0]}")
+        else:
+            umfang = len(ergebnis) if hasattr(ergebnis, "__len__") else "?"
+            print(f"  ok      {w['name']:<20} {umfang} Felder")
+    if fehler:
+        print(f"\n{fehler} Werkzeug(e) mit Fehler -- die gehoeren vor dem Start behoben.")
+        return 1
+    print("\nKein Werkzeug ist abgestuerzt. 'stumm' heisst: es fehlt eine Eingabe,")
+    print("nicht dass etwas kaputt ist -- meist eine zweite Mitschrift.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--save-dir", default=str(STANDARD_SAVE_DIR))
@@ -173,21 +382,36 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--log-level", default="INFO")
     ap.add_argument("--list-tools", action="store_true",
                     help="Werkzeuge auflisten und beenden, ohne MCP zu starten")
+    ap.add_argument("--pruefen", action="store_true",
+                    help="jedes Werkzeug einmal aufrufen und zeigen, was es sagt")
     args = ap.parse_args(argv)
 
-    Path("logs").mkdir(exist_ok=True)
+    save_dir = aufloesen(args.save_dir)
+    runs_dir = aufloesen(args.runs_dir)
+    db = aufloesen(args.db)
+
+    protokoll = aufloesen("logs")
+    protokoll.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=getattr(logging, args.log_level.upper(), logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
-        handlers=[logging.FileHandler(Path("logs") / "mcp_server.log", encoding="utf-8")],
+        handlers=[logging.FileHandler(protokoll / "mcp_server.log", encoding="utf-8")],
     )
 
     if args.list_tools:
-        for w in werkzeuge(Path(args.save_dir), Path(args.runs_dir), Path(args.db)):
+        for w in werkzeuge(save_dir, runs_dir, db):
             print(f"{w['name']:<22} {w['description']}")
         return 0
 
-    asyncio.run(serve(Path(args.save_dir), Path(args.runs_dir), Path(args.db)))
+    if args.pruefen:
+        return _pruefen(save_dir, runs_dir, db)
+
+    befund = lage(save_dir, runs_dir, db)
+    log.info("Start mit %s", json.dumps(befund, ensure_ascii=False, default=str))
+    for satz in befund["fehlt"]:
+        log.warning("%s", satz)
+
+    asyncio.run(serve(save_dir, runs_dir, db))
     return 0
 
 
