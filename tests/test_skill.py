@@ -51,6 +51,13 @@ def test_werkzeuge_sind_benannt(text: str) -> None:
         assert werkzeug in text, werkzeug
 
 
-def test_fehlendes_wird_als_fehlend_benannt(text: str) -> None:
-    assert "read_choice" in text and "Phase 3" in text
+def test_unsicheres_wird_als_unsicher_benannt(text: str) -> None:
+    """Der Berater darf eine Lesung nicht als Wissen ausgeben.
+
+    Frueher stand hier, dass `read_choice` fehlt. Es gibt es jetzt -- und
+    damit verschiebt sich die Pflicht: nicht mehr "sag, dass du nichts
+    siehst", sondern "sag, wenn du dir beim Gelesenen nicht sicher bist".
+    """
+    assert "read_choice" in text
+    assert "unklar" in text and "gefragt, nicht geraten" in text
     assert "erfundene Zahl" in text
