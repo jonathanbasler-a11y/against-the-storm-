@@ -356,8 +356,13 @@ def _pruefen(save_dir: Path, runs_dir: Path, db: Path) -> int:
             fehler += 1
             continue
         if isinstance(ergebnis, dict) and ergebnis.get("verfuegbar") is False:
-            grund = (ergebnis.get("grund") or "").split(".")[0]
-            print(f"  stumm   {w['name']:<20} {grund}")
+            # Nicht jedes Werkzeug nennt sein Warum `grund`: food_advice legt
+            # seine Auskunft in `empfehlung`, weil sie auch dann eine ist,
+            # wenn keine Kette taugt. Ein leeres "stumm" wäre die
+            # nutzloseste Zeile im ganzen Prueflauf.
+            grund = (ergebnis.get("grund") or ergebnis.get("empfehlung")
+                     or ergebnis.get("warnung") or "ohne Angabe")
+            print(f"  stumm   {w['name']:<20} {grund.split('.')[0]}")
         else:
             umfang = len(ergebnis) if hasattr(ergebnis, "__len__") else "?"
             print(f"  ok      {w['name']:<20} {umfang} Felder")

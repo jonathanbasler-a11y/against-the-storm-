@@ -140,3 +140,19 @@ def test_pruefen_laeuft_auch_gegen_eine_leere_umgebung(tmp_path: Path, capsys) -
     # Jedes Werkzeug kommt vor, keines mit FEHLER.
     assert "FEHLER" not in ausgabe
     assert "log_event" in ausgabe         # uebersprungen, aber genannt
+
+
+def test_stumme_werkzeuge_nennen_immer_einen_grund(tmp_path: Path, capsys) -> None:
+    """Ein leeres "stumm" ist die nutzloseste Zeile im ganzen Prüflauf.
+
+    `food_advice` legt seine Auskunft nach `empfehlung`, weil sie auch dann
+    eine ist, wenn keine Kette taugt -- und stand deshalb ohne Begründung da.
+    """
+    mcp_server.main(["--pruefen",
+                     "--save-dir", str(tmp_path / "kein-spiel"),
+                     "--runs-dir", str(tmp_path / "keine-runs"),
+                     "--db", str(tmp_path / "keine.sqlite")])
+    for zeile in capsys.readouterr().out.splitlines():
+        if zeile.startswith("  stumm"):
+            rest = zeile.split(maxsplit=2)
+            assert len(rest) == 3 and rest[2].strip(), zeile
