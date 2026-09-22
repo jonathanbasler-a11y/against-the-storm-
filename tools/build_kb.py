@@ -697,8 +697,9 @@ def cmd_status(args) -> int:
         if verstaerkung:
             print(f"\nNahrungsverstärkung durch Verarbeitung: {len(verstaerkung)} Rezepte")
             for e in verstaerkung[:8]:
+                marke = "" if e.get("belegt") else "  (Gebäude nur laut Seitentitel)"
                 print(f"  {e['eingesetzt']:<28} -> {e['saettigung_raus']:.0f} Sättigung "
-                      f"(Faktor {e['faktor']}) in {e['gebaeude'] or '?'}")
+                      f"(Faktor {e['faktor']}) in {e['gebaeude'] or '?'}{marke}")
 
         # Woher das Gebaeude eines Rezepts kommt. Der Seitentitel war ein
         # Rueckgriff und hat "Doerrfleisch in der Makellosen Schmelzerei"
