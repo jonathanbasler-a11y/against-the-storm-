@@ -192,10 +192,39 @@ def test_read_choice_bildet_gelesene_titel_auf_belegte_namen_ab(tmp_path: Path) 
 
 
 def test_read_choice_raet_nicht_bei_unlesbarem(tmp_path: Path) -> None:
+    """Von Hand getippt und nichts getroffen -- dann sagt das auch der Grund.
+
+    Am Spielrechner stand im Feld `handelsverhandlungen`, und die Ausgabe
+    riet zu `pip install winsdk`. Die Frage nach dem Bildschirmfoto passt
+    zum Bildweg; wer tippt, hat keines gemacht.
+    """
     out = tools_api.read_choice(text=["~~~~~", ""], db=tmp_path / "leer.sqlite")
     assert out["verfuegbar"] is False
     assert out["angebot"] == []
-    assert "Auswahlbildschirm offen" in out["grund"]
+    assert out["quelle"] == "hand"
+    assert "eingetippt" in out["grund"]
+    assert "Bild" not in out["grund"]
+
+
+def test_read_choice_nimmt_eine_zeichenkette_als_eine_zeile(tmp_path: Path) -> None:
+    """Sonst wird aus einem Namen eine Liste von Buchstaben.
+
+    Das Fenster übergibt immer eine Liste, der MCP-Server und die
+    Kommandozeile nicht zwingend.
+    """
+    out = tools_api.read_choice(text="Pilzführer", db=tmp_path / "leer.sqlite")
+    assert out["gelesene_zeilen"] == 1
+
+
+def test_read_choice_nennt_das_bild_als_quelle(tmp_path: Path, monkeypatch) -> None:
+    """Welcher Weg gelaufen ist, muss am Ergebnis stehen -- in beiden Fällen."""
+    bild = tmp_path / "schirm.png"
+    bild.write_bytes(b"kein echtes PNG")
+    monkeypatch.setattr(tools_api.screen, "erkenne", lambda pfad, **kw: [])
+    monkeypatch.setattr(tools_api.screen, "sortiere_nach_karten", lambda zeilen: [])
+    out = tools_api.read_choice(bild=bild, db=tmp_path / "leer.sqlite")
+    assert out["quelle"] == str(bild)
+    assert "Bild" in out["grund"]
 
 
 def test_food_advice_rechnet_gegen_den_lagerbestand(tmp_path: Path) -> None:

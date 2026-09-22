@@ -174,3 +174,21 @@ def test_feindseligkeit_zeigt_nie_ein_dictionary() -> None:
     """Was auch kommt -- eine geschweifte Klammer im Fenster ist ein Fehler."""
     for wert in ({"unbekannt": 7}, {}, None, 4, "hoch"):
         assert "{" not in rechner.feindseligkeit(wert)
+
+
+def test_der_handweg_fasst_den_bildschirm_nie_an(tmp_path: Path, monkeypatch) -> None:
+    """Am Spielrechner riet der Auswahlreiter zur Texterkennung, obwohl im
+    Feld getippter Text stand. Wer tippt, braucht keine."""
+    def nicht_anfassen(*args, **kwargs):
+        raise AssertionError("Der Handweg hat den Bildschirm angefasst.")
+
+    monkeypatch.setattr(rechner.tools_api.screen, "aufnehmen", nicht_anfassen)
+    monkeypatch.setattr(rechner.tools_api.screen, "erkenne", nicht_anfassen)
+
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(tmp_path / "save", tmp_path / "runs",
+                        tmp_path / "kb.sqlite", ausgang)
+    r._ausfuehren(rechner.Auftrag("auswahl", {"text": ["handelsverhandlungen"]}))
+    art, wert = ausgang.get_nowait()
+    assert art == "auswahl"
+    assert wert["quelle"] == "hand"

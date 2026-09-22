@@ -39,6 +39,21 @@ log = logging.getLogger(__name__)
 # --------------------------------------------------------------------------
 
 
+def _herkunft(a: dict) -> str:
+    """Welcher Weg diese Zeilen geliefert hat.
+
+    Am Spielrechner stand im Auswahlreiter der Rat zur Texterkennung,
+    während im Handfeld getippter Text stand -- und nirgends stand, welcher
+    Weg überhaupt gelaufen war. Seitdem steht es in beiden Fällen oben.
+    """
+    quelle = a.get("quelle")
+    zeilen = a.get("gelesene_zeilen")
+    woher = ("Von Hand abgeglichen" if quelle == "hand"
+             else "Vom Bildschirmfoto gelesen" if quelle
+             else "Nichts gelesen")
+    return f"{woher} – {zeilen} Zeile(n)" if zeilen else woher
+
+
 class App:
     def __init__(self, save_dir: Path, runs_dir: Path, db: Path) -> None:
         self.save_dir, self.runs_dir, self.db = save_dir, runs_dir, db
@@ -327,14 +342,21 @@ class App:
                 _minuten(k.get("reichweite_plus_sekunden"))))
 
     def _zeige_auswahl(self, a: dict) -> None:
+        zeilen = [_herkunft(a), ""]
         if not a.get("verfuegbar"):
-            zeilen = [a.get("grund") or a.get("fehler", "Nichts erkannt.")]
+            zeilen.append(a.get("grund") or a.get("fehler", "Nichts erkannt."))
             for u in a.get("unklar", []):
                 nahe = ", ".join(f"{k['de']} ({k['guete']})" for k in u["kandidaten"])
                 zeilen.append(f"  gelesen {u['gelesen']!r} → {nahe}")
+            # Der Bildweg ist gescheitert, während im Handfeld etwas steht.
+            # Der Knopf bleibt, was er heißt -- aber es darf nicht daran
+            # liegen, dass niemand den zweiten Weg sieht.
+            if a.get("quelle") != "hand" and self.hand.get().strip():
+                zeilen.append("")
+                zeilen.append("Im Feld unten steht Text -- „Abgleichen“ nimmt ihn, "
+                              "ganz ohne Texterkennung.")
             self._schreiben(self.auswahl_text, "\n".join(zeilen))
             return
-        zeilen = []
         for eintrag in a["angebot"]:
             kopf = f"{eintrag['de']}  ({eintrag['en']}"
             if eintrag.get("seltenheit"):

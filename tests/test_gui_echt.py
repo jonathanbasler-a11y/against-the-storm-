@@ -50,7 +50,8 @@ BEISPIELE = {
                            "einsatz": [{"menge": 40, "ware": "Meat"}],
                            "gewinn": 120.0, "faktor": 4.0, "engpass": "Meat",
                            "sekunden": 480.0, "reichweite_plus_sekunden": 1200}]},
-    "auswahl": {"verfuegbar": True, "angebot": [
+    "auswahl": {"verfuegbar": True, "quelle": "hand", "gelesene_zeilen": 2,
+                "angebot": [
         {"de": "Pilzführer", "en": "Fungal Guide", "guete": 0.98,
          "seltenheit": "Epic", "wirkung": "+1 Pilze je 25 Produktion"}]},
     "rat": {"ok": True, "text": "Nimm die Räucherei.", "fuss": "claude-opus-5"},
@@ -161,3 +162,48 @@ def test_lage_kopieren_benutzt_die_echte_zwischenablage(app) -> None:
 
     auszug = json.loads(app.root.clipboard_get())
     assert auszug["siedlung"]["jahr"] == 2
+
+
+# --------------------------------------------------------------------------
+# Welcher Weg gelaufen ist
+#
+# Am Spielrechner stand im Auswahlreiter der Rat zu `pip install winsdk`,
+# während im Handfeld `handelsverhandlungen` stand. Es war der Bildweg --
+# nur stand das nirgends. Ein Feld, das nicht sagt, woher seine Zeilen
+# kommen, macht aus einem Bedienfehler einen Programmfehler.
+# --------------------------------------------------------------------------
+
+
+def _auswahlfeld(app) -> str:
+    app.root.update_idletasks()
+    return app.auswahl_text.get("1.0", "end")
+
+
+def test_der_handweg_steht_ueber_dem_ergebnis(app) -> None:
+    app._anzeigen("auswahl", BEISPIELE["auswahl"])
+    text = _auswahlfeld(app)
+    assert "Von Hand abgeglichen" in text
+    assert "Pilzführer" in text
+
+
+def test_der_bildweg_nennt_sich_auch_so(app) -> None:
+    app._anzeigen("auswahl", {"verfuegbar": False, "quelle": "/tmp/schirm.png",
+                              "gelesene_zeilen": 0, "grund": "Nichts erkannt."})
+    assert "Vom Bildschirmfoto gelesen" in _auswahlfeld(app)
+
+
+def test_gescheiterter_bildweg_weist_auf_das_handfeld(app) -> None:
+    """Der Fall vom Spielrechner: Text im Feld, gelaufen ist der Bildweg."""
+    app.hand.insert(0, "handelsverhandlungen")
+    app._anzeigen("auswahl", {
+        "verfuegbar": False, "quelle": "/tmp/schirm.png", "gelesene_zeilen": 0,
+        "grund": "Fuer die Texterkennung: pip install winsdk."})
+    text = _auswahlfeld(app)
+    assert "Abgleichen" in text
+
+
+def test_der_handweg_weist_nicht_auf_sich_selbst(app) -> None:
+    app.hand.insert(0, "handelsverhandlungen")
+    app._anzeigen("auswahl", {"verfuegbar": False, "quelle": "hand",
+                              "gelesene_zeilen": 1, "grund": "Nichts getroffen."})
+    assert "Abgleichen" not in _auswahlfeld(app)

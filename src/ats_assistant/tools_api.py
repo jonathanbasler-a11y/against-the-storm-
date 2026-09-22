@@ -145,8 +145,12 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
     oder der bereits gelesene Text.
     """
     zeilen: list[str] = []
-    quelle = "text"
+    quelle = "hand"
     if text:
+        # Eine einzelne Zeichenkette ist ein Name, keine Liste von Buchstaben.
+        # Das Fenster uebergibt eine Liste, die Kommandozeile nicht zwingend.
+        if isinstance(text, str):
+            text = [text]
         zeilen = [t for t in text if (t or "").strip()]
     else:
         pfad = Path(bild) if bild else None
@@ -194,10 +198,25 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
         "angebot": angebot,
         "unklar": unklar[:5],
         "gelesene_zeilen": len(zeilen),
-        "grund": None if angebot else (
-            "Nichts erkannt, was einem belegten Namen nahekommt. Stand der "
-            "Auswahlbildschirm offen, als das Bild entstand?"),
+        "grund": None if angebot else _nichts_erkannt(quelle),
     }
+
+
+def _nichts_erkannt(quelle: str) -> str:
+    """Warum nichts herauskam -- je nach Weg eine andere Frage.
+
+    Am Spielrechner stand im Handfeld `handelsverhandlungen`, und die
+    Ausgabe fragte nach dem Bildschirmfoto und riet zu `pip install
+    winsdk`. Beides gehoert zum Bildweg. Wer tippt, hat kein Bild gemacht
+    und braucht keine Texterkennung.
+    """
+    if quelle == "hand":
+        return ("Keiner der eingetippten Namen kommt einem belegten nahe. "
+                "Grundsteine und Baupläne stehen unter verschiedenen Arten -- "
+                "oben umschalten, oder den Namen so tippen, wie er auf der "
+                "Karte steht.")
+    return ("Nichts erkannt, was einem belegten Namen nahekommt. Stand der "
+            "Auswahlbildschirm offen, als das Bild entstand?")
 
 
 @_wall
