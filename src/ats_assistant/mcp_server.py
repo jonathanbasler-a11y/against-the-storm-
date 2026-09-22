@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -187,12 +188,86 @@ def werkzeuge(save_dir: Path, runs_dir: Path, db: Path) -> list[dict]:
     ]
 
 
+# JSON-Schema -> Python-Typ. Die neue MCP-Fassung liest das Schema nicht
+# mehr aus einem Dictionary, sondern aus der Signatur der Funktion.
+SCHEMA_TYPEN = {"string": str, "number": float, "integer": int,
+                "boolean": bool, "array": list, "object": dict}
+
+
+def funktion_aus_schema(werkzeug: dict):
+    """Aus einem Werkzeug eine Funktion mit passender Signatur bauen.
+
+    In mcp 1.x wurde die Werkzeugliste mitsamt `inputSchema` uebergeben. In
+    2.x leitet der Server das Schema aus der Signatur ab -- also muss es
+    eine Signatur geben. Gebaut wird sie aus demselben Schema, damit beide
+    Wege dieselbe Quelle haben und nicht auseinanderlaufen.
+    """
+    schema = werkzeug.get("inputSchema") or {}
+    eigenschaften = schema.get("properties") or {}
+    pflicht = set(schema.get("required") or ())
+
+    parameter = []
+    annotationen = {}
+    for name, angabe in eigenschaften.items():
+        typ = SCHEMA_TYPEN.get(angabe.get("type"), str)
+        annotationen[name] = typ if name in pflicht else (typ | None)
+        parameter.append(inspect.Parameter(
+            name, inspect.Parameter.KEYWORD_ONLY,
+            default=inspect.Parameter.empty if name in pflicht else None,
+            annotation=annotationen[name]))
+    parameter.sort(key=lambda p: p.default is not inspect.Parameter.empty)
+
+    def aufruf(**kwargs):
+        # Was nicht gesetzt wurde, gar nicht erst weiterreichen: die
+        # Werkzeuge haben eigene Vorgaben, und None ist nicht dasselbe.
+        return werkzeug["handler"](**{k: v for k, v in kwargs.items() if v is not None})
+
+    aufruf.__name__ = werkzeug["name"]
+    aufruf.__doc__ = werkzeug["description"]
+    aufruf.__signature__ = inspect.Signature(parameter)
+    aufruf.__annotations__ = {**annotationen, "return": dict}
+    return aufruf
+
+
+def neue_fassung() -> bool:
+    """Traegt die installierte MCP-Fassung die Dekoratoren noch?
+
+    mcp 2.x hat `@server.list_tools()` und `@server.call_tool()` fallen
+    lassen und dafuer `MCPServer.add_tool`. Beides ist hier bedient --
+    was installiert ist, entscheidet, nicht was in pyproject.toml steht.
+    """
+    try:
+        from mcp.server import Server
+    except ImportError:
+        return True
+    return not hasattr(Server("pruefung"), "list_tools")
+
+
 async def serve(save_dir: Path, runs_dir: Path, db: Path) -> None:
+    liste = werkzeuge(save_dir, runs_dir, db)
+    if neue_fassung():
+        await _serve_neu(liste)
+    else:
+        await _serve_alt(liste)
+
+
+async def _serve_neu(liste: list[dict]) -> None:
+    """mcp 2.x: Werkzeuge als Funktionen, Schema aus der Signatur."""
+    from mcp.server import MCPServer
+
+    server = MCPServer("ats-assistant")
+    for werkzeug in liste:
+        server.add_tool(funktion_aus_schema(werkzeug),
+                        name=werkzeug["name"], description=werkzeug["description"])
+    await server.run_stdio_async()
+
+
+async def _serve_alt(liste: list[dict]) -> None:
+    """mcp 1.x: Werkzeugliste und Aufruf ueber Dekoratoren."""
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
     from mcp.types import TextContent, Tool
 
-    liste = werkzeuge(save_dir, runs_dir, db)
     nach_name = {w["name"]: w for w in liste}
     server = Server("ats-assistant")
 
@@ -217,47 +292,6 @@ async def serve(save_dir: Path, runs_dir: Path, db: Path) -> None:
 
     async with stdio_server() as (read, write):
         await server.run(read, write, server.create_initialization_options())
-
-
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--save-dir", default=str(STANDARD_SAVE_DIR))
-    ap.add_argument("--runs-dir", default="runs")
-    ap.add_argument("--db", default="kb.sqlite")
-    ap.add_argument("--log-level", default="INFO")
-    ap.add_argument("--list-tools", action="store_true",
-                    help="Werkzeuge auflisten und beenden, ohne MCP zu starten")
-    ap.add_argument("--pruefen", action="store_true",
-                    help="jedes Werkzeug einmal aufrufen und zeigen, was es sagt")
-    args = ap.parse_args(argv)
-
-    save_dir = aufloesen(args.save_dir)
-    runs_dir = aufloesen(args.runs_dir)
-    db = aufloesen(args.db)
-
-    protokoll = aufloesen("logs")
-    protokoll.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(
-        level=getattr(logging, args.log_level.upper(), logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-        handlers=[logging.FileHandler(protokoll / "mcp_server.log", encoding="utf-8")],
-    )
-
-    if args.list_tools:
-        for w in werkzeuge(save_dir, runs_dir, db):
-            print(f"{w['name']:<22} {w['description']}")
-        return 0
-
-    if args.pruefen:
-        return _pruefen(save_dir, runs_dir, db)
-
-    befund = lage(save_dir, runs_dir, db)
-    log.info("Start mit %s", json.dumps(befund, ensure_ascii=False, default=str))
-    for satz in befund["fehlt"]:
-        log.warning("%s", satz)
-
-    asyncio.run(serve(save_dir, runs_dir, db))
-    return 0
 
 
 # Womit ein Werkzeug beim Pruefen aufgerufen wird. Ohne das faende der
@@ -296,6 +330,18 @@ def _pruefen(save_dir: Path, runs_dir: Path, db: Path) -> int:
         print("\nOffen:")
         for satz in befund["fehlt"]:
             print(f"  - {satz}")
+
+    try:
+        import mcp                                        # noqa: F401
+        from importlib.metadata import version
+        fassung = version("mcp")
+        weg = "MCPServer.add_tool" if neue_fassung() else "Dekoratoren"
+        print(f"\nMCP: Fassung {fassung}, angebunden ueber {weg}")
+    except ImportError:
+        print("\nMCP: nicht installiert (pip install mcp). Die Werkzeuge "
+              "laufen trotzdem, nur die Anbindung an Claude fehlt.")
+    except Exception as exc:
+        print(f"\nMCP: Fassung nicht feststellbar ({type(exc).__name__})")
 
     print("\nWerkzeuge:")
     fehler = 0

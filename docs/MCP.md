@@ -48,6 +48,22 @@ leeren Ordner ist das aber kein halbes Bündel, sondern gar keins, und ein
 leerer Zustand sieht aus wie eine Siedlung ohne Bevölkerung. `get_state` sagt
 das jetzt: `verfuegbar: false` mit dem Ordner, unter dem nichts lag.
 
+## Welche MCP-Fassung
+
+`pip install mcp` holt heute **2.2.0**, und dort ist die Dekorator-API aus 1.x
+weg: `@server.list_tools()` gibt es nicht mehr, stattdessen `MCPServer.add_tool`,
+und das Schema wird aus der **Signatur** der Funktion abgeleitet statt als
+Dictionary übergeben.
+
+Beide Wege sind bedient. Welcher genommen wird, entscheidet die installierte
+Fassung, nicht was in `pyproject.toml` steht — `neue_fassung()` sieht nach, ob
+`Server` die Dekoratoren noch trägt. `funktion_aus_schema()` baut aus derselben
+Werkzeugliste die Funktion mit passender Signatur, damit beide Wege aus einer
+Quelle kommen und nicht auseinanderlaufen.
+
+`--pruefen` schreibt hin, welche Fassung gefunden wurde und über welchen Weg
+angebunden wird.
+
 ## Einhängen
 
 Voraussetzung: `pip install mcp`
