@@ -247,3 +247,16 @@ def test_ohne_spielstand_gehen_keine_alten_vorhersagen_hinaus(tmp_path: Path) ->
     arten = [a for a, _ in list(ausgang.queue)]
     assert "zustand" in arten
     assert not {"nahrung", "ungeduld", "ketten"} & set(arten)
+
+
+def test_eine_offene_bauplanwahl_gilt_als_wahl(tmp_path: Path, monkeypatch) -> None:
+    gesehen = {}
+
+    def frage(auszug, modell=None, wahl_steht_an=False, **kw):
+        gesehen["wahl"] = wahl_steht_an
+        raise rechner.berater.KeinZugang("x")
+
+    monkeypatch.setattr(rechner.berater, "frage", frage)
+    r = rechner.Rechner(tmp_path, tmp_path / "runs", tmp_path / "kb.sqlite", queue.Queue())
+    r._rat({"zustand": {"jahr": 1, "bauplan_wahl": {"angebot": ["Smokehouse"]}}})
+    assert gesehen["wahl"] is True

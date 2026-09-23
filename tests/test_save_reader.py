@@ -474,3 +474,18 @@ def test_warten_auf_ruhe_uebersteht_eine_verschwundene_datei(tmp_path: Path,
 
     monkeypatch.setattr(Path, "stat", wackelt)
     assert save_reader.wait_for_quiet(ordner, settle=0.0, timeout=0.5, poll=0.0) in (True, False)
+
+
+def test_eine_fehlende_bauplanwahl_ist_nicht_nicht_gefunden(tmp_path: Path) -> None:
+    """Ist keine Wahl offen, fehlt das Feld zu Recht -- das Fenster meldete
+    sonst ständig „nicht gefunden: blueprint_pick"."""
+    _, notes = read_state(schreibe_buendel(tmp_path), wait=False)
+    assert "blueprint_pick" not in {n.field for n in notes}
+
+
+def test_eine_bauplanwahl_in_fremder_form_wird_gemeldet(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"reputationRewards": {"currentPick": {
+        "options": [{"a": 1, "b": 2}, {"a": 3, "b": 4}]}}})
+    state, notes = read_state(ordner, wait=False)
+    assert state.blueprint_pick == {}
+    assert _note(notes, "blueprint_pick").how == "form_unbekannt"

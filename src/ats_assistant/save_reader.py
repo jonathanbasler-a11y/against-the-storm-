@@ -87,6 +87,9 @@ class GameState:
     reputation_by_race: dict[str, float] = field(default_factory=dict)
     blueprints: list[str] = field(default_factory=list)
     orders: list[dict[str, Any]] = field(default_factory=list)
+    # Die offene Bauplanwahl (Reputationsbonus), gemessen am 23.09.2026 unter
+    # `reputationRewards.currentPick`. Leer, wenn keine Wahl ansteht.
+    blueprint_pick: dict[str, Any] = field(default_factory=dict)
 
     # Zeitreihen: 180 Stuetzstellen à rund 10 Spielzeitsekunden, je Ware und
     # je Warenkategorie. Daraus kommt die Steigung fuer food_forecast.
@@ -200,6 +203,31 @@ def _name_und_zahl(entry: dict) -> tuple[str | None, Any]:
     return None, None
 
 
+def _bauplanwahl(wahl: Any, belohnung: dict) -> dict[str, Any]:
+    """Die angebotenen Bauplaene, wenn eine Wahl offen ist.
+
+    Gemessen: `options` hatte zwei Eintraege mit je zwei Schluesseln, als
+    Nahrungssammlerlager und Raeucherei zur Wahl standen. Welche zwei, zeigte
+    die Messung nicht; genommen wird je Eintrag der einzige Text.
+    """
+    if not isinstance(wahl, dict):
+        return {}
+    namen = []
+    for option in wahl.get("options") or []:
+        if isinstance(option, str):
+            namen.append(option)
+            continue
+        if isinstance(option, dict):
+            texte = [v for v in option.values() if isinstance(v, str) and v]
+            if len(texte) == 1:
+                namen.append(texte[0])
+    if not namen:
+        return {}
+    return {"angebot": namen,
+            "neu_wuerfeln": belohnung.get("currentRerolls"),
+            "joker": wahl.get("isWild")}
+
+
 def _entdeckte(glades: Any) -> int | None:
     """Gemessen: `world.glades` ist die ganze Karte (42 nach 600 Sekunden).
     Wo `wasDiscovered` steht, zaehlen nur die entdeckten."""
@@ -297,6 +325,16 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
         state.orders = [o for o in (raw_orders or [])
                         if isinstance(o, dict) and isinstance(o.get("model"), str)]
         _form_pruefen(notes[-1], raw_orders, state.orders)
+
+        # Ohne `pick`: ist keine Wahl offen, fehlt das Feld zu Recht und
+        # gehoert nicht unter "nicht gefunden". Gemeldet wird nur eine Wahl
+        # in fremder Form.
+        belohnung = _an_pfad(save, "$.reputationRewards")
+        wahl = _an_pfad(save, "$.reputationRewards.currentPick")
+        state.blueprint_pick = _bauplanwahl(wahl, belohnung if isinstance(belohnung, dict) else {})
+        if isinstance(wahl, dict) and wahl.get("options") and not state.blueprint_pick:
+            notes.append(Resolution("blueprint_pick", "$.reputationRewards.currentPick.options",
+                                    "form_unbekannt", form=form_skizze(wahl["options"])))
 
         raw_buildings = pick(save, idx, "buildings", ("buildings.buildings", "buildings"))
         state.buildings = _buildings(raw_buildings)

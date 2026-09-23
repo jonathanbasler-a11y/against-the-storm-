@@ -63,6 +63,10 @@ class Vorschlag:
     # die Produktionstabelle widersprochen -- und die gilt, denn sie fuehrt
     # die Zuordnung ausdruecklich statt aus dem Seitentitel geraten.
     gebaeude_laut_seite: str | None = None
+    # "steht", "baubar" oder "fehlt" -- None, wenn niemand gesagt hat, was
+    # in der Siedlung steht. Am Spielrechner empfahl der Reiter den Grill,
+    # der weder stand noch freigeschaltet war.
+    status: str | None = None
 
     @property
     def gewinn(self) -> float:
@@ -101,6 +105,12 @@ class Vorschlag:
             text += f" (Faktor {self.faktor:.1f})"
         if self.reichweite_plus:
             text += f", rund {self.reichweite_plus / 60:.0f} Minuten Reichweite"
+        if self.status == "steht":
+            text += " – steht schon"
+        elif self.status == "baubar":
+            text += " – baubar"
+        elif self.status == "fehlt":
+            text += f" – {name} ist nicht freigeschaltet"
         return text
 
 
@@ -122,6 +132,26 @@ def _bestand_auf_waren(conn: sqlite3.Connection,
             continue
         name = nach_save_id.get(schluessel) or strip_prefixes(schluessel)[0]
         out[name] = out.get(name, 0.0) + float(menge)
+    return out
+
+
+def _schluessel(name: str | None) -> str:
+    """Spielstand und Wiki schreiben Namen verschieden: "Forager's Camp"
+    gegen "Foragers' Camp", "Woodcutters Camp" gegen "Woodcutters' Camp"."""
+    return "".join(c for c in (name or "").casefold() if c.isalnum())
+
+
+def _hersteller(conn: sqlite3.Connection) -> dict[str, list[tuple[str, int | None]]]:
+    """Produkt -> alle Gebaeude, die es herstellen, die besten zuerst."""
+    out: dict[str, list[tuple[str, int | None]]] = {}
+    try:
+        zeilen = conn.execute(
+            "SELECT product, building, stars FROM production "
+            "ORDER BY stars DESC NULLS LAST, building").fetchall()
+    except sqlite3.DatabaseError:
+        return out
+    for z in zeilen:
+        out.setdefault(z["product"], []).append((z["building"], z["stars"]))
     return out
 
 
@@ -243,7 +273,8 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
                 verbrauch_pro_sekunde: float | None = None,
                 mindestgewinn: float = 1.0,
                 nur_belegt: bool = True,
-                huerden: list[dict] | None = None) -> list[Vorschlag]:
+                huerden: list[dict] | None = None,
+                verfuegbar: dict[str, str] | None = None) -> list[Vorschlag]:
     """Jedes Rezept gegen den Bestand rechnen, nach Gewinn sortiert.
 
     `verbrauch_pro_sekunde` kommt aus `food_forecast().rate_per_second` --
@@ -267,6 +298,9 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
     lager = _bestand_auf_waren(conn, bestand)
     namen = _deutsch(conn)
     zustaendig = _produktionsgebaeude(conn)
+    alle_hersteller = _hersteller(conn)
+    da = ({_schluessel(n): s for n, s in verfuegbar.items()}
+          if verfuegbar is not None else None)
     # Die Rate kommt mit Vorzeichen aus der Vorhersage. Nur ein fallender
     # Bestand ist Verbrauch; `abs()` machte aus einem wachsenden einen.
     verbrauch = (-verbrauch_pro_sekunde
@@ -334,6 +368,18 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
 
         belegt, grad = zustaendig.get(r["product"], (None, None))
         gebaeude = belegt or r["building"]
+        status = None
+        if da is not None:
+            # Unter allen Herstellern das beste, das steht oder baubar ist;
+            # sonst das beste, und dazu gesagt, dass es fehlt.
+            kandidaten = alle_hersteller.get(r["product"]) or [(r["building"], r["stars"])]
+            erreichbar = [(g, s) for g, s in kandidaten if _schluessel(g) in da]
+            erreichbar.sort(key=lambda gs: da[_schluessel(gs[0])] != "steht")
+            if erreichbar:
+                gebaeude, grad = erreichbar[0]
+                status = da[_schluessel(gebaeude)]
+            else:
+                status = "fehlt"
         vorschlag = Vorschlag(
             gebaeude=gebaeude, produkt=r["product"], zutaten=zutaten,
             zyklen=zyklen,
@@ -347,6 +393,7 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
             gebaeude_laut_seite=(r["building"]
                                  if r["building"] and r["building"] != gebaeude
                                  else None),
+            status=status,
         )
         if vorschlag.gewinn >= mindestgewinn:
             out.append(vorschlag)
@@ -362,9 +409,12 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
         # und eine unbekannte Dauer schlaegt keine bekannte.
         if vorhanden is None or _besser(v, vorhanden):
             einmalig[schluessel] = v
+    # Was steht, vor dem, was sich bauen laesst, vor dem, was fehlt -- erst
+    # dann der Gewinn. Ein Rat fuer ein Gebaeude, das es nicht gibt, ist keiner.
+    rang = {"steht": 0, "baubar": 1, None: 1, "fehlt": 2}
     out = sorted(einmalig.values(),
-                 key=lambda v: (-v.gewinn, v.dauer if v.dauer is not None else math.inf,
-                                v.produkt))
+                 key=lambda v: (rang.get(v.status, 1), -v.gewinn,
+                                v.dauer if v.dauer is not None else math.inf, v.produkt))
     if huerden is not None:
         # Nur die knappsten: wer zwanzig Rezepte aufzaehlt, sagt nichts.
         gesehen: set[str] = set()
@@ -399,7 +449,8 @@ class Rat:
 
 def rat(conn: sqlite3.Connection, bestand: dict[str, float],
         verbrauch_pro_sekunde: float | None = None,
-        reichweite_sekunden: float | None = None) -> Rat:
+        reichweite_sekunden: float | None = None,
+        verfuegbar: dict[str, str] | None = None) -> Rat:
     """Aus den Vorschlaegen die Ausgabe bauen, die die Spec verlangt."""
     if not bestand:
         # Leer gelesen heisst nicht leer. Am 22.09.2026 kam `lager: {}` aus
@@ -419,7 +470,8 @@ def rat(conn: sqlite3.Connection, bestand: dict[str, float],
         )
 
     huerden: list[dict] = []
-    liste = vorschlaege(conn, bestand, verbrauch_pro_sekunde, huerden=huerden)
+    liste = vorschlaege(conn, bestand, verbrauch_pro_sekunde, huerden=huerden,
+                        verfuegbar=verfuegbar)
     if not liste:
         namen = _deutsch(conn)
 

@@ -419,3 +419,18 @@ def test_echte_daten_passen_in_den_auszug() -> None:
     assert all(v for v in auszug["siedlung"]["lager"].values())
     assert len(auszug["siedlung"]["bauplaene_ungebaut"]) <= 80
     assert berater.MAX_ZEICHEN >= 40_000
+
+
+def test_die_bauplanwahl_aus_dem_spielstand_geht_mit() -> None:
+    wahl = {"angebot": ["Foragers' Camp", "Smokehouse"], "neu_wuerfeln": 1, "joker": False}
+    auszug = berater.kontext(zustand={"jahr": 1, "bauplan_wahl": wahl})
+    assert auszug["siedlung"]["bauplan_wahl"] == wahl
+
+
+def test_der_systemtext_verbietet_erfundene_bedienschritte() -> None:
+    """„Pakete öffnest du im Hauptlager … ‚Öffnen'" -- am Spielrechner
+    geprüft: das gibt es nicht."""
+    text = " ".join(berater.systemtext().split())      # Zeilenumbrüche egal
+    assert "Bedienschritte" in text
+    assert "noch zu öffnen" in text
+    assert "fehlt" in text and "bauplan_wahl" in text

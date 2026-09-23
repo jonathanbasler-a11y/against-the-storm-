@@ -49,6 +49,22 @@ def _wall(fn):
     return gehuellt
 
 
+def _verfuegbar(zustand: dict) -> dict[str, str] | None:
+    """Was steht und was sich bauen laesst, aus einem Zustand der Mitschrift.
+
+    None, wenn die Mitschrift keins von beiden kennt -- aeltere Zeilen hatten
+    weder `blueprints` noch lesbare Gebaeude. Dann bleibt der Rat, wie er war.
+    """
+    gebaut = [b.get("model") for b in zustand.get("buildings") or []
+              if isinstance(b, dict) and isinstance(b.get("model"), str)]
+    plaene = [p for p in zustand.get("blueprints") or [] if isinstance(p, str)]
+    if not gebaut and not plaene:
+        return None
+    out = {p: "baubar" for p in plaene}
+    out.update({g: "steht" for g in gebaut})
+    return out
+
+
 # Gemessen am 23.09.2026: Index 2 war genau der Zufriedenheitsgewinn der
 # Fuechse. Die anderen drei sind nicht belegt und heissen deshalb so --
 # bestaetigt werden sie, sobald ein abgeschlossener Auftrag Index 0 hebt.
@@ -75,12 +91,17 @@ def _auftraege(orders: list[dict]) -> dict:
             eintrag = {
                 "name": o["model"],
                 "belohnungen": [r for r in o.get("rewards") or [] if isinstance(r, str)],
-                "ziele": [{"typ": z.get("type"), "zaehler": z.get("amount"),
+                # Gemessen: `amount` 0 bei "0/2", "0/6", "0/2" im Spiel --
+                # der Stand. Das Ziel selbst steht nicht im Spielstand.
+                "ziele": [{"typ": z.get("type"), "stand": z.get("amount"),
                            "erledigt": z.get("completed")}
                           for z in o.get("objectives") or [] if isinstance(z, dict)],
             }
-            if o.get("shouldBeFailable") and isinstance(o.get("timeLeft"), (int, float)):
-                eintrag["zeitlimit_sekunden"] = o["timeLeft"]
+            # 0 hiess "keine Uhr laeuft", nicht "abgelaufen".
+            zeit = o.get("timeLeft")
+            if (o.get("shouldBeFailable") and isinstance(zeit, (int, float))
+                    and not isinstance(zeit, bool) and zeit > 0):
+                eintrag["zeitlimit_sekunden"] = zeit
             aktiv.append(eintrag)
         else:
             for p in o.get("picks") or []:
@@ -135,6 +156,7 @@ def _zustand_als_dict(state: GameState) -> dict:
         "ruf_quellen": _ruf_quellen(state.reputation_sources),
         "ruf_je_volk": state.reputation_by_race,
         "auftraege": _auftraege(state.orders),
+        **({"bauplan_wahl": state.blueprint_pick} if state.blueprint_pick else {}),
         "lichtungen": state.glades,
         "vorkommen": state.deposits,
         "grundsteine": state.cornerstones,
@@ -275,7 +297,14 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
     # einer offenen Grundsteinwahl gemessen: `Fuchs`, `Frosch`, `Biber` (die
     # Spezies oben links) und `Wucher` mit Guete 0,727. Alle vier standen
     # gleichberechtigt neben den beiden echten Karten.
-    sicher = [g for g in getroffen if g["guete"] >= SICHER]
+    # Einmal je Name: in der Auftragsuebersicht stand jeder Auftrag in der
+    # Seitenleiste und auf der Karte. Die erste Lesung bleibt.
+    gesehen: set[str] = set()
+    sicher = []
+    for g in getroffen:
+        if g["guete"] >= SICHER and g["en"] not in gesehen:
+            gesehen.add(g["en"])
+            sicher.append(g)
     # Belegtes zuerst, dann nach Guete. Sortiert, nicht gefiltert: die
     # Wissensbasis kennt 398 Grundsteine bei 2273 Namen, und
     # "Exportspezialisierung" stand am 22.09. wirklich zur Wahl, ohne
@@ -462,7 +491,8 @@ def food_advice(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
 
     conn = kb.connect(db)
     try:
-        r = nahrung.rat(conn, aktuell.storage or {}, verbrauch, reichweite)
+        r = nahrung.rat(conn, aktuell.storage or {}, verbrauch, reichweite,
+                        verfuegbar=_verfuegbar(zustaende[-1]))
         essbar = nahrung.essbar_im_lager(conn, aktuell.storage or {})
     finally:
         conn.close()
@@ -498,6 +528,7 @@ def food_advice(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
                 "engpass_en": v.engpass,
                 "reichweite_plus_sekunden": (round(v.reichweite_plus)
                                              if v.reichweite_plus else None),
+                "status": v.status,
             }
             for v in r.vorschlaege[:6]
         ],

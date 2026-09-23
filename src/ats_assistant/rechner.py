@@ -185,7 +185,10 @@ class Rechner(threading.Thread):
         try:
             antwort = berater.frage(
                 auszug, modell=daten.get("modell", berater.MODELL),
-                wahl_steht_an=bool((daten.get("auswahl") or {}).get("angebot")))
+                # Eine offene Bauplanwahl aus dem Spielstand ist eine Wahl,
+                # auch ohne Bildschirmlesung.
+                wahl_steht_an=bool((daten.get("auswahl") or {}).get("angebot")
+                                   or (daten.get("zustand") or {}).get("bauplan_wahl")))
         except berater.KeinZugang as exc:
             return {"ok": False, "text": str(exc), "auszug": auszug, "zugang": False}
         except Exception as exc:
