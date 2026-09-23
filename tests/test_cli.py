@@ -129,3 +129,24 @@ def test_form_zeigt_den_aufbau_ohne_werte(tmp_path: Path, capsys) -> None:
 def test_form_ohne_spielstand_kommt_ein_satz(tmp_path: Path, capsys) -> None:
     assert cli.main(["form", "--save-dir", str(tmp_path / "weg"), "--sofort"]) == 1
     assert "kein spielstand" in capsys.readouterr().out.lower()
+
+
+def test_ohne_save_dir_wird_der_spielordner_gesucht(tmp_path: Path, capsys,
+                                                     monkeypatch) -> None:
+    """Am Spielrechner: `lage.py form` endete mit ImportError. Die Suche
+    nach dem Spielordner wurde aus dem falschen Modul geholt -- und jeder
+    Test gab --save-dir an, lief also nie über diese Zeile."""
+    ordner = _buendel_mit_fremdem_lager(tmp_path / "save")
+    monkeypatch.setattr(cli, "finde_spielordner", lambda: ordner)
+    assert cli.main(["form", "--sofort"]) == 0
+    assert "$.storage.goods" in capsys.readouterr().out
+
+    db = kleine_basis(tmp_path / "kb.sqlite")
+    cli.main(["--runs", str(tmp_path / "runs"), "--db", str(db), "--sofort"])
+    assert "Jahr 1" in capsys.readouterr().out
+
+
+def test_ohne_gefundenen_spielordner_kommt_ein_satz(capsys, monkeypatch) -> None:
+    monkeypatch.setattr(cli, "finde_spielordner", lambda: None)
+    assert cli.main(["form", "--sofort"]) == 1
+    assert "Kein Spielordner gefunden" in capsys.readouterr().out
