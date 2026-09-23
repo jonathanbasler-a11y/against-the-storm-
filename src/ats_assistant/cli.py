@@ -7,6 +7,7 @@ und was zu bauen waere, soll dafuer keinen Server starten muessen.
     ats-lage                      Zustand, Nahrung, Ungeduld auf einen Blick
     ats-lage nahrung              nur die Ketten, ausfuehrlich
     ats-lage nachschlag Imbiss    ein Name, deutsch oder englisch
+    ats-lage form                 wie Lager und Gebaeude im Spielstand liegen
 """
 
 from __future__ import annotations
@@ -45,6 +46,14 @@ def cmd_lage(args) -> int:
                                f"{zustand.get('reputation_ziel')}"))
     print(_zeile("Ungeduld", f"{zustand.get('ungeduld')} von "
                              f"{zustand.get('ungeduld_schwelle')}"))
+    # Ein leeres Lager und ein nicht gelesenes sehen sonst gleich aus.
+    if zustand.get("nicht_gefunden"):
+        print(_zeile("Im Spielstand nicht gefunden",
+                     ", ".join(zustand["nicht_gefunden"])))
+    if zustand.get("form_unbekannt"):
+        print(_zeile("Gefunden, aber nicht lesbar",
+                     ", ".join(zustand["form_unbekannt"])
+                     + "  -> python tools\\lage.py form"))
 
     nahrung = tools_api.food_forecast(args.runs)
     print("\nNahrung")
@@ -95,6 +104,14 @@ def cmd_nahrung(args) -> int:
     return 0
 
 
+def cmd_form(args) -> int:
+    from .save_reader import formbericht
+    zeilen = formbericht(Path(args.save_dir), wait=not args.sofort)
+    for zeile in zeilen:
+        print(zeile)
+    return 1 if zeilen[0].startswith("Kein Spielstand") else 0
+
+
 def cmd_nachschlag(args) -> int:
     out = tools_api.query_kb(" ".join(args.name), db=args.db)
     for n in out.get("namen", []):
@@ -142,6 +159,11 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("name", nargs="+")
     s.set_defaults(func=cmd_nachschlag)
 
+    s = sub.add_parser("form", parents=[gemeinsam],
+                       help="Aufbau von Lager und Gebäuden im Spielstand, "
+                            "ohne Werte -- zum Einfügen in den Chat")
+    s.set_defaults(func=cmd_form)
+
     args = ap.parse_args(argv)
     for name, vorgabe in (("save_dir", None), ("runs", "runs"),
                           ("db", "kb.sqlite"), ("sofort", False)):
@@ -153,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     args.db = aufloesen(args.db)
     if getattr(args, "func", None) is None:
         args.func = cmd_lage
-    if args.func is cmd_lage and not args.save_dir:
+    if args.func in (cmd_lage, cmd_form) and not args.save_dir:
         from .save_reader import finde_spielordner
         gefunden = finde_spielordner()
         if gefunden is None:

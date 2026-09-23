@@ -353,3 +353,19 @@ def test_nicht_gefundene_felder_stehen_in_der_warnung(gui, tmp_path: Path) -> No
     app._anzeigen("zustand", {"verfuegbar": True, "jahr": 1, "biom": "Royal Woodlands",
                               "lager": {}, "nicht_gefunden": ["storage", "buildings"]})
     assert any("storage" in z and "nicht gefunden" in z.lower() for z in gesagt)
+
+
+def test_unlesbare_felder_stehen_in_der_warnung(gui, tmp_path: Path) -> None:
+    """Gefunden, aber in fremder Form -- das ist etwas anderes als „fehlt"
+    und muss auch anders heißen, sonst sucht man am falschen Ende."""
+    app = _vorbereitet(gui, tmp_path)
+    gesagt: list[str] = []
+    app.warnung = Wurzel()
+    app.warnung.configure = lambda **kw: gesagt.append(kw.get("text", ""))
+
+    app._anzeigen("zustand", {"verfuegbar": True, "jahr": 1, "biom": "Royal Woodlands",
+                              "lager": {}, "nicht_gefunden": ["biome"],
+                              "form_unbekannt": {"storage": "{…}", "buildings": "{…}"}})
+    text = " ".join(gesagt)
+    assert "nicht lesbar" in text and "storage" in text and "buildings" in text
+    assert "nicht gefunden" in text.lower() and "biome" in text

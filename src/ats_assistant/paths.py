@@ -41,8 +41,12 @@ class Resolution:
 
     field: str
     path: str | None
-    how: str  # "pfad", "suche" oder "fehlt"
+    how: str  # "pfad", "suche", "fehlt" oder "form_unbekannt"
     depth: int | None = None
+    # Nur bei "form_unbekannt": Schluessel und Typen des Gefundenen, keine
+    # Werte. Damit laesst sich aus einer Zeile ablesen, wie das Spiel es
+    # wirklich ablegt.
+    form: str | None = None
 
 
 @dataclass

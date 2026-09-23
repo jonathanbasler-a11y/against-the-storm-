@@ -60,6 +60,27 @@ def test_get_state_schreibt_die_mitschrift(tmp_path: Path) -> None:
     assert len(zeilen) == 1 and json.loads(zeilen[0])["year"] == 13
 
 
+def test_get_state_meldet_ein_lager_in_fremder_form(tmp_path: Path) -> None:
+    """`lager: {}` ohne jede Meldung kam am Spielrechner aus einem vollen
+    Lagerhaus. Gefunden-aber-unlesbar muss mit seiner Form heraus."""
+    save_dir = buendel(tmp_path / "save")
+    pfad = save_dir / "Save.save"
+    save = json.loads(pfad.read_text(encoding="utf-8"))
+    save["storage"] = {"goods": {"[Food Raw] Meat": {"amount": 42}}}
+    pfad.write_text(json.dumps(save), encoding="utf-8")
+
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    assert out["lager"] == {}
+    assert "amount" in out["form_unbekannt"]["storage"]
+    assert "storage" not in out.get("nicht_gefunden", [])
+
+
+def test_get_state_ohne_formfehler_hat_kein_feld_dafuer(tmp_path: Path) -> None:
+    out = tools_api.get_state(buendel(tmp_path / "save"), tmp_path / "runs",
+                              auf_ruhe_warten=False)
+    assert "form_unbekannt" not in out
+
+
 def test_food_forecast_braucht_zwei_spielstaende(tmp_path: Path) -> None:
     save_dir = buendel(tmp_path / "save")
     runs = tmp_path / "runs"
