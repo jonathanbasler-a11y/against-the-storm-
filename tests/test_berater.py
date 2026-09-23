@@ -88,7 +88,8 @@ def test_kein_bild_geht_hinaus() -> None:
 
 def test_ein_zu_grosser_auszug_wird_abgewiesen() -> None:
     with pytest.raises(ValueError, match="Zeichen"):
-        berater.pruefe_auszug({"lager": {f"Ware{i}": "x" * 100 for i in range(300)}})
+        berater.pruefe_auszug({"lager": {f"Ware{i}": "x" * 100
+                                         for i in range(berater.MAX_ZEICHEN // 50)}})
 
 
 def test_frage_setzt_die_richtigen_einstellungen() -> None:
@@ -353,3 +354,68 @@ def test_der_systemtext_sagt_was_als_nahrung_zaehlt() -> None:
     text = berater.systemtext()
     assert "essbar_im_lager" in text
     assert "bauplaene_ungebaut" in text and "auftraege" in text
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 3 (23.09.2026): Anbindung
+# --------------------------------------------------------------------------
+
+
+class Abgebrochen(FalscherClient):
+    def __init__(self, grund: str, text: str = ""):
+        super().__init__(text=text)
+        self.grund = grund
+
+    def create(self, **kwargs):
+        antwort = super().create(**kwargs)
+        antwort.stop_reason = self.grund
+        if not self.text:
+            antwort.content = []
+        return antwort
+
+
+def test_nachdenken_und_antwort_haben_platz() -> None:
+    """`max_tokens` deckt Nachdenken und Antwort zusammen. 2000 reichten bei
+    einer Grundsteinwahl auf hohem Aufwand nicht."""
+    client = FalscherClient()
+    berater.frage({"siedlung": {}}, client=client, regeln="x", wahl_steht_an=True)
+    assert client.gesehen["max_tokens"] >= 16000
+
+
+def test_eine_abgeschnittene_antwort_sagt_das() -> None:
+    antwort = berater.frage({"siedlung": {}}, client=Abgebrochen("max_tokens", "Nimm die"),
+                            regeln="x")
+    assert "Nimm die" in antwort.text and "abgeschnitten" in antwort.text
+
+
+def test_eine_ablehnung_sagt_das() -> None:
+    antwort = berater.frage({"siedlung": {}}, client=Abgebrochen("refusal"), regeln="x")
+    assert "abgelehnt" in antwort.text.lower()
+    assert antwort.text != "Keine Antwort erhalten."
+
+
+def test_die_kosten_rechnen_den_zwischenspeicher_ein() -> None:
+    """Schreiben kostet 1,25-fach, Lesen 0,1-fach -- beides fehlte."""
+    ohne = berater.Antwort("", "claude-opus-5", eingabe_token=1000, ausgabe_token=0)
+    mit = berater.Antwort("", "claude-opus-5", eingabe_token=1000, ausgabe_token=0,
+                          zwischenspeicher_gelesen=10_000, zwischenspeicher_geschrieben=2000)
+    assert mit.kosten_cent == pytest.approx(
+        ohne.kosten_cent + (10_000 * 0.1 + 2000 * 1.25) * 5.0 / 1e6 * 100)
+
+
+def test_echte_daten_passen_in_den_auszug() -> None:
+    """Mit 60 Waren, 63 Bauplänen und 15 Aufträgen lag der Auszug bei
+    16 700 von 20 000 Zeichen -- eine große Siedlung, und jede Frage wäre
+    gescheitert. Nullmengen gehen nicht mit, lange Listen werden gekappt."""
+    zustand = {
+        "jahr": 5,
+        "lager": {f"Ware {i}": (0 if i % 2 else i) for i in range(120)},
+        "bauplaene_ungebaut": [f"Ein recht langer Gebäudename {i}" for i in range(200)],
+        "gebaeude_liste": [{"gebaeude": f"Gebäude {i}", "anzahl": 1, "arbeiter": 2}
+                           for i in range(120)],
+    }
+    auszug = berater.kontext(zustand=zustand)
+    berater.pruefe_auszug(auszug)
+    assert all(v for v in auszug["siedlung"]["lager"].values())
+    assert len(auszug["siedlung"]["bauplaene_ungebaut"]) <= 80
+    assert berater.MAX_ZEICHEN >= 40_000

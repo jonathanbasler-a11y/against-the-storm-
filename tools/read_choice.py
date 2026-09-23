@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from ats_assistant import screen, tools_api  # noqa: E402
+from ats_assistant.mcp_server import aufloesen  # noqa: E402
 
 
 def cmd_pruefen(args) -> int:
@@ -38,7 +39,9 @@ def cmd_pruefen(args) -> int:
 
 
 def cmd_lesen(args) -> int:
-    out = tools_api.read_choice(bild=args.bild, text=args.text, db=args.db,
+    # Wie beim Server: `kb.sqlite` meint die Wissensbasis des Projekts. Aus
+    # einem anderen Ordner gestartet, legte es dort eine leere an.
+    out = tools_api.read_choice(bild=args.bild, text=args.text, db=aufloesen(args.db),
                                 arten=tuple(args.arten),
                                 aufnehmen=not args.bild and not args.text)
     if not out["verfuegbar"]:

@@ -39,7 +39,7 @@ def cmd_lage(args) -> int:
         # Sonst stuende hier "Jahr None, ?, Prestige None" -- das sieht aus
         # wie eine Siedlung ohne Eigenschaften statt wie ein fehlender
         # Spielstand.
-        print(zustand.get("grund", "Kein Spielstand lesbar."))
+        print(zustand.get("fehler") or zustand.get("grund") or "Kein Spielstand lesbar.")
         return 1
     print(f"Jahr {zustand.get('jahr')}, {zustand.get('biom') or '?'}, "
           f"Prestige {zustand.get('prestige')}")
@@ -88,6 +88,9 @@ def cmd_lage(args) -> int:
 
 def cmd_nahrung(args) -> int:
     rat = tools_api.food_advice(args.runs, args.db)
+    if rat.get("fehler"):
+        print(rat["fehler"])
+        return 1
     if not rat.get("verfuegbar"):
         if rat.get("grund"):
             print(rat["grund"])
@@ -122,6 +125,9 @@ def cmd_form(args) -> int:
 
 def cmd_nachschlag(args) -> int:
     out = tools_api.query_kb(" ".join(args.name), db=args.db)
+    if out.get("fehler"):
+        print(out["fehler"])
+        return 1
     for n in out.get("namen", []):
         herkunft = n.get("loc_key") or n.get("source") or ""
         print(f"  {n['de']:<28} {n['en']:<28} {n['kind'] or '':<12} "

@@ -17,6 +17,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
+
+def _melden(hinweis: str) -> None:
+    """Ohne Konsole sieht niemand einen Stapelauszug. Also ein Fenster."""
+    try:
+        import tkinter.messagebox as mb
+        import tkinter as tk
+        wurzel = tk.Tk()
+        wurzel.withdraw()
+        mb.showerror("Against the Storm – Assistent", hinweis)
+    except Exception:
+        if sys.stderr is not None:
+            print(hinweis, file=sys.stderr)
+
+
 try:
     from ats_assistant.gui import main
 except ImportError as exc:
@@ -27,15 +41,15 @@ except ImportError as exc:
                    "\"tcl/tk and IDLE\" ankreuzen.")
     else:
         hinweis = f"Das Paket liess sich nicht laden:\n\n{exc}"
-    try:
-        import tkinter.messagebox as mb
-        import tkinter as tk
-        wurzel = tk.Tk()
-        wurzel.withdraw()
-        mb.showerror("Against the Storm – Assistent", hinweis)
-    except Exception:
-        print(hinweis, file=sys.stderr)
+    _melden(hinweis)
     raise SystemExit(1)
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except Exception as exc:
+        # Unter pythonw ist sys.stderr None: ohne dieses Fenster endete ein
+        # Absturz beim Start (TclError, kein Schreibrecht fuer logs/) still.
+        _melden(f"Das Fenster ist abgestuerzt:\n\n{type(exc).__name__}: {exc}\n\n"
+                "Mehr steht in logs\\gui.log, falls es angelegt wurde.")
+        raise SystemExit(1)

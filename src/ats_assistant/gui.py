@@ -25,7 +25,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
 
-from . import berater
+from . import berater, screen
 from .mcp_server import aufloesen
 from .orte import finde_spielordner
 from .rechner import (ABHOLEN_MS, Rechner, alter as _alter,
@@ -237,8 +237,24 @@ class App:
         self._schreiben(self.auswahl_text, "wird gelesen …")
         self.root.withdraw()
         self._sicherung = self.root.after(SICHERUNG_MS, self._fenster_zurueck)
-        self.root.after(VERSTECKT_MS, lambda: self.rechner.bitte(
-            "auswahl", arten=(self.art.get(),), text=None))
+        self.root.after(VERSTECKT_MS, self._foto_machen)
+
+    def _foto_machen(self) -> None:
+        """Das Foto hier, im Hauptthread, solange das Fenster weg ist.
+
+        Vorher ging nur ein Auftrag an den Arbeits-Thread, und der stand
+        hinter allem, was gerade lief -- eine Rat-Frage dauert bis zu einer
+        Minute. Nach acht Sekunden holte das Sicherheitsnetz das Fenster
+        zurück, und fotografiert wurde es selbst.
+        """
+        try:
+            pfad = screen.aufnehmen()
+        except Exception as exc:
+            self._fenster_zurueck()
+            self._schreiben(self.auswahl_text, f"Keine Aufnahme: {exc}")
+            return
+        self._fenster_zurueck()
+        self.rechner.bitte("auswahl", arten=(self.art.get(),), bild=str(pfad))
 
     def _fenster_zurueck(self) -> None:
         """Zurückholen, was der Bildweg versteckt hat -- auch nach einem Fehler.
@@ -296,16 +312,31 @@ class App:
         feld.configure(state="disabled")
 
     def _abholen(self) -> None:
+        # Eine Ausnahme beim Anzeigen beendete das Abholen fuer immer: das
+        # Fenster zeigte danach nichts Neues mehr. Unter pythonw steht sie
+        # auch nirgends -- also ins Protokoll, und weiter.
         try:
             while True:
-                art, wert = self.ausgang.get_nowait()
-                self._anzeigen(art, wert)
-        except queue.Empty:
-            pass
-        self.root.after(ABHOLEN_MS, self._abholen)
+                try:
+                    art, wert = self.ausgang.get_nowait()
+                except queue.Empty:
+                    break
+                try:
+                    self._anzeigen(art, wert)
+                except Exception:
+                    log.exception("Anzeige von %s gescheitert", art)
+            self._kopf_auffrischen()
+        finally:
+            self.root.after(ABHOLEN_MS, self._abholen)
 
     def _anzeigen(self, art: str, wert) -> None:
         if art == "zustand":
+            # Eine gelesene Auswahl gilt, bis das Spiel weiterlaeuft. Sonst
+            # ging eine alte Grundsteinwahl bei jeder spaeteren Frage mit.
+            alt = (getattr(self, "zustand", None) or {}).get("spielzeit")
+            neu = (wert or {}).get("spielzeit")
+            if alt is not None and neu is not None and neu != alt:
+                self.auswahl = None
             self.zustand = wert
             self._zeige_zustand(wert)
         elif art == "nahrung":
@@ -330,7 +361,9 @@ class App:
             if not getattr(self, "_rat_gefragt", False):
                 self.rat_fuss.configure(text=_anmeldehinweis(wert))
         elif art == "rat":
-            self._rat_gefragt = True
+            # Erst eine echte Antwort ersetzt den Anmeldehinweis; nach einer
+            # gescheiterten darf ein spaeter gesetzter Schluessel ihn loeschen.
+            self._rat_gefragt = bool(wert.get("ok"))
             self._schreiben(self.rat_text, wert.get("text", ""))
             if wert.get("ok"):
                 fuss = wert.get("fuss", "")
@@ -355,17 +388,41 @@ class App:
             self.status.configure(text=text)
             self.status_alles = "\n".join(offen)
         elif art == "fehler":
-            self._fenster_zurueck()
             self.status.configure(text=f"Fehler: {wert}")
+
+    def _kopf_auffrischen(self) -> None:
+        """Das Alter im Kopf laeuft mit -- sonst stand "gerade eben" ewig."""
+        z = getattr(self, "zustand", None)
+        if not z or z.get("verfuegbar") is False:
+            return
+        if z.get("gespeichert"):
+            wann = _alter(z["gespeichert"], "gespeichert")
+        else:
+            wann = _alter(z.get("zeitpunkt"))
+        self.kopf.configure(
+            text=f"Jahr {z.get('jahr', '?')} · {z.get('biom') or '?'} · "
+                 f"Prestige {z.get('prestige', '?')} · {wann}")
+
+    def _warnung_zeigen(self) -> None:
+        """Zustand und Nahrung warnen beide in dieselbe Zeile. Vorher
+        ueberschrieb die Nahrung im selben Durchgang, was der Zustand sagte."""
+        teile = [t for t in (getattr(self, "_warn_zustand", ""),
+                             getattr(self, "_warn_nahrung", "")) if t]
+        self.warnung.configure(text="  ·  ".join(teile))
 
     def _zeige_zustand(self, z: dict) -> None:
         if z.get("verfuegbar") is False:
             self.kopf.configure(text="Kein Spielstand")
-            self.warnung.configure(text=z.get("grund") or z.get("fehler", ""))
+            self._warn_zustand = z.get("grund") or z.get("fehler", "")
+            self._warn_nahrung = ""
+            # Die Werte der letzten Siedlung sind keine Aussage ueber jetzt.
+            for feld in self.felder.values():
+                feld.configure(text="–")
+            for balken in self.balken.values():
+                balken.configure(value=0)
+            self._warnung_zeigen()
             return
-        self.kopf.configure(
-            text=f"Jahr {z.get('jahr', '?')} · {z.get('biom') or '?'} · "
-                 f"Prestige {z.get('prestige', '?')} · {_alter(z.get('zeitpunkt'))}")
+        self._kopf_auffrischen()
         # Ein stiller Ausfall ist schlimmer als ein lauter: `lager: {}` sah
         # aus wie ein leeres Lager und war ein nicht gefundenes Feld.
         fehlend = z.get("nicht_gefunden") or []
@@ -378,9 +435,9 @@ class App:
             # die der Leser nicht kennt. `tools\lage.py form` zeigt sie.
             saetze.append("Gefunden, aber nicht lesbar: " + ", ".join(unlesbar[:6])
                           + " (python tools\\lage.py form zeigt den Aufbau).")
-        if saetze:
-            self.warnung.configure(
-                text=" ".join(saetze) + " Was darauf rechnet, rechnet auf nichts.")
+        self._warn_zustand = (" ".join(saetze) + " Was darauf rechnet, rechnet auf nichts."
+                              if saetze else "")
+        self._warnung_zeigen()
         self.felder["bevoelkerung"].configure(text=str(z.get("bevoelkerung") or "–"))
         self.felder["feindseligkeit"].configure(
             text=_feindseligkeit(z.get("feindseligkeit")))
@@ -389,20 +446,23 @@ class App:
                 ("reputation", z.get("reputation"), z.get("reputation_ziel")),
                 ("ungeduld", z.get("ungeduld"), z.get("ungeduld_schwelle"))):
             if jetzt is None:
+                self.felder[schluessel].configure(text="–")
+                self.balken[schluessel].configure(value=0)
                 continue
             self.felder[schluessel].configure(
                 text=f"{jetzt:.1f} von {ziel}" if ziel else f"{jetzt:.1f}")
-            if ziel:
-                self.balken[schluessel].configure(value=min(jetzt / ziel * 100, 100))
+            self.balken[schluessel].configure(
+                value=min(jetzt / ziel * 100, 100) if ziel else 0)
 
     def _zeige_nahrung(self, n: dict) -> None:
         self.felder["reichweite"].configure(text=_minuten(n.get("reichweite_sekunden")))
         reichweite = n.get("reichweite_sekunden")
-        if reichweite:
-            # Eine Jahreszeit dauert grob 300 Spielzeitsekunden je Speicherlauf;
-            # voll ist der Balken bei einer Stunde Reichweite.
-            self.balken["reichweite"].configure(value=min(reichweite / 3600 * 100, 100))
-        self.warnung.configure(text=n.get("warnung") or n.get("grund") or "")
+        # Voll ist der Balken bei einer Stunde Reichweite. Ohne Wert leer --
+        # sonst stand er voll neben "0 s".
+        self.balken["reichweite"].configure(
+            value=min(reichweite / 3600 * 100, 100) if reichweite else 0)
+        self._warn_nahrung = n.get("warnung") or n.get("grund") or ""
+        self._warnung_zeigen()
 
     def _zeige_ketten(self, rat: dict) -> None:
         saetze = [rat.get(k) for k in ("empfehlung", "begruendung", "alternative")]

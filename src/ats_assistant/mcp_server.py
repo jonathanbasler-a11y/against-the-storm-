@@ -108,10 +108,17 @@ def werkzeuge(save_dir: Path, runs_dir: Path, db: Path) -> list[dict]:
                     "text": {"type": "array", "items": {"type": "string"},
                              "description": "bereits gelesene Kartentitel, "
                                             "falls keine Texterkennung da ist"},
+                    "arten": {"type": "array",
+                              "items": {"type": "string",
+                                        "enum": ["effect", "building", "order"]},
+                              "description": "worauf abgeglichen wird: effect "
+                                             "(Grundsteine), building (Baupläne), "
+                                             "order (Aufträge); Vorgabe effect"},
                 },
             },
-            "handler": lambda bild=None, text=None, **kw: tools_api.read_choice(
-                bild=bild, text=text, db=db, aufnehmen=bild is None and not text),
+            "handler": lambda bild=None, text=None, arten=None, **kw: tools_api.read_choice(
+                bild=bild, text=text, db=db, arten=tuple(arten or ("effect",)),
+                aufnehmen=bild is None and not text),
         },
         {
             "name": "query_kb",
@@ -368,6 +375,12 @@ def _pruefen(save_dir: Path, runs_dir: Path, db: Path) -> int:
             ergebnis = w["handler"](**PRUEFARGUMENTE.get(w["name"], {}))
         except Exception as exc:
             print(f"  FEHLER  {w['name']:<20} {type(exc).__name__}: {exc}")
+            fehler += 1
+            continue
+        if isinstance(ergebnis, dict) and ergebnis.get("fehler"):
+            # Jedes Werkzeug faengt seine Ausnahme und legt sie nach `fehler`.
+            # Als "stumm" gezaehlt, meldete der Prueflauf Erfolg.
+            print(f"  FEHLER  {w['name']:<20} {ergebnis['fehler']}")
             fehler += 1
             continue
         if isinstance(ergebnis, dict) and ergebnis.get("verfuegbar") is False:

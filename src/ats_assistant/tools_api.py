@@ -180,6 +180,14 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
     # Gefunden, aber in fremder Form -- sieht sonst aus wie ein leeres Lager.
     unlesbar = {n.field: n.form for n in notes if n.how == "form_unbekannt"}
     out = _zustand_als_dict(state)
+    # Wann das Spiel gespeichert hat, nicht wann gelesen wurde: das Fenster
+    # zeigte sonst auch bei einem Stand von vor Stunden "gerade eben".
+    try:
+        from datetime import datetime, timezone
+        out["gespeichert"] = datetime.fromtimestamp(
+            (ordner / "Save.save").stat().st_mtime, timezone.utc).isoformat()
+    except OSError:
+        pass
     if kennung:
         out["mitschrift"] = kennung
     out["verfuegbar"] = state.game_time is not None
@@ -295,6 +303,15 @@ def _belegt(conn, eintrag: dict, arten: tuple[str, ...]) -> bool:
     hat eine Zeile in `cornerstones`, ein Bauplan eine in `buildings`. Was
     dort fehlt, ist Bildschirmtext, bis das Gegenteil dasteht.
     """
+    if "order" in arten:
+        # Auftraege haben keine eigene Tabelle -- belegt ist, was die
+        # Lokalisierung als Auftrag fuehrt. Vorher wurden sie unter den
+        # Grundsteinen gesucht und landeten alle unter "meist Oberflaeche".
+        zeile = conn.execute(
+            "SELECT 1 FROM name_map WHERE en = ? AND kind = 'order'",
+            (eintrag["en"],)).fetchone()
+        return zeile is not None
+
     if "building" in arten:
         zeile = conn.execute(
             "SELECT category, purpose, cost FROM buildings WHERE en = ?",

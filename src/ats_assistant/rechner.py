@@ -61,7 +61,7 @@ def feindseligkeit(wert) -> str:
     return " · ".join(teile) or "–"
 
 
-def alter(zeitpunkt: str | None) -> str:
+def alter(zeitpunkt: str | None, wort: str = "gelesen") -> str:
     """Wie alt die Zahlen sind. Ohne das wird aus einem fünf Minuten alten
     Bestand eine Behauptung über jetzt."""
     if not zeitpunkt:
@@ -73,7 +73,9 @@ def alter(zeitpunkt: str | None) -> str:
     sekunden = (datetime.now(gelesen.tzinfo) - gelesen).total_seconds()
     if sekunden < 90:
         return "gerade eben"
-    return f"vor {sekunden / 60:.0f} min gelesen"
+    if sekunden < 5400:
+        return f"vor {sekunden / 60:.0f} min {wort}"
+    return f"vor {sekunden / 3600:.0f} h {wort}"
 
 
 # --------------------------------------------------------------------------
@@ -112,8 +114,17 @@ class Rechner(threading.Thread):
     def bitte(self, art: str, **daten) -> None:
         self.eingang.put(Auftrag(art, daten))
 
-    def run(self) -> None:
+    def _anfangen(self) -> None:
+        # Die Signatur gleich merken: sonst sah `_nachsehen` drei Sekunden
+        # spaeter eine "neue" (von None aus) und las ein zweites Mal.
+        try:
+            self._signatur = _signatur(self.save_dir)
+        except Exception:
+            pass
         self.bitte("lage")
+
+    def run(self) -> None:
+        self._anfangen()
         while not self._ende.is_set():
             try:
                 auftrag = self.eingang.get(timeout=TAKT_SEKUNDEN)
@@ -148,10 +159,13 @@ class Rechner(threading.Thread):
             # jemand fragt. Kostet keine Anfrage, nur einen Blick.
             self.ausgang.put(("anmeldung", berater.anmeldung_gefunden()))
         elif auftrag.art == "auswahl":
+            # Das Foto macht das Fenster selbst, im Hauptthread, solange es
+            # versteckt ist. Hier wird nur noch gelesen.
+            bild = auftrag.daten.get("bild")
+            text = auftrag.daten.get("text")
             self.ausgang.put(("auswahl", tools_api.read_choice(
-                db=self.db, arten=auftrag.daten.get("arten", ("effect",)),
-                text=auftrag.daten.get("text"),
-                aufnehmen=not auftrag.daten.get("text"))))
+                bild=bild, db=self.db, arten=auftrag.daten.get("arten", ("effect",)),
+                text=text, aufnehmen=not text and not bild)))
         elif auftrag.art == "nachschlag":
             self.ausgang.put(("nachschlag", tools_api.query_kb(
                 auftrag.daten["name"], db=self.db)))
