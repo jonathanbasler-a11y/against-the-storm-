@@ -603,3 +603,14 @@ def test_statistik_und_effekte_gehen_mit_und_werden_gekappt() -> None:
 def test_der_systemtext_kennt_statistik_und_effekte() -> None:
     text = " ".join(berater.systemtext().split())
     assert "effekte.aktiv" in text and "statistik" in text
+
+
+def test_abweichende_effekte_gehen_an_den_rat() -> None:
+    from ats_assistant import save_reader
+    alle = [{"feld": f, "name": save_reader.EFFEKT_NAMEN.get(f, f), "wert": 9.999,
+             "grundwert": 1} for f in save_reader.EFFEKT_GRUNDWERTE]
+    auszug = berater.kontext(zustand={"jahr": 1, "effekte": {
+        "abweichungen": alle, "aktiv": [{"modell": f"Perk {i}"} for i in range(200)]}})
+    assert len(auszug["siedlung"]["effekte"]["abweichungen"]) == len(alle)
+    berater.pruefe_auszug(auszug)
+    assert "effekte.abweichungen" in " ".join(berater.systemtext().split())

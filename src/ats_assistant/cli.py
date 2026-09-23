@@ -61,6 +61,13 @@ def cmd_lage(args) -> int:
             e.get("name") or e["modell"] for e in effekte["aktiv"])))
     if effekte.get("hunger_multiplikator") is not None:
         print(_zeile("Hungermultiplikator", effekte["hunger_multiplikator"]))
+    if effekte.get("abweichungen"):
+        abw = effekte["abweichungen"]
+        text = ", ".join(f"{a.get('name') or a['feld']} {a['wert']} (sonst {a['grundwert']})"
+                         for a in abw[:6])
+        if len(abw) > 6:
+            text += f"  (+{len(abw) - 6})"
+        print(_zeile("Abweichende Effekte", text))
     # Ein leeres Lager und ein nicht gelesenes sehen sonst gleich aus.
     if zustand.get("nicht_gefunden"):
         print(_zeile("Im Spielstand nicht gefunden",

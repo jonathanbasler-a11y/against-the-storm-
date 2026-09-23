@@ -281,13 +281,98 @@ def _statistik(roh: Any) -> dict[str, Any]:
     return out
 
 
+# Die Zahlenfelder unter `effects` mit ihrem Grundwert ("kein Effekt").
+# Herkunft: Namensregel -- Bonus/Options/Amount/Capacity/HP/Cost/Chance → 0,
+# Rate/Speed/Length/Factor/Ratio/Multiplier → 1 --, gegengeprueft an
+# `lage.py form --pfad effects --werte` vom 23.09.2026: Verkaufspreise 0.5,
+# Bauplan- und Grundsteinoptionen -2, Ereignistempo 0.67 -- genau die
+# Prestige-Effekte, die bekannt sind. Eine ausdrueckliche Liste: ein Feld,
+# das eine spaetere Spielversion hinzufuegt, geht nicht mit einem geratenen
+# Grundwert hinaus. Unsicher sind `newYearEffectMultiplayer`, `hearthBonusHP`
+# und `newcomersBonus`. `hungerMultiplier` steht fuer sich (siehe unten).
+EFFEKT_GRUNDWERTE: dict[str, float] = {
+    **{feld: 0.0 for feld in (
+        "globalBlightRateBonus", "globalProductionRateBonus",
+        "globalExtraProductionChanceBonus", "globalNoProductionChanceBonus",
+        "relicsBonusDangerousWorkingTimeRate", "relicsExtraRewardsChance",
+        "relicsDangerousExtraRewardsChance", "bonusReputationPenaltyPerReputation",
+        "bonusBuildingsRefundRate", "bonusHearthCorruptionRate", "bonusCystBurningTime",
+        "traderMerchandisePriceBonusRates", "bonusForceTraderPrice",
+        "globalBonusCapacity", "bonusWaterTanksCapacity", "bonusHearthRange",
+        "bonusGlobalReputationTresholdIncrease", "globalStoragesBonusCapacity",
+        "globalHousesBonusCapacity", "hearthBonusHP", "reputationRewardRerollBonusCost",
+        "newcomersBonus", "smallDepositsChargesBonus", "largeDepositsChargesBonus",
+        "bonusTradeRoutes", "bonusReputationRewardsOptions", "bonusSeasonalRewardsOptions",
+        "bonusOrdersOptions", "bonusTimedOrdersAmount", "bonusGracePeriod",
+        "bonusTraderMerchSlots", "bonusTradeRoutesRewards", "bonusTradeRoutesFuel",
+        "bonusRainpunkUnlockPrice", "extraBaitProduction", "wildcardPicks",
+        "blueprintFromCategoryPicks", "bonusCorruptionPerRemovedCyst",
+        "bonusSacrificeStacks", "cornerstonesLimit",
+        "positiveSeasonalEffectsMinHostilityChange",
+        "negativeSeasonalEffectsMinHostilityChange")},
+    **{feld: 1.0 for feld in (
+        "plantingSpeed", "harvestingSpeed", "fuelConsumptionSpeed",
+        "hearthSacraficeTimeRate", "constructionSpeed", "constructionCost",
+        "relicsWorkingTimeRate", "grassAmountRatio", "drizzleLength",
+        "clearanceleLength", "stormLength", "resolveToReputationRatio", "leavingRate",
+        "newcommersGoodsRate", "traderGlobalSellPriceRate", "tradeRoutesSpeed",
+        "villagersBreakTimeRate", "globalSpeedFactor", "roadsSpeedFactor",
+        "offroadSpeedFacotr", "resolveNegativeChangeRate", "tradersIntervalRate",
+        "newcomersIntervalRate", "enginesBlightRate", "newYearEffectMultiplayer")},
+}
+
+# Uebersetzungen der Feldnamen, keine Deutung. Das Feld geht immer mit.
+EFFEKT_NAMEN: dict[str, str] = {
+    "constructionCost": "Baukosten",
+    "constructionSpeed": "Baugeschwindigkeit",
+    "stormLength": "Sturmdauer",
+    "drizzleLength": "Nieselregendauer",
+    "clearanceleLength": "Lichtungszeitdauer",
+    "leavingRate": "Abwanderung",
+    "traderGlobalSellPriceRate": "Verkaufspreise",
+    "tradersIntervalRate": "Abstand der Händler",
+    "newcomersIntervalRate": "Abstand der Neuankömmlinge",
+    "newcomersBonus": "Zusätzliche Neuankömmlinge",
+    "relicsWorkingTimeRate": "Arbeitstempo an Ereignissen",
+    "bonusReputationPenaltyPerReputation": "Zusätzliche Ungeduld je Ruf",
+    "bonusGlobalReputationTresholdIncrease": "Zusätzlicher Rufbedarf",
+    "bonusReputationRewardsOptions": "Bauplanoptionen",
+    "bonusSeasonalRewardsOptions": "Grundsteinoptionen",
+    "bonusOrdersOptions": "Auftragsoptionen",
+    "reputationRewardRerollBonusCost": "Mehrkosten Neu würfeln",
+    "hearthBonusHP": "Herd-Lebenspunkte",
+    "globalProductionRateBonus": "Produktionstempo",
+    "plantingSpeed": "Pflanztempo",
+    "harvestingSpeed": "Erntetempo",
+    "fuelConsumptionSpeed": "Brennstoffverbrauch",
+    "resolveToReputationRatio": "Ruf aus Zufriedenheit",
+    "globalSpeedFactor": "Bewegungstempo",
+    "globalStoragesBonusCapacity": "Lagerkapazität",
+}
+
+
+def _abweichungen(roh: dict) -> list[dict[str, Any]]:
+    out = []
+    for feld, grundwert in EFFEKT_GRUNDWERTE.items():
+        wert = _zahl(roh.get(feld))
+        if wert is None or not math.isfinite(wert) or abs(wert - grundwert) <= 1e-6:
+            continue
+        eintrag: dict[str, Any] = {"feld": feld}
+        if feld in EFFEKT_NAMEN:
+            eintrag["name"] = EFFEKT_NAMEN[feld]
+        gerundet = round(float(wert), 3)
+        eintrag["wert"] = int(gerundet) if gerundet.is_integer() else gerundet
+        eintrag["grundwert"] = int(grundwert)
+        out.append(eintrag)
+    return out
+
+
 def _effekte(roh: Any) -> dict[str, Any]:
     """Der Reiter „Allgemeine Effekte“, gemessen am 23.09.2026 unter `effects`.
 
-    Die vielen Raten (`constructionSpeed`, `stormLength`, …) fehlen mit
-    Absicht: ihr Grundwert ist nicht gemessen -- ob "kein Effekt" 0 oder 1
-    heisst, zeigte die Messung nicht. Sie kommen, wenn `form --werte` es
-    gezeigt hat, und dann nur, wo sie vom Grundwert abweichen.
+    Die Raten gehen nur mit, wo sie von ihrem Grundwert abweichen
+    (`EFFEKT_GRUNDWERTE`) -- sonst waeren es sechzig Zahlen, die fast alle
+    "nichts" sagen.
     """
     if not isinstance(roh, dict):
         return {}
@@ -307,6 +392,9 @@ def _effekte(roh: Any) -> dict[str, Any]:
         out["aktiv"] = aktiv
     if _zahl(roh.get("hungerMultiplier")) is not None:
         out["hunger_multiplikator"] = roh["hungerMultiplier"]
+    abweichungen = _abweichungen(roh)
+    if abweichungen:
+        out["abweichungen"] = abweichungen
     for ziel, quelle in (("mehrverbrauch", "chanceForExtraConsumption"),
                          ("kein_verbrauch", "chanceForNoConsumption")):
         werte = roh.get(quelle)

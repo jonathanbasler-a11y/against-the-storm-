@@ -591,3 +591,47 @@ def test_werte_zeigen_nur_zahlen_und_haelt_die_grenze() -> None:
     assert zeilen == ["a: 1.5", "b.c: True", "e: [2]"]
     viele = werte_zeigen({f"k{i}": i for i in range(500)}, grenze=10)
     assert len(viele) == 11 and "abgeschnitten" in viele[-1]
+
+
+# --------------------------------------------------------------------------
+# Runde 9: Raten unter `effects` -- Abweichungen vom Grundwert
+# (Werte aus `lage.py form --pfad effects --werte`, 23.09.2026)
+# --------------------------------------------------------------------------
+
+GEMESSENE_RATEN = {
+    "globalBlightRateBonus": 0.0, "globalProductionRateBonus": 0.0,
+    "plantingSpeed": 1.0, "harvestingSpeed": 1.0, "constructionSpeed": 1.0,
+    "constructionCost": 1.5, "relicsWorkingTimeRate": 0.669999957, "stormLength": 2.0,
+    "bonusReputationPenaltyPerReputation": 0.5, "leavingRate": 2.0,
+    "traderGlobalSellPriceRate": 0.5, "newcomersIntervalRate": 1.5,
+    "bonusGlobalReputationTresholdIncrease": 1, "hearthBonusHP": 150,
+    "reputationRewardRerollBonusCost": 10, "newYearEffectMultiplayer": 1, "newcomersBonus": 2,
+    "bonusReputationRewardsOptions": -2, "bonusSeasonalRewardsOptions": -2,
+    "hungerMultiplier": 1, "altarActive": True, "requestedGrassLocation": 0,
+    "neuesFeld": 5, "offroadSpeedFacotr": "kaputt",
+}
+
+
+def test_abweichende_raten_werden_genannt(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"effects": GEMESSENE_RATEN})
+    state, _ = read_state(ordner, wait=False)
+    abw = {a["feld"]: a for a in state.effects["abweichungen"]}
+    assert abw["constructionCost"] == {"feld": "constructionCost", "name": "Baukosten",
+                                       "wert": 1.5, "grundwert": 1}
+    assert abw["stormLength"]["wert"] == 2 and abw["traderGlobalSellPriceRate"]["wert"] == 0.5
+    assert abw["bonusReputationRewardsOptions"]["wert"] == -2
+    assert abw["relicsWorkingTimeRate"]["wert"] == 0.67
+    assert abw["hearthBonusHP"]["grundwert"] == 0
+    # Was auf dem Grundwert steht, was unbekannt ist und was keine Zahl ist: nicht.
+    for feld in ("plantingSpeed", "globalProductionRateBonus", "hungerMultiplier",
+                 "newYearEffectMultiplayer", "neuesFeld", "offroadSpeedFacotr",
+                 "altarActive", "requestedGrassLocation"):
+        assert feld not in abw
+    assert len(abw) == 13
+
+
+def test_ohne_abweichung_gibt_es_keinen_eintrag(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"effects": {"plantingSpeed": 1.0,
+                                                          "hungerMultiplier": 1}})
+    state, _ = read_state(ordner, wait=False)
+    assert "abweichungen" not in state.effects
