@@ -78,9 +78,11 @@ def passe(gelesen: str, tabelle: list[tuple[str, str, str]],
         if not kandidat:
             continue
         # Schneller Vorfilter: Laengen, die weit auseinanderliegen, koennen
-        # die Schwelle nicht mehr erreichen.
+        # die Schwelle nicht mehr erreichen. Das beste Verhaeltnis ist
+        # 2k/(k+l); daraus folgt k/l >= m/(2-m), nicht k/l >= m. Mit der
+        # falschen Grenze fiel "Pilzfüh" (0,82 zu "Pilzführer") heraus.
         kurz, lang = sorted((len(ziel), len(kandidat)))
-        if lang and kurz / lang < mindest:
+        if lang and kurz / lang < mindest / (2 - mindest):
             continue
         guete = SequenceMatcher(None, ziel, kandidat).ratio()
         if guete >= mindest:
@@ -98,7 +100,12 @@ def eindeutig(treffer: list[Treffer], abstand: float = 0.06) -> Treffer | None:
     """
     if not treffer:
         return None
-    if len(treffer) == 1 or treffer[0].guete - treffer[1].guete >= abstand:
+    # Derselbe deutsche Name fuer zwei Eintraege ("Glücksbringer" fuer
+    # Lucky Charm und Lucky Talisman) ist keine offene Lesung: auf dem
+    # Bildschirm stand genau das. Verglichen wird mit dem naechsten
+    # *anderen* Namen.
+    andere = [t for t in treffer[1:] if falte(t.de) != falte(treffer[0].de)]
+    if not andere or treffer[0].guete - andere[0].guete >= abstand:
         return treffer[0]
     return None
 

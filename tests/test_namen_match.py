@@ -72,3 +72,33 @@ def test_lies_auswahl_liefert_namen_statt_rohtext(tmp_path: Path) -> None:
     # Unlesbares wird nicht geraten.
     assert out[2]["eindeutig"] is False and out[2]["en"] is None
     conn.close()
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 4 (23.09.2026)
+# --------------------------------------------------------------------------
+
+
+def test_ein_deutscher_name_fuer_zwei_eintraege_ist_trotzdem_eindeutig(tmp_path: Path) -> None:
+    """„Glücksbringer" steht für Lucky Charm und Lucky Talisman. Eine exakte
+    Lesung landete in „unklar", weil beide mit 1,0 gleichauf lagen."""
+    conn = tabelle(tmp_path)
+    localization.import_localization(conn, [
+        localization.Eintrag("Effect_LuckyCharm_Name", "Lucky Charm", "Glücksbringer", "effect"),
+        localization.Eintrag("Effect_LuckyTalisman_Name", "Lucky Talisman",
+                             "Glücksbringer", "effect"),
+    ])
+    kand = namen_match.kandidaten(conn, ("effect",))
+    beste = namen_match.eindeutig(namen_match.passe("GLUCKSBRINGER", kand))
+    assert beste is not None and beste.de == "Glücksbringer"
+    conn.close()
+
+
+def test_ein_abgeschnittener_titel_trifft_noch(tmp_path: Path) -> None:
+    """„Pilzfüh" liegt bei 0,82 zu „Pilzführer" -- die Längenvorprüfung warf
+    es trotzdem weg, weil sie die falsche Grenze nahm."""
+    conn = tabelle(tmp_path)
+    kand = namen_match.kandidaten(conn, ("effect",))
+    treffer = namen_match.passe("Pilzfüh", kand)
+    assert treffer and treffer[0].en == "Fungal Guide"
+    conn.close()

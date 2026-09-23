@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS buildings (
     category     TEXT,          -- die Ueberschrift, unter der der Entwurf steht
     purpose      TEXT,          -- Zweck in einem Satz
     products     TEXT,          -- was es herstellt oder erntet
-    near         TEXT
+    near         TEXT,
     source_page  TEXT REFERENCES source_pages(title)
 );
 
