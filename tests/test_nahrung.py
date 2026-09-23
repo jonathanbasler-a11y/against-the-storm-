@@ -331,3 +331,100 @@ def test_ein_leer_gelesenes_lager_ist_kein_urteil(tmp_path: Path) -> None:
     assert "Verarbeitungsschritt" not in r.empfehlung
     assert "kb_probe" in r.alternative or "lage.py" in r.alternative
     conn.close()
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 1 (23.09.2026). Am Spielrechner stand im Reiter „Nahrung":
+# „Grill: 2 Insekten, 3 Eier werden zu Fleischspieße, 25 Sättigung mehr
+# (Faktor 6.0)" -- ein Durchlauf, weil je Zutatengruppe die billigste
+# Alternative für einen Durchlauf gewählt wurde.
+# --------------------------------------------------------------------------
+
+
+def _rezept(conn, id_, gebaeude, gruppen, produkt, menge, sekunden, sterne=1):
+    conn.execute(
+        "INSERT INTO recipes (id, building, inputs, stars, seconds, product, "
+        " product_amount) VALUES (?,?,?,?,?,?,?)",
+        (id_, gebaeude, json.dumps(gruppen), sterne, sekunden, produkt, menge))
+
+
+def _grill(conn):
+    conn.execute("INSERT INTO resources (en, save_id, eatable, eating_fullness) "
+                 "VALUES ('Eggs', '[Food Raw] Eggs', 1, 1.0)")
+    conn.execute("INSERT INTO resources (en, save_id, eatable, eating_fullness) "
+                 "VALUES ('Skewers', '[Food Processed] Skewers', 1, 3.0)")
+    _rezept(conn, 20, "Grill", [[{"menge": 2, "ware": "Insects"},
+                                 {"menge": 3, "ware": "Meat"}],
+                                [{"menge": 3, "ware": "Eggs"}]], "Skewers", 10, 60)
+    conn.execute("INSERT INTO production (product, building, stars) "
+                 "VALUES ('Skewers', 'Grill', 3)")
+    conn.commit()
+
+
+def test_die_alternative_mit_den_meisten_durchlaeufen_gewinnt(tmp_path: Path) -> None:
+    """2 Insekten tragen einen Durchlauf, 60 Fleisch zwanzig."""
+    conn = wissensbasis(tmp_path)
+    _grill(conn)
+    grill = [v for v in nahrung.vorschlaege(
+        conn, {"[Food Raw] Insects": 2, "[Food Raw] Meat": 60, "[Food Raw] Eggs": 60})
+        if v.produkt == "Skewers"][0]
+    assert [z.ware for z in grill.zutaten] == ["Meat", "Eggs"]
+    assert grill.zyklen == 20
+    assert grill.gewinn == 600 - 120               # 200 Spieße à 3 gegen 60+60 roh
+    conn.close()
+
+
+def test_dieselbe_ware_in_zwei_gruppen_wird_nicht_doppelt_gezaehlt(tmp_path: Path) -> None:
+    conn = wissensbasis(tmp_path)
+    _rezept(conn, 21, "Cellar", [[{"menge": 2, "ware": "Insects"}, {"menge": 2, "ware": "Meat"}],
+                                 [{"menge": 2, "ware": "Insects"}, {"menge": 2, "ware": "Berries"}]],
+            "Pickled Goods", 10, 60)
+    conn.commit()
+    liste = nahrung.vorschlaege(conn, {"[Food Raw] Insects": 2})
+    assert [v for v in liste if v.produkt == "Pickled Goods"] == []   # braucht 4 Insekten
+    conn.close()
+
+
+def test_nur_ganze_durchlaeufe_zaehlen(tmp_path: Path) -> None:
+    """7 Fleisch sind ein Durchlauf zu 5, nicht 1,4."""
+    conn = wissensbasis(tmp_path)
+    doerr = [v for v in nahrung.vorschlaege(conn, {"[Food Raw] Meat": 7})
+             if v.produkt == "Jerky"][0]
+    assert doerr.zyklen == 1
+    assert doerr.saettigung_rein == 5 and doerr.saettigung_raus == 20
+    assert "5 Meat" in doerr.satz()
+    conn.close()
+
+
+def test_ein_wachsender_bestand_ist_kein_verbrauch(tmp_path: Path) -> None:
+    conn = wissensbasis(tmp_path)
+    liste = nahrung.vorschlaege(conn, {"[Food Raw] Meat": 20}, verbrauch_pro_sekunde=0.5)
+    assert liste[0].reichweite_plus is None
+    assert "Reichweite" not in liste[0].satz()
+    conn.close()
+
+
+def test_bei_doppelten_rezepten_bleibt_das_ergiebigere(tmp_path: Path) -> None:
+    """Zwei Gebäude, ein Erzeugnis: das mit dem größeren Gewinn bleibt, und
+    eine unbekannte Dauer schlägt keine bekannte."""
+    conn = wissensbasis(tmp_path)
+    _rezept(conn, 22, "Field Kitchen", [[{"menge": 5, "ware": "Meat"}]], "Jerky", 5, 30)
+    _rezept(conn, 23, "Grill", [[{"menge": 5, "ware": "Meat"}]], "Jerky", 10, None)
+    conn.commit()
+    doerr = [v for v in nahrung.vorschlaege(conn, {"[Food Raw] Meat": 10})
+             if v.produkt == "Jerky"]
+    assert len(doerr) == 1
+    assert doerr[0].gewinn == 30                   # 20 Dörrfleisch à 2 gegen 10 roh
+    assert doerr[0].sekunden == 60                 # bekannt schlägt unbekannt
+    conn.close()
+
+
+def test_rohquellen_nennen_jede_ware_einmal(tmp_path: Path) -> None:
+    """Wiki-Zellen wiederholen den Alt-Text der Symbole: „Meat Meat"."""
+    conn = mit_sammelgebaeuden(wissensbasis(tmp_path))
+    conn.execute("UPDATE buildings SET products = 'Meat Meat Leather Leather' "
+                 "WHERE en = 'Trappers'' Camp'")
+    conn.commit()
+    quelle = {q.gebaeude: q for q in nahrung.rohquellen(conn)}["Trappers' Camp"]
+    assert quelle.waren == ["Meat"]
+    conn.close()

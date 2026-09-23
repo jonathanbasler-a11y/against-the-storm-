@@ -9,6 +9,8 @@ logs/
 cache/
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 
 # Spielstände gehören nie ins Repo
 *.save

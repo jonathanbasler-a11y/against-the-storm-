@@ -193,7 +193,19 @@ def food_forecast(
         t1 = getattr(current, "game_time", None)
         if isinstance(t0, (int, float)) and isinstance(t1, (int, float)) and t1 > t0:
             erwartet = max(round((t1 - t0) / SAMPLE_SECONDS), 0) or None
-        values = fresh_samples(previous.category_trends[category], series, erwartet)
+        vorher = previous.category_trends[category]
+        if len(vorher) == len(series) and (
+                (erwartet is not None and erwartet >= len(series))
+                or all(a != b for a, b in zip(vorher, series, strict=True))):
+            # Jede Stuetzstelle ist neu. Der Ringpuffer verraet seinen
+            # Schreibzeiger nicht, also ist die Reihenfolge nicht mehr
+            # herzustellen -- die Reihe roh zu nehmen ergab am Rechner ein
+            # steigendes Lager, wo es fiel.
+            return FoodForecast(
+                None, None, None, 0,
+                "Zwischen den zwei Spielständen liegt zu viel Spielzeit, um den "
+                "Verbrauch zu rechnen -- beim nächsten Speichern geht es wieder")
+        values = fresh_samples(vorher, series, erwartet)
     else:
         values = []
 

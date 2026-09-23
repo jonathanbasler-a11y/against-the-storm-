@@ -17,6 +17,7 @@ Kein Modell beteiligt. Was hier steht, ist Arithmetik auf den Rezepten aus
 from __future__ import annotations
 
 import json
+import math
 import sqlite3
 from dataclasses import dataclass, field
 
@@ -195,7 +196,9 @@ def rohquellen(conn: sqlite3.Connection, grenze: int = 4) -> list[Rohquelle]:
     for z in zeilen:
         from .kb import zerlege_waren
 
-        waren = [w for w in zerlege_waren(z["products"], bekannt) if w in essbar]
+        # Wiki-Zellen wiederholen den Alt-Text der Symbole: "Meat Meat".
+        waren = list(dict.fromkeys(
+            w for w in zerlege_waren(z["products"], bekannt) if w in essbar))
         if not waren:
             continue
         try:
@@ -262,7 +265,11 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
     lager = _bestand_auf_waren(conn, bestand)
     namen = _deutsch(conn)
     zustaendig = _produktionsgebaeude(conn)
-    verbrauch = abs(verbrauch_pro_sekunde) if verbrauch_pro_sekunde else None
+    # Die Rate kommt mit Vorzeichen aus der Vorhersage. Nur ein fallender
+    # Bestand ist Verbrauch; `abs()` machte aus einem wachsenden einen.
+    verbrauch = (-verbrauch_pro_sekunde
+                 if verbrauch_pro_sekunde is not None and verbrauch_pro_sekunde < 0
+                 else None)
 
     out: list[Vorschlag] = []
     gescheitert: list[dict] = []
@@ -276,12 +283,21 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
         zutaten: list[Zutat] = []
         rein_je_zyklus = 0.0
         vollstaendig = True
+        # Was fruehere Gruppen schon je Durchlauf beanspruchen. Dieselbe Ware
+        # in zwei Gruppen wurde sonst doppelt gezaehlt.
+        bedarf: dict[str, float] = {}
         for gruppe in json.loads(r["inputs"] or "[]"):
             # Das Spiel laesst die Wahl zwischen den Alternativen einer
-            # Zutat. Gewaehlt wird, was da ist -- und darunter das, was roh
-            # am wenigsten saettigt: es kostet am wenigsten, es zu verarbeiten.
+            # Zutat. Gewaehlt wird, was die meisten Durchlaeufe traegt, und
+            # bei Gleichstand, was roh am wenigsten saettigt. Vorher gewann
+            # das Billigste fuer einen Durchlauf: am Spielrechner standen so
+            # "2 Insekten, 3 Eier" im Rat, waehrend Fleisch fuer zwanzig
+            # Durchlaeufe im Lager lag.
+            def durchlaeufe(z: dict, bedarf: dict = bedarf) -> float:
+                return lager.get(z["ware"], 0.0) / (bedarf.get(z["ware"], 0.0) + z["menge"])
+
             moeglich = [z for z in gruppe
-                        if lager.get(z["ware"], 0.0) >= z["menge"] > 0]
+                        if z.get("menge", 0) > 0 and durchlaeufe(z) >= 1]
             if not moeglich:
                 # Woran es scheitert, ist die eigentliche Auskunft: "lohnt
                 # sich nicht" schickt den Spieler in dieselbe Sackgasse
@@ -294,9 +310,10 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
                 })
                 vollstaendig = False
                 break
-            gewaehlt = min(moeglich,
-                           key=lambda z: (saettigung.get(z["ware"], 0.0) * z["menge"],
-                                          -lager.get(z["ware"], 0.0)))
+            gewaehlt = max(moeglich,
+                           key=lambda z: (math.floor(durchlaeufe(z)),
+                                          -saettigung.get(z["ware"], 0.0) * z["menge"]))
+            bedarf[gewaehlt["ware"]] = bedarf.get(gewaehlt["ware"], 0.0) + gewaehlt["menge"]
             zutaten.append(Zutat(float(gewaehlt["menge"]), gewaehlt["ware"],
                                  lager.get(gewaehlt["ware"], 0.0),
                                  namen.get(gewaehlt["ware"])))
@@ -308,10 +325,12 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
             # Aus Fleisch wird kein Fleisch. Solche Zeilen entstehen, wenn
             # die Gebaeudeseite eine Zutatenliste als Rezept fuehrt.
             continue
-        zyklen = min(z.zyklen for z in zutaten)
+        # Nur ganze Durchlaeufe: 7 Fleisch sind einer zu 5, nicht 1,4.
+        tragweite = {ware: lager.get(ware, 0.0) / menge for ware, menge in bedarf.items()}
+        zyklen = float(math.floor(min(tragweite.values())))
         if zyklen < 1:
             continue
-        engpass = min(zutaten, key=lambda z: z.zyklen).ware
+        engpass = min(tragweite, key=tragweite.get)
         raus_je_zyklus = je_stueck * float(r["product_amount"] or 1.0)
 
         belegt, grad = zustaendig.get(r["product"], (None, None))
@@ -340,10 +359,13 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
         schluessel = (v.produkt, v.gebaeude,
                       tuple((z.menge, z.ware) for z in v.zutaten))
         vorhanden = einmalig.get(schluessel)
-        if vorhanden is None or (v.sekunden or 0) < (vorhanden.sekunden or 0):
+        # Das ergiebigere Rezept bleibt; bei gleichem Gewinn das schnellere,
+        # und eine unbekannte Dauer schlaegt keine bekannte.
+        if vorhanden is None or _besser(v, vorhanden):
             einmalig[schluessel] = v
     out = sorted(einmalig.values(),
-                 key=lambda v: (-v.gewinn, v.dauer or 0.0, v.produkt))
+                 key=lambda v: (-v.gewinn, v.dauer if v.dauer is not None else math.inf,
+                                v.produkt))
     if huerden is not None:
         # Nur die knappsten: wer zwanzig Rezepte aufzaehlt, sagt nichts.
         gesehen: set[str] = set()
@@ -353,6 +375,14 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
             gesehen.add(e["produkt"])
             huerden.append(e)
     return out
+
+
+def _besser(neu: Vorschlag, alt: Vorschlag) -> bool:
+    if neu.gewinn != alt.gewinn:
+        return neu.gewinn > alt.gewinn
+    a = neu.sekunden if neu.sekunden is not None else math.inf
+    b = alt.sekunden if alt.sekunden is not None else math.inf
+    return a < b
 
 
 @dataclass
