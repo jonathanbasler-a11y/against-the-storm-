@@ -489,3 +489,105 @@ def test_eine_bauplanwahl_in_fremder_form_wird_gemeldet(tmp_path: Path) -> None:
     state, notes = read_state(ordner, wait=False)
     assert state.blueprint_pick == {}
     assert _note(notes, "blueprint_pick").how == "form_unbekannt"
+
+
+# --------------------------------------------------------------------------
+# Runde 8: Stadtstatistik, Allgemeine Effekte, Bauplanwahl (gemessen 23.09.2026)
+# --------------------------------------------------------------------------
+
+GEMESSENE_STATS = {
+    "deadVillagers": 1, "leftVillagers": 2, "exiledVillagers": 0, "hungerGained": 3,
+    "foodSavedByEffects": 4, "cystsSpawned": 5, "cystsRemoved": 2, "cystsBurned": 1,
+    "cornerstonesPicked": ["Forager's Luck"],
+    "buildingsConstructed": ["Woodcutters Camp"] * 11,
+    "gladesDiscovered": [
+        {"level": 0, "time": 0.0, "date": {"year": 1, "season": 0, "quarter": 0},
+         "wasAutomatic": True},
+        {"level": 1, "time": 400.0, "date": {"year": 1, "season": 1, "quarter": 0},
+         "wasAutomatic": False},
+        {"level": 1, "time": 500.0, "date": {"year": 1, "season": 1, "quarter": 1},
+         "wasAutomatic": False}],
+    "tradeRoutesCollected": [{"price": 5}] * 3,
+    "producedGoods": {"[Mat Raw] Wood": 374, "[Food Raw] Eggs": 120},
+    "ingredientUsed": {"[Food Raw] Eggs": 40},
+}
+
+GEMESSENE_EFFECTS = {
+    "perks": {
+        "[Biome] Wood in Woodlands": {"name": "[Biome] Wood in Woodlands", "stacks": 1,
+                                      "hidden": False},
+        "Frog Newcomer Bonus": {"name": "Frog Newcomer Bonus", "stacks": 2, "hidden": False},
+        "Unsichtbar": {"name": "Unsichtbar", "stacks": 1, "hidden": True}},
+    "hungerMultiplier": 1,
+    "chanceForExtraConsumption": {"Food Need Category": 0.1, "Services Need Category": 0.0},
+    "chanceForNoConsumption": {},
+    "constructionSpeed": 1.0,
+}
+
+
+def test_die_stadtstatistik_wird_gelesen(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"stats": GEMESSENE_STATS})
+    state, notes = read_state(ordner, wait=False)
+    assert state.stats["produziert"] == {"Wood": 374, "Eggs": 120}
+    assert state.stats["verbraucht"] == {"Eggs": 40}
+    assert (state.stats["tot"], state.stats["gegangen"], state.stats["hunger"]) == (1, 2, 3)
+    assert state.stats["zysten"] == {"entstanden": 5, "entfernt": 2, "verbrannt": 1}
+    assert state.stats["gebaut"] == 11 and state.stats["handelsrouten"] == 3
+    assert _note(notes, "stats").how == "pfad"
+
+
+def test_grundsteine_und_lichtungen_kommen_aus_der_statistik(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"stats": GEMESSENE_STATS})
+    state, _ = read_state(ordner, wait=False)
+    assert state.cornerstones == ["Forager's Luck"]
+    # Nicht die 4 aus `world.glades` -- `stats.gladesDiscovered` geht vor.
+    assert state.glades == 3
+    assert state.glades_by_level == {"0": 1, "1": 2}
+
+
+def test_ohne_statistik_bleiben_die_alten_wege(tmp_path: Path) -> None:
+    state, notes = read_state(schreibe_buendel(tmp_path), wait=False)
+    assert state.glades == 4 and state.stats == {} and state.effects == {}
+    assert _note(notes, "stats").how == "fehlt"
+
+
+def test_eine_statistik_in_fremder_form_wird_gemeldet(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"stats": {"ganzAnders": "x"}})
+    state, notes = read_state(ordner, wait=False)
+    assert state.stats == {}
+    assert _note(notes, "stats").how == "form_unbekannt"
+
+
+def test_die_allgemeinen_effekte_werden_gelesen(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"effects": GEMESSENE_EFFECTS})
+    state, _ = read_state(ordner, wait=False)
+    aktiv = state.effects["aktiv"]
+    assert [e["modell"] for e in aktiv] == ["[Biome] Wood in Woodlands", "Frog Newcomer Bonus"]
+    assert aktiv[1]["stapel"] == 2 and "stapel" not in aktiv[0]
+    assert state.effects["hunger_multiplikator"] == 1
+    assert state.effects["mehrverbrauch"] == {"Food Need Category": 0.1}
+    assert "kein_verbrauch" not in state.effects
+    # Raten mit ungemessenem Grundwert gehen nicht mit.
+    assert "constructionSpeed" not in json.dumps(state.effects)
+
+
+def test_die_bauplanwahl_in_gemessener_form(tmp_path: Path) -> None:
+    """Gemessen: je Option `{building, set}`. Die erste Fassung nahm "den
+    einzigen Text" und las bei zwei Texten gar nichts."""
+    ordner = schreibe_buendel(tmp_path, save={"reputationRewards": {
+        "currentRerolls": 2, "currentPick": {"isWild": False, "id": 3, "options": [
+            {"building": "Smokehouse", "set": "Food Set"},
+            {"building": "Gatherers Hut", "set": "Food Set"}]}}})
+    state, notes = read_state(ordner, wait=False)
+    assert state.blueprint_pick["angebot"] == ["Smokehouse", "Gatherers Hut"]
+    assert state.blueprint_pick["satz"] == ["Food Set"]
+    assert state.blueprint_pick["neu_wuerfeln"] == 2
+    assert "blueprint_pick" not in {n.field for n in notes}
+
+
+def test_werte_zeigen_nur_zahlen_und_haelt_die_grenze() -> None:
+    from ats_assistant.save_reader import werte_zeigen
+    zeilen = werte_zeigen({"a": 1.5, "b": {"c": True, "d": "geheim"}, "e": [1, 2]})
+    assert zeilen == ["a: 1.5", "b.c: True", "e: [2]"]
+    viele = werte_zeigen({f"k{i}": i for i in range(500)}, grenze=10)
+    assert len(viele) == 11 and "abgeschnitten" in viele[-1]

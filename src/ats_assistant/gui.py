@@ -30,7 +30,8 @@ from . import berater, screen
 from .mcp_server import aufloesen
 from .orte import finde_spielordner
 from .rechner import (ABHOLEN_MS, Rechner, alter as _alter,
-                      feindseligkeit as _feindseligkeit, minuten as _minuten)
+                      feindseligkeit as _feindseligkeit, minuten as _minuten,
+                      statistik_satz as _statistik_satz)
 
 # Wie lange das Fenster weg ist, bevor der Bildschirm aufgenommen wird --
 # lang genug, dass Windows es wirklich aus dem Bild genommen hat.
@@ -98,6 +99,10 @@ def _laeufe_text(wert: dict) -> str:
                          + (f" (Jahr {knapp['jahr']})" if knapp.get("jahr") else ""))
         if isinstance(b.get("ungeduld_max"), (int, float)):
             teile.append(f"Ungeduld max. {b['ungeduld_max']:.1f}")
+        if b.get("hunger") is not None or b.get("gegangen") is not None:
+            teile.append(f"Hunger {b.get('hunger', '?')}× · {b.get('gegangen', '?')} gegangen")
+        if b.get("ursache"):
+            teile.append(f"Ursache: {b['ursache']}")
         zeilen.append(f"\n{b.get('kennung', '?')}: " + " · ".join(teile))
         for e in b.get("empfehlungen") or []:
             jahr = f"Jahr {e['jahr']}: " if e.get("jahr") else ""
@@ -178,7 +183,8 @@ class App:
         self.balken: dict[str, ttk.Progressbar] = {}
         zeilen = [("Bevölkerung", "bevoelkerung"), ("Feindseligkeit", "feindseligkeit"),
                   ("Reputation", "reputation"), ("Ungeduld", "ungeduld"),
-                  ("Nahrung reicht", "reichweite"), ("Niederlage in", "verlust")]
+                  ("Nahrung reicht", "reichweite"), ("Niederlage in", "verlust"),
+                  ("Statistik", "statistik")]
         for i, (titel, schluessel) in enumerate(zeilen, start=1):
             ttk.Label(rahmen, text=titel).grid(row=i, column=0, sticky="w", pady=3)
             wert = ttk.Label(rahmen, text="–", width=28, anchor="w")
@@ -586,6 +592,8 @@ class App:
                               if saetze else "")
         self._warnung_zeigen()
         self.felder["bevoelkerung"].configure(text=str(z.get("bevoelkerung") or "–"))
+        self.felder["statistik"].configure(
+            text=_statistik_satz(z.get("statistik"), z.get("lichtungen")))
         self.felder["feindseligkeit"].configure(
             text=_feindseligkeit(z.get("feindseligkeit")))
 

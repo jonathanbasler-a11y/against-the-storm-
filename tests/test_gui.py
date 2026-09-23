@@ -663,3 +663,20 @@ def test_der_reiter_laeufe_zeigt_berichte_und_lehren(gui, tmp_path: Path) -> Non
     text = geschrieben[-1]
     assert "In 3 von 4 Niederlagen" in text and "lauf-a" in text and "verloren" in text
     assert "Nahrungssammlerlager" in text
+
+
+def test_laeufe_text_nennt_hunger_und_ursache(gui) -> None:
+    text = gui._laeufe_text({"lehren": [], "berichte": [
+        {"kennung": "lauf-b", "ausgang": "verloren", "hunger": 9, "gegangen": 3,
+         "ursache": "Hunger/Abwanderung"}]})
+    assert "Hunger 9× · 3 gegangen" in text and "Ursache: Hunger/Abwanderung" in text
+
+
+def test_statistik_steht_in_der_lage(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    gesetzt = {}
+    app.felder["statistik"] = types.SimpleNamespace(
+        configure=lambda **kw: gesetzt.update(kw))
+    app._zeige_zustand({"jahr": 1, "statistik": {"hunger": 2, "gegangen": 0, "tot": 0},
+                        "lichtungen": 3})
+    assert gesetzt["text"] == "Hunger 2× · 0 gegangen · 0 tot · 3 Lichtungen"

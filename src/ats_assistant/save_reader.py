@@ -91,6 +91,12 @@ class GameState:
     # `reputationRewards.currentPick`. Leer, wenn keine Wahl ansteht.
     blueprint_pick: dict[str, Any] = field(default_factory=dict)
 
+    # Gemessen am 23.09.2026 unter `stats` und `effects`: die Reiter
+    # „Stadtstatistiken“ und „Allgemeine Effekte“ im Hauptlager, kompakt.
+    stats: dict[str, Any] = field(default_factory=dict)
+    effects: dict[str, Any] = field(default_factory=dict)
+    glades_by_level: dict[str, int] = field(default_factory=dict)
+
     # Zeitreihen: 180 Stuetzstellen à rund 10 Spielzeitsekunden, je Ware und
     # je Warenkategorie. Daraus kommt die Steigung fuer food_forecast.
     goods_trends: dict[str, list[float]] = field(default_factory=dict)
@@ -206,26 +212,120 @@ def _name_und_zahl(entry: dict) -> tuple[str | None, Any]:
 def _bauplanwahl(wahl: Any, belohnung: dict) -> dict[str, Any]:
     """Die angebotenen Bauplaene, wenn eine Wahl offen ist.
 
-    Gemessen: `options` hatte zwei Eintraege mit je zwei Schluesseln, als
-    Nahrungssammlerlager und Raeucherei zur Wahl standen. Welche zwei, zeigte
-    die Messung nicht; genommen wird je Eintrag der einzige Text.
+    Gemessen am 23.09.2026: je Option `{building: str, set: str}`. Die erste
+    Fassung nahm "den einzigen Text" -- bei zwei Texten also keinen, und das
+    Angebot aus dem Spielstand kam nie an. Der Rueckfall bleibt fuer eine
+    fremde Form. `set` geht roh mit; was es bedeutet, ist nicht gemessen.
     """
     if not isinstance(wahl, dict):
         return {}
-    namen = []
+    namen: list[str] = []
+    saetze: list[str] = []
     for option in wahl.get("options") or []:
         if isinstance(option, str):
             namen.append(option)
             continue
-        if isinstance(option, dict):
-            texte = [v for v in option.values() if isinstance(v, str) and v]
-            if len(texte) == 1:
-                namen.append(texte[0])
+        if not isinstance(option, dict):
+            continue
+        if isinstance(option.get("building"), str) and option["building"]:
+            namen.append(option["building"])
+            if isinstance(option.get("set"), str) and option["set"]:
+                saetze.append(option["set"])
+            continue
+        texte = [v for v in option.values() if isinstance(v, str) and v]
+        if len(texte) == 1:
+            namen.append(texte[0])
     if not namen:
         return {}
-    return {"angebot": namen,
-            "neu_wuerfeln": belohnung.get("currentRerolls"),
-            "joker": wahl.get("isWild")}
+    out = {"angebot": namen,
+           "neu_wuerfeln": belohnung.get("currentRerolls"),
+           "joker": wahl.get("isWild")}
+    if saetze:
+        out["satz"] = sorted(set(saetze))
+    return out
+
+
+def _zahl(wert: Any) -> int | float | None:
+    if isinstance(wert, (int, float)) and not isinstance(wert, bool):
+        return wert
+    return None
+
+
+def _statistik(roh: Any) -> dict[str, Any]:
+    """Der Reiter „Stadtstatistiken“, gemessen am 23.09.2026 unter `stats`.
+
+    Nur was fuer Nahrung, Scheitern und Fortschritt zaehlt; Summen seit
+    Beginn der Siedlung.
+    """
+    if not isinstance(roh, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for ziel, quelle in (("produziert", "producedGoods"), ("verbraucht", "ingredientUsed")):
+        waren = _normalise_goods(roh.get(quelle))
+        if waren:
+            out[ziel] = {k: int(v) if float(v).is_integer() else v for k, v in waren.items()}
+    for ziel, quelle in (("tot", "deadVillagers"), ("gegangen", "leftVillagers"),
+                         ("verbannt", "exiledVillagers"), ("hunger", "hungerGained"),
+                         ("nahrung_gespart", "foodSavedByEffects")):
+        if _zahl(roh.get(quelle)) is not None:
+            out[ziel] = roh[quelle]
+    zysten = {ziel: roh[quelle] for ziel, quelle in (
+        ("entstanden", "cystsSpawned"), ("entfernt", "cystsRemoved"),
+        ("verbrannt", "cystsBurned")) if _zahl(roh.get(quelle)) is not None}
+    if zysten:
+        out["zysten"] = zysten
+    for ziel, quelle in (("gebaut", "buildingsConstructed"),
+                         ("handelsrouten", "tradeRoutesCollected")):
+        if isinstance(roh.get(quelle), list):
+            out[ziel] = len(roh[quelle])
+    return out
+
+
+def _effekte(roh: Any) -> dict[str, Any]:
+    """Der Reiter „Allgemeine Effekte“, gemessen am 23.09.2026 unter `effects`.
+
+    Die vielen Raten (`constructionSpeed`, `stormLength`, …) fehlen mit
+    Absicht: ihr Grundwert ist nicht gemessen -- ob "kein Effekt" 0 oder 1
+    heisst, zeigte die Messung nicht. Sie kommen, wenn `form --werte` es
+    gezeigt hat, und dann nur, wo sie vom Grundwert abweichen.
+    """
+    if not isinstance(roh, dict):
+        return {}
+    out: dict[str, Any] = {}
+    perks = roh.get("perks")
+    if isinstance(perks, dict):
+        aktiv = []
+        for modell, perk in perks.items():
+            if not isinstance(perk, dict) or perk.get("hidden") is True:
+                continue
+            eintrag = {"modell": modell}
+            if isinstance(perk.get("name"), str) and perk["name"] != modell:
+                eintrag["name"] = perk["name"]
+            if _zahl(perk.get("stacks")) is not None and perk["stacks"] != 1:
+                eintrag["stapel"] = perk["stacks"]
+            aktiv.append(eintrag)
+        out["aktiv"] = aktiv
+    if _zahl(roh.get("hungerMultiplier")) is not None:
+        out["hunger_multiplikator"] = roh["hungerMultiplier"]
+    for ziel, quelle in (("mehrverbrauch", "chanceForExtraConsumption"),
+                         ("kein_verbrauch", "chanceForNoConsumption")):
+        werte = roh.get(quelle)
+        if isinstance(werte, dict):
+            werte = {k: v for k, v in werte.items() if _zahl(v)}
+            if werte:
+                out[ziel] = werte
+    return out
+
+
+def _lichtungen_nach_stufe(entdeckt: Any) -> dict[str, int]:
+    """`stats.gladesDiscovered`: je Lichtung `level`. Was die Stufen
+    bedeuten, ist nicht gemessen -- gezaehlt, nicht benannt."""
+    out: dict[str, int] = {}
+    for g in entdeckt if isinstance(entdeckt, list) else []:
+        if isinstance(g, dict):
+            stufe = str(g.get("level"))
+            out[stufe] = out.get(stufe, 0) + 1
+    return out
 
 
 def _entdeckte(glades: Any) -> int | None:
@@ -301,12 +401,27 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
         state.category_trends = _series(
             pick(save, idx, "category_trends", ("trends.goodsCategoriesTrends",),
                  ("goodsCategoriesTrends",), dict))
+        # Gemessen am 23.09.2026: die gewaehlten Grundsteine und die
+        # entdeckten Lichtungen stehen unter `stats`. Die alten Wege bleiben
+        # Rueckfall.
         state.cornerstones = [
-            c for c in (pick(save, idx, "cornerstones", (), ("cornerstones", "effects"), list) or [])
+            c for c in (pick(save, idx, "cornerstones", ("stats.cornerstonesPicked",),
+                             ("cornerstones",), list) or [])
             if isinstance(c, str)
         ]
-        glades = pick(save, idx, "glades", ("world.glades",), ("glades",), list)
-        state.glades = _entdeckte(glades)
+        entdeckt = _an_pfad(save, "$.stats.gladesDiscovered")
+        if isinstance(entdeckt, list):
+            state.glades = len(entdeckt)
+            state.glades_by_level = _lichtungen_nach_stufe(entdeckt)
+        else:
+            glades = pick(save, idx, "glades", ("world.glades",), ("glades",), list)
+            state.glades = _entdeckte(glades)
+        raw_stats = pick(save, idx, "stats", ("stats",), want=dict)
+        state.stats = _statistik(raw_stats)
+        _form_pruefen(notes[-1], raw_stats, state.stats)
+        raw_effects = pick(save, idx, "effects", ("effects",), want=dict)
+        state.effects = _effekte(raw_effects)
+        _form_pruefen(notes[-1], raw_effects, state.effects)
         deposits = pick(save, idx, "deposits", ("world.naturalResources",),
                         ("naturalResources", "deposits"), list)
         state.deposits = len(deposits) if isinstance(deposits, list) else None
@@ -471,8 +586,38 @@ FORM_FELDER = ("storage", "buildings", "glades", "deposits")
 FORM_STICHWORTE = ("goods", "storage", "building", "glade", "resource", "deposit")
 
 
+WERTE_ZEILEN = 200
+
+
+def werte_zeigen(wert: Any, pfad: str = "", grenze: int = WERTE_ZEILEN) -> list[str]:
+    """Die Blattwerte eines Knotens -- nur Zahlen und Wahrheitswerte.
+
+    Dafuer gebaut, die Grundwerte der Raten unter `effects` zu messen. Texte
+    bleiben weg (Namen stehen in der Form, und so geht nichts Unerwartetes
+    in den Chat); Listen zeigen nur ihre Laenge.
+    """
+    zeilen: list[str] = []
+
+    def gehe(w: Any, p: str) -> None:
+        if len(zeilen) > grenze:
+            return
+        if isinstance(w, dict):
+            for k, v in w.items():
+                gehe(v, f"{p}.{k}" if p else str(k))
+        elif isinstance(w, list):
+            zeilen.append(f"{p}: [{len(w)}]")
+        elif isinstance(w, (bool, int, float)):
+            zeilen.append(f"{p}: {w}")
+
+    gehe(wert, pfad)
+    if len(zeilen) > grenze:
+        zeilen = zeilen[:grenze] + [f"… abgeschnitten nach {grenze} Zeilen"]
+    return zeilen
+
+
 def formbericht(directory: Path, wait: bool = True, grenze: int | None = 30,
-                stichworte: tuple[str, ...] = (), pfad: str | None = None) -> list[str]:
+                stichworte: tuple[str, ...] = (), pfad: str | None = None,
+                werte: bool = False) -> list[str]:
     """Wie das Spiel die fraglichen Felder wirklich ablegt -- zum Einfuegen
     in den Chat. Nur Pfade, Schluessel und Typen; keine Werte.
 
@@ -484,7 +629,7 @@ def formbericht(directory: Path, wait: bool = True, grenze: int | None = 30,
     if not (directory / "Save.save").exists():
         return [f"Kein Spielstand unter {directory}."]
     if pfad:
-        return _knoten_zeigen(directory, pfad)
+        return _knoten_zeigen(directory, pfad, werte=werte)
     if stichworte:
         return _stichwortsuche(directory, tuple(w.lower() for w in stichworte), grenze)
     _, notes = read_state(directory, wait=wait)
@@ -513,7 +658,7 @@ def formbericht(directory: Path, wait: bool = True, grenze: int | None = 30,
     return zeilen
 
 
-def _knoten_zeigen(directory: Path, pfad: str) -> list[str]:
+def _knoten_zeigen(directory: Path, pfad: str, werte: bool = False) -> list[str]:
     """Einen Knoten ganz: jeder Schluessel eine Zeile, ohne Breitengrenze.
 
     `$` vorn ist freiwillig -- in PowerShell ist es der Beginn einer
@@ -529,6 +674,8 @@ def _knoten_zeigen(directory: Path, pfad: str) -> list[str]:
         if not gefunden:
             continue
         zeilen = [f"{datei} {pfad}: {form_skizze(wert, tiefe=0)}"]
+        if werte:
+            return zeilen + ["  " + z for z in werte_zeigen(wert)]
         if isinstance(wert, dict):
             for k, v in wert.items():
                 zeilen.append(f"  {k}: {form_skizze(v, tiefe=2)}")

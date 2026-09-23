@@ -128,3 +128,56 @@ def test_der_zwischenspeicher_liegt_nicht_zwischen_den_mitschriften(tmp_path: Pa
     _mitschrift(runs, "lauf", [_stand(300.0, 1, [1.0] * 180)])
     lernen.berichte(runs)
     assert sorted(p.name for p in runs.glob("*.jsonl")) == ["lauf.jsonl"]
+
+
+# --------------------------------------------------------------------------
+# Runde 8: woran ein Lauf gescheitert ist
+# --------------------------------------------------------------------------
+
+
+def _mit_statistik(stand: dict, hunger: int, gegangen: int = 0, tot: int = 0) -> dict:
+    stand["stats"] = {"hunger": hunger, "gegangen": gegangen, "tot": tot}
+    return stand
+
+
+def test_die_ursache_ist_die_ungeduld() -> None:
+    b = lernen.laufbericht([_stand(300.0, 1, [100.0] * 180),
+                            _stand(600.0, 2, [100.0] * 180, ungeduld=14.0, lost=True)], "a")
+    assert b["ausgang"] == "verloren" and b["ursache"] == "Ungeduld"
+
+
+def test_die_ursache_ist_hunger_und_die_statistik_steht_im_bericht() -> None:
+    b = lernen.laufbericht([
+        _mit_statistik(_stand(300.0, 1, [100.0] * 180), hunger=2),
+        _mit_statistik(_stand(600.0, 1, [100.0] * 180), hunger=4, gegangen=1),
+        _mit_statistik(_stand(900.0, 2, [100.0] * 180, lost=True), hunger=9, gegangen=3, tot=1),
+    ], "b")
+    assert (b["hunger"], b["gegangen"], b["tot"], b["hunger_jahr1"]) == (9, 3, 1, 4)
+    assert b["ursache"] == "Hunger/Abwanderung"
+
+
+def test_ein_offener_lauf_hat_keine_ursache() -> None:
+    b = lernen.laufbericht([_stand(300.0, 1, [100.0] * 180)], "c")
+    assert b["ursache"] is None
+
+
+def test_eine_lehre_ueber_hungerereignisse() -> None:
+    siege = [{"ausgang": "gewonnen", "hunger": 0} for _ in range(3)]
+    niederlagen = [{"ausgang": "verloren", "hunger": 8} for _ in range(3)]
+    lehren = lernen.lehren(siege + niederlagen)
+    assert any("Hungerereignisse" in s for s in lehren)
+    assert not any(s.startswith("Hinweis") for s in lehren)
+
+
+def test_ein_alter_zwischenspeicher_wird_neu_gerechnet(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    _mitschrift(runs, "lauf", [_mit_statistik(_stand(300.0, 1, [100.0] * 180), hunger=5)])
+    datei = runs / "lauf.jsonl"
+    st = datei.stat()
+    speicher = lernen.wissensordner(runs) / "berichte.json"
+    speicher.parent.mkdir(parents=True)
+    speicher.write_text(json.dumps({"lauf.jsonl": {
+        "marke": [st.st_size, st.st_mtime_ns], "bericht": {"kennung": "lauf", "alt": True}}}),
+        encoding="utf-8")
+    bericht = lernen.berichte(runs)[0]
+    assert "alt" not in bericht and bericht["hunger"] == 5
