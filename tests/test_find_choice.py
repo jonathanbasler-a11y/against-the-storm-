@@ -128,3 +128,17 @@ def test_find_sagt_klar_wenn_der_name_gar_nicht_vorkommt(tmp_path: Path, capsys)
                              "--db", str(tmp_path / "fehlt.sqlite")]) == 0
     ausgabe = capsys.readouterr().out
     assert "Phase 3 braucht" in ausgabe        # die andere Antwort, aber eine
+
+
+def test_read_choice_werkzeug_findet_die_wissensbasis_des_projekts(tmp_path: Path,
+                                                                   monkeypatch) -> None:
+    """Aus einem anderen Ordner gestartet, legte `--db kb.sqlite` dort eine
+    leere Datenbank an."""
+    import read_choice as werkzeug
+    gesehen = {}
+    monkeypatch.setattr(werkzeug.tools_api, "read_choice",
+                        lambda **kw: gesehen.update(kw) or {"verfuegbar": False, "grund": "x"})
+    monkeypatch.chdir(tmp_path)
+    werkzeug.main(["lesen", "--text", "Holz"])
+    assert Path(gesehen["db"]).is_absolute()
+    assert Path(gesehen["db"]).parent != tmp_path

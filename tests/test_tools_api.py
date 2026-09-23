@@ -592,3 +592,29 @@ def test_analyze_runs_liest_metasave_mit_bom(tmp_path: Path) -> None:
     pfad.write_bytes(b"\xef\xbb\xbf" + pfad.read_bytes())
     out = tools_api.analyze_runs(save_dir=save_dir)
     assert out["verfuegbar"] is True
+
+
+def test_read_choice_belegt_auftraege(tmp_path: Path) -> None:
+    """Aufträge landeten alle unter „meist Oberfläche": `_belegt` suchte sie
+    unter den Grundsteinen."""
+    from ats_assistant import localization
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Order_BeaverInflux_Name", "Beaver Influx",
+                             "Biber-Zustrom", "order")])
+    conn.close()
+    out = tools_api.read_choice(text=["BIBER-ZUSTROM"], db=db, arten=("order",))
+    assert [a["de"] for a in out["belegt"]] == ["Biber-Zustrom"]
+
+
+def test_get_state_nennt_wann_das_spiel_gespeichert_hat(tmp_path: Path) -> None:
+    """„gerade eben" war die Lesezeit, nicht die Speicherzeit -- auch bei
+    einem Spielstand von vor Stunden."""
+    import os
+    save_dir = buendel(tmp_path / "save")
+    alt = 1_700_000_000
+    os.utime(save_dir / "Save.save", (alt, alt))
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    assert out["gespeichert"].startswith("2023-11-14")

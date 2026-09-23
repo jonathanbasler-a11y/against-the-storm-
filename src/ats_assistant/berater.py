@@ -26,9 +26,11 @@ log = logging.getLogger(__name__)
 MODELL = "claude-opus-5"
 MODELLE = ("claude-opus-5", "claude-sonnet-5")
 
-# Drei Saetze sind ein absichtlich kurzes Ergebnis -- das ist hier der Grund,
-# niedrig zu gehen, nicht Sparsamkeit.
-MAX_TOKENS = 2000
+# `max_tokens` deckt Nachdenken und Antwort zusammen. Drei Saetze sind kurz,
+# das Nachdenken vor einer Grundsteinwahl nicht: 2000 reichten auf hohem
+# Aufwand nicht, und die Antwort kam abgeschnitten oder leer. 16 000 ist die
+# uebliche Grenze fuer Anfragen ohne Streaming.
+MAX_TOKENS = 16_000
 
 # Eine Nahrungsfrage braucht kein tiefes Nachdenken, eine Grundsteinwahl
 # schon. `output_config.effort`, nicht `budget_tokens` -- das gibt es auf
@@ -38,7 +40,11 @@ AUFWAND_WAHL = "high"
 
 # Der Auszug ist eine Lage, kein Spielstand. Wer darueber liegt, hat etwas
 # hineingeraten, das nicht hineingehoert.
-MAX_ZEICHEN = 20_000
+MAX_ZEICHEN = 40_000
+
+# Lange Listen kappen, bevor sie die Grenze reissen: eine grosse Siedlung
+# lag mit 60 Waren und 63 Bauplaenen schon bei 16 700 Zeichen.
+LISTENGRENZE = 80
 
 SKILL = Path(__file__).resolve().parents[2] / ".claude" / "skills" / "ats-advisor" / "SKILL.md"
 
@@ -84,16 +90,25 @@ class Antwort:
     eingabe_token: int | None = None
     ausgabe_token: int | None = None
     zwischenspeicher_gelesen: int | None = None
+    zwischenspeicher_geschrieben: int | None = None
 
     @property
     def kosten_cent(self) -> float | None:
-        """Grobe Schaetzung in Cent, damit niemand raten muss."""
+        """Grobe Schaetzung in Cent, damit niemand raten muss.
+
+        `input_tokens` zaehlt nur, was nicht aus dem Zwischenspeicher kam.
+        Schreiben in den Zwischenspeicher kostet das 1,25-fache, Lesen das
+        0,1-fache des Eingabepreises -- beides fehlte in der Schaetzung.
+        """
         preise = {"claude-opus-5": (5.0, 25.0), "claude-sonnet-5": (2.0, 10.0)}
         satz = preise.get(self.modell)
         if satz is None or self.eingabe_token is None or self.ausgabe_token is None:
             return None
         ein, aus = satz
-        return round((self.eingabe_token * ein + self.ausgabe_token * aus) / 1e6 * 100, 3)
+        eingabe = (self.eingabe_token
+                   + 0.1 * (self.zwischenspeicher_gelesen or 0)
+                   + 1.25 * (self.zwischenspeicher_geschrieben or 0))
+        return round((eingabe * ein + self.ausgabe_token * aus) / 1e6 * 100, 3)
 
 
 def systemtext(pfad: Path | None = None) -> str:
@@ -125,6 +140,7 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
 
     auszug: dict = {}
     if zustand:
+        zustand = _gekappt(zustand)
         auszug["siedlung"] = sauber(zustand, (
             "jahr", "jahreszeit", "biom", "prestige", "bevoelkerung", "spezies",
             "feindseligkeit", "ungeduld", "ungeduld_schwelle", "reputation",
@@ -167,6 +183,17 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
     if frage:
         auszug["frage"] = frage
     return auszug
+
+
+def _gekappt(zustand: dict) -> dict:
+    """Was nichts sagt, faellt weg; was zu lang ist, wird gekappt."""
+    out = dict(zustand)
+    if isinstance(out.get("lager"), dict):
+        out["lager"] = {k: v for k, v in out["lager"].items() if v}
+    for feld in ("bauplaene_ungebaut", "gebaeude_liste"):
+        if isinstance(out.get(feld), list) and len(out[feld]) > LISTENGRENZE:
+            out[feld] = out[feld][:LISTENGRENZE]
+    return out
 
 
 def pruefe_auszug(auszug: dict) -> None:
@@ -303,6 +330,17 @@ def frage(auszug: dict, modell: str = MODELL, wahl_steht_an: bool = False,
 
     text = "\n".join(b.text for b in antwort.content
                      if getattr(b, "type", None) == "text").strip()
+    # Warum die Antwort endete, vor dem Text pruefen: sonst stand eine
+    # abgeschnittene Antwort da wie eine fertige, und eine Ablehnung als
+    # "Keine Antwort erhalten.".
+    grund = getattr(antwort, "stop_reason", None)
+    if grund == "refusal":
+        text = ("Die Anfrage wurde abgelehnt. Mit anderen Worten nochmal fragen, "
+                "oder „Lage kopieren“ und in Claude einfügen.")
+    elif grund == "max_tokens":
+        text = ((text + " …\n\n") if text else "") + (
+            "(Die Antwort wurde abgeschnitten – die Grenze war erreicht. "
+            "Nochmal fragen, gern mit einer engeren Frage.)")
     nutzung = getattr(antwort, "usage", None)
     return Antwort(
         text=text or "Keine Antwort erhalten.",
@@ -310,4 +348,5 @@ def frage(auszug: dict, modell: str = MODELL, wahl_steht_an: bool = False,
         eingabe_token=getattr(nutzung, "input_tokens", None),
         ausgabe_token=getattr(nutzung, "output_tokens", None),
         zwischenspeicher_gelesen=getattr(nutzung, "cache_read_input_tokens", None),
+        zwischenspeicher_geschrieben=getattr(nutzung, "cache_creation_input_tokens", None),
     )

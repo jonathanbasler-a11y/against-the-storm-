@@ -156,3 +156,26 @@ def test_stumme_werkzeuge_nennen_immer_einen_grund(tmp_path: Path, capsys) -> No
         if zeile.startswith("  stumm"):
             rest = zeile.split(maxsplit=2)
             assert len(rest) == 3 and rest[2].strip(), zeile
+
+
+def test_pruefen_meldet_abgestuerzte_werkzeuge(tmp_path: Path, capsys, monkeypatch) -> None:
+    """Jedes Werkzeug fängt seine Ausnahme und liefert `fehler` -- der
+    Prüflauf zählte das als „stumm" und meldete Erfolg."""
+    from ats_assistant import kb
+
+    def platzt(*a, **k):
+        raise RuntimeError("Datenbank gesperrt")
+
+    monkeypatch.setattr(kb, "lookup", platzt)
+    code = mcp_server.main(["--pruefen", "--save-dir", str(tmp_path / "kein-spiel"),
+                            "--runs-dir", str(tmp_path / "runs"),
+                            "--db", str(tmp_path / "kb.sqlite")])
+    ausgabe = capsys.readouterr().out
+    assert code == 1
+    assert "FEHLER" in ausgabe and "Datenbank gesperrt" in ausgabe
+
+
+def test_read_choice_kennt_die_art(tmp_path: Path) -> None:
+    w = {w["name"]: w for w in mcp_server.werkzeuge(tmp_path, tmp_path, tmp_path / "kb.sqlite")}
+    schema = w["read_choice"]["inputSchema"]["properties"]
+    assert "arten" in schema

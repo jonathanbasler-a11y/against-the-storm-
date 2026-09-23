@@ -213,3 +213,26 @@ def test_der_rat_bekommt_die_nahrungsketten(tmp_path: Path, ohne_anmeldung) -> N
     antwort = r._rat({"zustand": {"jahr": 1},
                       "ketten": {"ketten": [{"gebaeude": "Grill", "faktor": 6.0}]}})
     assert antwort["auszug"]["nahrung_rat"]["ketten"][0]["gebaeude"] == "Grill"
+
+
+def test_das_erste_lesen_passiert_einmal(tmp_path: Path) -> None:
+    """`run()` bat um die Lage, und drei Sekunden später sah `_nachsehen`
+    eine neue Signatur (von None aus) und bat ein zweites Mal."""
+    save_dir = buendel(tmp_path / "save")
+    r = rechner.Rechner(save_dir, tmp_path / "runs", tmp_path / "kb.sqlite", queue.Queue())
+    r._anfangen()
+    r._nachsehen()
+    assert r.eingang.qsize() == 1
+
+
+def test_der_bildweg_reicht_das_foto_durch(tmp_path: Path, monkeypatch) -> None:
+    gesehen = {}
+
+    def lesen(**kw):
+        gesehen.update(kw)
+        return {"verfuegbar": False}
+
+    monkeypatch.setattr(rechner.tools_api, "read_choice", lesen)
+    r = rechner.Rechner(tmp_path, tmp_path / "runs", tmp_path / "kb.sqlite", queue.Queue())
+    r._ausfuehren(rechner.Auftrag("auswahl", {"bild": "foto.png", "arten": ("order",)}))
+    assert gesehen["bild"] == "foto.png" and gesehen["aufnehmen"] is False

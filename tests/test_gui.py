@@ -236,8 +236,9 @@ def _vorbereitet(gui, tmp_path: Path):
     return app
 
 
-def test_bildweg_versteckt_das_fenster(gui, tmp_path: Path) -> None:
+def test_bildweg_versteckt_das_fenster(gui, tmp_path: Path, monkeypatch) -> None:
     app = _vorbereitet(gui, tmp_path)
+    monkeypatch.setattr(gui.screen, "aufnehmen", lambda *a, **k: tmp_path / "foto.png")
     app._auswahl_lesen()
 
     assert "withdraw" in app.root.protokoll
@@ -258,12 +259,19 @@ def test_das_ergebnis_holt_das_fenster_zurueck(gui, tmp_path: Path) -> None:
     assert "deiconify" in app.root.protokoll
 
 
-def test_auch_ein_fehler_holt_das_fenster_zurueck(gui, tmp_path: Path) -> None:
-    """Ein Fenster, das nach einem Fehler unsichtbar bleibt, ist schlimmer
-    als eines, das im Bild steht."""
+def test_ein_fremder_fehler_holt_das_fenster_nicht_vor_dem_foto(
+        gui, tmp_path: Path, monkeypatch) -> None:
+    """Ein Fenster, das unsichtbar bleibt, ist schlimmer als eines im Bild --
+    aber ein Fehler aus einem anderen Auftrag durfte es vor dem Foto
+    zurückholen, und fotografiert wurde es selbst. Zurück kommt es mit dem
+    Foto, oder spätestens über das Sicherheitsnetz."""
     app = _vorbereitet(gui, tmp_path)
+    monkeypatch.setattr(gui.screen, "aufnehmen", lambda *a, **k: tmp_path / "foto.png")
     app._auswahl_lesen()
-    app._anzeigen("fehler", "Aufnahme gescheitert")
+    app._anzeigen("fehler", "Ein anderer Auftrag scheiterte")
+    assert "deiconify" not in app.root.protokoll
+    for _, fn in sorted(app.root.auftraege, key=lambda a: a[0]):
+        fn()
     assert "deiconify" in app.root.protokoll
 
 
@@ -379,3 +387,101 @@ def test_die_ketten_gehen_mit_in_den_rat(gui, tmp_path: Path) -> None:
     app._rat_holen()
     art, daten = app.rechner.gebeten[-1]
     assert art == "rat" and daten["ketten"] == ketten
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 3 (23.09.2026): Fenster
+# --------------------------------------------------------------------------
+
+
+def test_das_foto_entsteht_bevor_das_fenster_zurueckkommt(gui, tmp_path: Path,
+                                                          monkeypatch) -> None:
+    """Vorher wartete das Foto hinter laufenden Aufträgen -- eine Rat-Frage
+    dauert bis zu einer Minute. Nach acht Sekunden holte das Sicherheitsnetz
+    das Fenster zurück, und fotografiert wurde es selbst."""
+    app = _vorbereitet(gui, tmp_path)
+    reihenfolge: list[str] = []
+    monkeypatch.setattr(gui.screen, "aufnehmen",
+                        lambda *a, **k: reihenfolge.append("foto") or tmp_path / "foto.png")
+    app.root.deiconify = lambda: reihenfolge.append("zurück")
+    app.rechner.bitte = lambda art, **d: reihenfolge.append(f"bitte {art} {d.get('bild')}")
+    app._auswahl_lesen()
+    for _, fn in sorted(app.root.auftraege, key=lambda a: a[0]):
+        fn()
+    assert reihenfolge[:3] == ["foto", "zurück", f"bitte auswahl {tmp_path / 'foto.png'}"]
+
+
+def test_scheitert_das_foto_kommt_das_fenster_mit_einem_satz_zurueck(
+        gui, tmp_path: Path, monkeypatch) -> None:
+    app = _vorbereitet(gui, tmp_path)
+
+    def geht_nicht(*a, **k):
+        raise RuntimeError("Keine Aufnahme moeglich")
+
+    monkeypatch.setattr(gui.screen, "aufnehmen", geht_nicht)
+    geschrieben: list[str] = []
+    app._schreiben = lambda feld, text: geschrieben.append(text)
+    app._auswahl_lesen()
+    for _, fn in list(app.root.auftraege):
+        fn()
+    assert "deiconify" in app.root.protokoll
+    assert app.rechner.gebeten == []
+    assert any("Keine Aufnahme" in t for t in geschrieben)
+
+
+def test_ein_fehler_beim_anzeigen_haelt_das_abholen_nicht_an(gui, tmp_path: Path) -> None:
+    """Eine Ausnahme in `_anzeigen` beendete das Abholen für immer: das
+    Fenster zeigte nie wieder etwas Neues."""
+    app = _vorbereitet(gui, tmp_path)
+    gezeigt: list[str] = []
+
+    def anzeigen(art, wert):
+        if art == "kaputt":
+            raise ValueError("unerwartete Form")
+        gezeigt.append(art)
+
+    app._anzeigen = anzeigen
+    import queue
+    app.ausgang = queue.Queue()                        # nichts vom Aufbau dazwischen
+    app.ausgang.put(("kaputt", None))
+    app.ausgang.put(("zustand", {}))
+    app._abholen()
+    assert gezeigt == ["zustand"]
+    assert any(fn == app._abholen for _, fn in app.root.auftraege)
+
+
+def test_die_zustandswarnung_bleibt_neben_der_nahrungswarnung(gui, tmp_path: Path) -> None:
+    """„Nicht gefunden" wurde im selben Durchgang von der Nahrungswarnung
+    überschrieben -- der stille Ausfall, den die Zeile verhindern sollte."""
+    app = _vorbereitet(gui, tmp_path)
+    gesagt: list[str] = []
+    app.warnung = Wurzel()
+    app.warnung.configure = lambda **kw: gesagt.append(kw.get("text", ""))
+    app._anzeigen("zustand", {"verfuegbar": True, "jahr": 1,
+                              "nicht_gefunden": ["cornerstones"]})
+    app._anzeigen("nahrung", {"warnung": "Nahrung reicht noch 103 Spielzeitsekunden"})
+    assert "cornerstones" in gesagt[-1] and "103" in gesagt[-1]
+
+
+def test_eine_alte_auswahl_verfaellt_wenn_das_spiel_weiterlaeuft(gui, tmp_path: Path) -> None:
+    """Eine gelesene Grundsteinwahl ging bei jeder späteren Frage mit --
+    mit `wahl_steht_an`, also höherem Aufwand und falschem Rat."""
+    app = _vorbereitet(gui, tmp_path)
+    app._anzeigen("zustand", {"verfuegbar": True, "spielzeit": 600.0})
+    app._anzeigen("auswahl", {"verfuegbar": True, "quelle": "hand", "gelesene_zeilen": 1,
+                              "angebot": [{"de": "Wucher", "en": "Usury", "guete": 1.0}]})
+    app._anzeigen("zustand", {"verfuegbar": True, "spielzeit": 600.0})
+    assert app.auswahl                                  # dieselbe Spielzeit: bleibt
+    app._anzeigen("zustand", {"verfuegbar": True, "spielzeit": 900.0})
+    assert not app.auswahl
+
+
+def test_der_anmeldehinweis_bleibt_bis_zur_ersten_antwort(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app.rat_fuss = Wurzel()
+    fuss: list[str] = []
+    app.rat_fuss.configure = lambda **kw: fuss.append(kw.get("text", ""))
+    app._anzeigen("rat", {"ok": False, "zugang": False, "text": "Keine Anmeldung"})
+    assert "Ohne Anmeldung" in fuss[-1]
+    app._anzeigen("anmeldung", True)                  # Schlüssel inzwischen gesetzt
+    assert fuss[-1] == ""                             # der alte Hinweis ist weg

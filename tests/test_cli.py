@@ -201,3 +201,19 @@ def test_lage_zeigt_die_ruf_quellen(tmp_path: Path, capsys) -> None:
               "--db", str(db), "--sofort"])
     ausgabe = capsys.readouterr().out
     assert "Ruf-Quellen" in ausgabe and "Zufriedenheit 0.08" in ausgabe
+
+
+def test_ein_fehler_wird_genannt_und_endet_mit_eins(tmp_path: Path, capsys,
+                                                    monkeypatch) -> None:
+    monkeypatch.setattr(cli.tools_api, "query_kb",
+                        lambda *a, **k: {"verfuegbar": False, "fehler": "Datenbank gesperrt"})
+    assert cli.main(["nachschlag", "Holz", "--db", str(tmp_path / "kb.sqlite")]) == 1
+    assert "Datenbank gesperrt" in capsys.readouterr().out
+
+
+def test_ein_abgestuerzter_zustand_nennt_den_fehler(tmp_path: Path, capsys,
+                                                    monkeypatch) -> None:
+    monkeypatch.setattr(cli.tools_api, "get_state",
+                        lambda *a, **k: {"verfuegbar": False, "fehler": "PermissionError: x"})
+    assert cli.main(["--save-dir", str(tmp_path), "--sofort"]) == 1
+    assert "PermissionError" in capsys.readouterr().out
