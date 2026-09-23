@@ -91,3 +91,37 @@ def test_erkenne_ohne_jedes_paket_sagt_was_zu_tun_ist(monkeypatch, tmp_path) -> 
     _ohne(monkeypatch, "winsdk", "winrt", "pytesseract")
     with pytest.raises(RuntimeError, match="pip install"):
         screen.erkenne(bild)
+
+
+# --------------------------------------------------------------------------
+# Randleisten (23.09.2026): „BAUMATERIALIEN“ aus der Auftragsleiste wurde als
+# Grundstein gelesen und empfohlen.
+# --------------------------------------------------------------------------
+
+
+def _png_kopf(breite: int, hoehe: int = 1125) -> bytes:
+    return (b"\x89PNG\r\n\x1a\n" + (13).to_bytes(4, "big") + b"IHDR"
+            + breite.to_bytes(4, "big") + hoehe.to_bytes(4, "big") + b"\x08\x02\x00\x00\x00")
+
+
+def test_die_bildbreite_kommt_aus_dem_png_kopf(tmp_path) -> None:
+    bild = tmp_path / "schirm.png"
+    bild.write_bytes(_png_kopf(2000))
+    assert screen.bildbreite(bild) == 2000
+    kaputt = tmp_path / "kaputt.png"
+    kaputt.write_bytes(b"kein PNG")
+    assert screen.bildbreite(kaputt) is None
+    assert screen.bildbreite(tmp_path / "fehlt.png") is None
+
+
+def test_nur_die_mitte_zaehlt() -> None:
+    # Orte wie auf dem Bildschirmfoto vom 23.09.2026, 2000 Pixel breit.
+    zeilen = [screen.Zeile("BIBER", 245, 45, 50, 15),
+              screen.Zeile("FRÜHSTÜCKSPENSION", 618, 635, 200, 20),
+              screen.Zeile("BLUTPREISVERTRAG", 908, 635, 185, 20),
+              screen.Zeile("BAUMATERIALIEN", 1737, 408, 130, 15)]
+    behalten, weg = screen.nur_mitte(zeilen, 2000)
+    assert [z.text for z in behalten] == ["FRÜHSTÜCKSPENSION", "BLUTPREISVERTRAG"]
+    assert weg == 2
+    # Ohne Breite bleibt alles.
+    assert screen.nur_mitte(zeilen, None) == (zeilen, 0)

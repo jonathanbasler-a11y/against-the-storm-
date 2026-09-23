@@ -122,7 +122,10 @@ def _herkunft(a: dict) -> str:
     woher = ("Von Hand abgeglichen" if quelle == "hand"
              else "Vom Bildschirmfoto gelesen" if quelle
              else "Nichts gelesen")
-    return f"{woher} – {zeilen} Zeile(n)" if zeilen else woher
+    text = f"{woher} – {zeilen} Zeile(n)" if zeilen else woher
+    if a.get("am_rand_verworfen"):
+        text += f", {a['am_rand_verworfen']} aus den Randleisten übergangen"
+    return text
 
 
 class App:

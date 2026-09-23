@@ -108,7 +108,10 @@ ist nicht belegt.
 
 **Nachschlagen statt raten.** Das Werkzeug `nachschlagen(name)` sieht in der
 Wissensbasis aus den Spieldaten nach — Ware oder Gebäude, deutsch oder
-englisch. Vor jeder Aussage über eine Mechanik, die nicht im Auszug steht,
+englisch; bei Gebäuden mit `rezepte` (Sterne, Zutaten), bei Waren mit
+`hergestellt_in`. Woraus etwas entsteht, wird nachgeschlagen, nie erinnert.
+Angebotene Baupläne stehen mit ihren Rezepten schon unter
+`gebaeude_wissen` (Status `angeboten`). Vor jeder Aussage über eine Mechanik, die nicht im Auszug steht,
 nachschlagen; findet sich nichts, das sagen statt ergänzen.
 
 **Keine erfundenen Bedienschritte oder Mechaniken.** Empfohlen wird, was sich
@@ -166,8 +169,20 @@ Bäumen.
 Grundsteinoptionen weniger verfügbar, Waren sind beim Verkauf 50 Prozent
 weniger wert, und Späher arbeiten an Ereignissen 33 Prozent langsamer.
 
-**Jährliche Grundsteine sind in Jahr 2, 4 und 6 Legendary.** Rerolls dafür
-aufheben.
+**Grundsteine: erst „Mehr“, dann Zurücksetzen.** „Mehr“ legt eine Karte
+dazu und behält die angebotenen (kostet Wildfeuer-Essenz); nach
+„Zurücksetzen“ sind die alten Karten weg. Die Zurücksetzungen sind ein
+Vorrat für die ganze Siedlung, nicht je Wahl (am Spielrechner bestätigt,
+23.09.2026). Zurücksetzen nur, wenn keine Karte zur Lage passt — nicht,
+weil eine andere vielleicht besser wäre. Die frühere Regel aus der Spec
+(„Jahr 2, 4 und 6 Legendary, Rerolls dafür aufheben“) ist nicht belegt: am
+23.09.2026 standen in Jahr 2 zwei epische Karten zur Wahl.
+
+**Wildfeuer-Essenz ist knapp.** Sie baut Feuerstellen (Kleine Feuerstelle ab
+Prestige 6: 8 Bretter, 8 Ziegel, 3 Essenz — Wiki, passt zu den gemessenen
+Baukosten ×1,5) und wird für Geysirpumpen-Ausbau und einige
+Lichtungsereignisse (1–2) gebraucht. Vor „Mehr“ prüfen, ob danach eine
+geplante Feuerstelle noch bezahlbar ist.
 
 **Die Ungeduld ist die zweite Verlustbedingung.** Sie wächst stetig und fällt
 um genau 1,0 je **vollem** Reputationspunkt — nicht anteilig. Wer bei 13,6
