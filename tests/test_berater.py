@@ -563,3 +563,15 @@ def test_ein_werkzeugergebnis_wird_wie_der_auszug_geprueft() -> None:
 
 def test_der_systemtext_nennt_das_nachschlagen() -> None:
     assert "nachschlagen(name)" in berater.systemtext()
+
+
+def test_das_gelernte_geht_mit() -> None:
+    lern = {"lehren": ["Hinweis, kein Befund: …"], "korrekturen": ["Pakete kann man nicht öffnen"],
+            "laufhistorie": "4 Läufe: 1 gewonnen, 3 verloren."}
+    auszug = berater.kontext(zustand={"jahr": 1}, lernen=lern)
+    assert auszug["lernen"] == lern
+
+
+def test_der_systemtext_stellt_korrekturen_vor_das_gedaechtnis() -> None:
+    text = " ".join(berater.systemtext().split())
+    assert "lernen.korrekturen" in text and "lernen.lehren" in text

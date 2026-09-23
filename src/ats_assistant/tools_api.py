@@ -644,13 +644,22 @@ def impatience_forecast(runs_dir: str | Path = "runs", run_id: str | None = None
 
 
 @_wall
-def log_event(text: str, runs_dir: str | Path = "runs", run_id: str | None = None) -> dict:
-    """Freitextnotiz in den Lauf schreiben."""
+def log_event(text: str, runs_dir: str | Path = "runs", run_id: str | None = None,
+              art: str | None = None, spielzeit: float | None = None,
+              jahr: int | None = None) -> dict:
+    """Freitextnotiz in den Lauf schreiben.
+
+    `art="rat"` markiert eine Empfehlung des Rats; der Laufbericht stellt sie
+    spaeter neben den Ausgang.
+    """
     runs = Path(runs_dir)
     runs.mkdir(parents=True, exist_ok=True)
     kennung = run_id or _neueste_mitschrift(runs) or "notizen"
     ziel = runs / f"{kennung}.jsonl"
     eintrag = {"typ": "notiz", "zeitpunkt": datetime.now(timezone.utc).isoformat(), "text": text}
+    for feld, wert in (("art", art), ("spielzeit", spielzeit), ("jahr", jahr)):
+        if wert is not None:
+            eintrag[feld] = wert
     with ziel.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(eintrag, ensure_ascii=False) + "\n")
     return {"geschrieben": str(ziel), "eintrag": eintrag}

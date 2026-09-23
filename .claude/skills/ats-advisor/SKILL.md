@@ -69,6 +69,13 @@ Bonus überhaupt greift.
 - **`trends`** sind die Raten je Ware aus denselben Reihen wie „Verlauf“ im
   Spiel: die schnellsten fallenden und steigenden, mit Reichweite.
 
+- **`lernen.korrekturen`** sind Widersprüche des Spielers zu früheren
+  Antworten, am Spiel geprüft. Sie gelten vor dem eigenen Gedächtnis und vor
+  jeder Heuristik hier; nie gegen sie empfehlen.
+- **`lernen.lehren`** vergleicht mitgeschriebene Siege und Niederlagen.
+  Beginnt ein Satz mit „Hinweis, kein Befund", ist er ein Hinweis, keine
+  Regel. `lernen.laufhistorie` ist die Kurzfassung der Spielhistorie.
+
 ## Mechanik — nur Belegtes
 
 Jede Aussage hier hat eine Herkunft. Was hier nicht steht und nicht im Auszug,

@@ -133,7 +133,7 @@ def systemtext(pfad: Path | None = None) -> str:
 def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             ungeduld: dict | None = None, auswahl: dict | None = None,
             frage: str | None = None, ketten: dict | None = None,
-            wissen: dict | None = None) -> dict:
+            wissen: dict | None = None, lernen: dict | None = None) -> dict:
     """Die kompakte Lage. Zahlen und Namen, sonst nichts."""
     def sauber(quelle: dict | None, felder: tuple[str, ...]) -> dict | None:
         if not quelle:
@@ -204,6 +204,9 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
              if k in ("de", "en", "seltenheit", "wirkung", "zweck", "guete", "belegt")}
             for eintrag in auswahl["angebot"]
         ]
+    if lernen and any(lernen.values()):
+        # Korrekturen des Spielers, Lehren aus frueheren Laeufen, Spielhistorie.
+        auszug["lernen"] = lernen
     if frage:
         auszug["frage"] = frage
     return auszug

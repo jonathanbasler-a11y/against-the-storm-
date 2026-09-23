@@ -639,3 +639,27 @@ def test_fallende_waren_stehen_in_der_lage(gui, tmp_path: Path) -> None:
     assert "Eier -6.0/min" in gesagt[-1]
     app._rat_holen()
     assert app.rechner.gebeten[-1][1]["wissen"]["trends"]["fallend"][0]["ware"] == "Eggs"
+
+
+def test_stimmt_nicht_merkt_sich_die_korrektur(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app._anzeigen("rat", {"ok": True, "text": "Pakete öffnest du im Hauptlager.", "fuss": ""})
+    app.korrektur = Variable(value="Pakete kann man nicht öffnen")
+    app._korrektur_senden()
+    art, daten = app.rechner.gebeten[-1]
+    assert art == "korrektur"
+    assert daten == {"aussage": "Pakete öffnest du im Hauptlager.",
+                     "korrektur": "Pakete kann man nicht öffnen"}
+
+
+def test_der_reiter_laeufe_zeigt_berichte_und_lehren(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    geschrieben: list[str] = []
+    app._schreiben = lambda feld, text: geschrieben.append(text)
+    app._anzeigen("laeufe", {"lehren": ["In 3 von 4 Niederlagen …"], "berichte": [
+        {"kennung": "lauf-a", "biom": "Royal Woodlands", "jahre": 3, "ausgang": "verloren",
+         "nahrung_min_reichweite": {"sekunden": 43.0, "jahr": 1}, "ungeduld_max": 9.5,
+         "empfehlungen": [{"jahr": 1, "text": "Nimm das Nahrungssammlerlager."}]}]})
+    text = geschrieben[-1]
+    assert "In 3 von 4 Niederlagen" in text and "lauf-a" in text and "verloren" in text
+    assert "Nahrungssammlerlager" in text

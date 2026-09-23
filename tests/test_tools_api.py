@@ -769,3 +769,9 @@ def test_lage_wissen_nennt_was_gebaeude_herstellen(tmp_path: Path) -> None:
 def test_lage_wissen_ohne_mitschrift_sagt_das(tmp_path: Path) -> None:
     out = tools_api.lage_wissen(tmp_path / "leer", tmp_path / "kb.sqlite")
     assert out["verfuegbar"] is False
+
+
+def test_log_event_nimmt_art_und_spielzeit(tmp_path: Path) -> None:
+    out = tools_api.log_event("Rat: Sammlerlager", tmp_path / "runs", run_id="lauf",
+                              art="rat", spielzeit=600.0, jahr=1)
+    assert out["eintrag"]["art"] == "rat" and out["eintrag"]["spielzeit"] == 600.0

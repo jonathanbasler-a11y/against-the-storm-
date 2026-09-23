@@ -282,3 +282,69 @@ def test_der_rat_bekommt_das_nachschlagen(tmp_path: Path, monkeypatch) -> None:
     r._rat({"zustand": {"jahr": 1}})
     assert callable(gesehen["nachschlagen"])
     assert "hinweis" in gesehen["nachschlagen"]("Gibtsnicht")
+
+
+# --------------------------------------------------------------------------
+# Runde 7c: Gedächtnis, Lehren, Korrekturen
+# --------------------------------------------------------------------------
+
+
+def _antwortender_rat(monkeypatch, gesehen: dict):
+    def frage(auszug, **kw):
+        gesehen["auszug"] = auszug
+        return rechner.berater.Antwort(text="Nimm das Nahrungssammlerlager. Weil …",
+                                       modell="claude-opus-5")
+    monkeypatch.setattr(rechner.berater, "frage", frage)
+
+
+def test_eine_empfehlung_wird_als_gedaechtnis_notiert(tmp_path: Path, monkeypatch) -> None:
+    gesehen: dict = {}
+    _antwortender_rat(monkeypatch, gesehen)
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    (runs / "lauf.jsonl").write_text('{"game_time": 600.0, "year": 1}\n', encoding="utf-8")
+    r = rechner.Rechner(tmp_path, runs, tmp_path / "kb.sqlite", queue.Queue())
+    r._rat({"zustand": {"jahr": 1, "spielzeit": 600.0, "mitschrift": "lauf"},
+            "frage": "welches gebäude"})
+    zeilen = (runs / "lauf.jsonl").read_text(encoding="utf-8").strip().splitlines()
+    notiz = json.loads(zeilen[-1])
+    assert notiz["typ"] == "notiz" and notiz["art"] == "rat"
+    assert notiz["spielzeit"] == 600.0 and notiz["jahr"] == 1
+    assert "Nahrungssammlerlager" in notiz["text"] and "Weil" not in notiz["text"]
+
+
+def test_korrekturen_und_lehren_gehen_an_den_rat(tmp_path: Path, monkeypatch) -> None:
+    from ats_assistant import lernen
+    gesehen: dict = {}
+    _antwortender_rat(monkeypatch, gesehen)
+    runs = tmp_path / "runs"
+    lernen.korrektur_merken(lernen.wissensordner(runs) / "korrekturen.jsonl",
+                            "Pakete öffnen", "Pakete kann man nicht öffnen")
+    r = rechner.Rechner(tmp_path, runs, tmp_path / "kb.sqlite", queue.Queue())
+    r._rat({"zustand": {"jahr": 1}})
+    lern = gesehen["auszug"]["lernen"]
+    assert lern["korrekturen"] == ["Pakete kann man nicht öffnen"]
+    assert lern["lehren"]
+
+
+def test_eine_korrektur_wird_gemerkt(tmp_path: Path) -> None:
+    from ats_assistant import lernen
+    ausgang: queue.Queue = queue.Queue()
+    runs = tmp_path / "runs"
+    r = rechner.Rechner(tmp_path, runs, tmp_path / "kb.sqlite", ausgang)
+    r._ausfuehren(rechner.Auftrag("korrektur", {"aussage": "Pakete öffnen",
+                                                 "korrektur": "Geht nicht"}))
+    assert lernen.korrekturen(lernen.wissensordner(runs) / "korrekturen.jsonl") == ["Geht nicht"]
+    assert ausgang.get_nowait()[0] == "korrektur"
+
+
+def test_die_laeufe_werden_ausgewertet(tmp_path: Path) -> None:
+    ausgang: queue.Queue = queue.Queue()
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    (runs / "lauf.jsonl").write_text('{"game_time": 600.0, "year": 1}\n', encoding="utf-8")
+    r = rechner.Rechner(tmp_path, runs, tmp_path / "kb.sqlite", ausgang)
+    r._ausfuehren(rechner.Auftrag("laeufe"))
+    art, wert = ausgang.get_nowait()
+    assert art == "laeufe" and wert["berichte"][0]["kennung"] == "lauf"
+    assert wert["lehren"]

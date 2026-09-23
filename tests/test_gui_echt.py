@@ -64,9 +64,23 @@ BEISPIELE = {
 def test_das_fenster_baut_sich_wirklich_auf(app) -> None:
     """Jede Option muss Tk gefallen, nicht nur einem Stub."""
     assert app.root.winfo_exists()
-    assert len(app.reiter.tabs()) == 4
+    assert len(app.reiter.tabs()) == 5
     assert [app.reiter.tab(t, "text") for t in app.reiter.tabs()] == [
-        "Lage", "Nahrung", "Auswahl", "Rat"]
+        "Lage", "Nahrung", "Auswahl", "Rat", "Läufe"]
+
+
+def test_laeufe_und_korrektur_mit_echtem_tk(app) -> None:
+    app._anzeigen("laeufe", {"lehren": ["Hinweis, kein Befund: x"], "berichte": [
+        {"kennung": "lauf-a", "ausgang": "verloren", "ungeduld_max": "kaputt",
+         "empfehlungen": [{"text": "Nimm das Lager."}]}]})
+    text = app.laeufe_text.get("1.0", "end")
+    assert "lauf-a" in text and "Nimm das Lager." in text
+    gebeten = []
+    app.rechner.bitte = lambda art, **d: gebeten.append((art, d))
+    app.korrektur.set("  Geht nicht  ")
+    app._korrektur_senden()
+    assert gebeten == [("korrektur", {"aussage": "", "korrektur": "Geht nicht"})]
+    assert app.korrektur.get() == ""
 
 
 def test_nach_dem_anzeigen_steht_auch_etwas_da(app) -> None:
