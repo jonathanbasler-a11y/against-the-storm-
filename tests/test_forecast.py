@@ -187,3 +187,30 @@ def test_ein_ganz_erneuerter_ringpuffer_ergibt_keine_falsche_rate() -> None:
     f = food_forecast(aktuell, vorher)
     assert f.rate_per_second is None
     assert "Spielzeit" in f.warning
+
+
+# --------------------------------------------------------------------------
+# Runde 7: Trends je Ware -- dieselben Reihen wie „Verlauf" im Spiel.
+# --------------------------------------------------------------------------
+
+
+def test_trends_je_ware_aus_den_frischen_stuetzstellen() -> None:
+    from ats_assistant.forecast import waren_trends
+    n = 180
+    holz_vorher, holz = [100.0] * n, [100.0] * n
+    holz[40:70] = [100.0 + 3 * i for i in range(30)]          # steigt 0,3/s
+    eier_vorher, eier = [50.0] * n, [50.0] * n
+    eier[40:70] = [50.0 - 1 * i for i in range(30)]           # fällt 0,1/s
+    trends = waren_trends({"Wood": holz, "Eggs": eier}, {"Wood": holz_vorher, "Eggs": eier_vorher},
+                          t0=600.0, t1=900.0)
+    nach = {t["ware"]: t for t in trends}
+    assert nach["Wood"]["rate_je_minute"] == pytest.approx(18.0)
+    assert nach["Eggs"]["rate_je_minute"] == pytest.approx(-6.0)
+    assert nach["Eggs"]["reichweite_sekunden"] == pytest.approx(21 / 0.1)
+    assert "reichweite_sekunden" not in nach["Wood"]
+
+
+def test_trends_je_ware_verweigern_einen_ganz_erneuerten_puffer() -> None:
+    from ats_assistant.forecast import waren_trends
+    assert waren_trends({"Wood": [float(i) for i in range(180)]}, {"Wood": [0.5] * 180},
+                        t0=600.0, t1=3000.0) == []

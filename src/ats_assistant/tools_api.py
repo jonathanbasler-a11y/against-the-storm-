@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import analysis, kb, nahrung, namen_match, save_reader, screen, watcher
+from . import analysis, forecast, kb, nahrung, namen_match, save_reader, screen, watcher
 from .forecast import food_forecast as _food_forecast
 from .forecast import impatience_forecast as _impatience_forecast
 from .save_reader import GameState, read_state
@@ -440,6 +440,94 @@ def query_kb(name: str, entity: str | None = None, db: str | Path = "kb.sqlite")
         return treffer
     finally:
         conn.close()
+
+
+@_wall
+def lage_wissen(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
+                run_id: str | None = None) -> dict:
+    """Was die Spieldaten zur Lage wissen: Waren, Gebaeude, Trends je Ware.
+
+    Der Rat riet einmal, Pakete zu "oeffnen" -- erfundene Mechanik. Was eine
+    Ware ist (Kategorie, essbar, brennbar, Handelswert) und was ein Gebaeude
+    herstellt, steht in der Wissensbasis. Das geht jetzt mit, statt dass das
+    Modell es aus dem Gedaechtnis ergaenzt.
+    """
+    zustaende, quelle = _letzte_zustaende(runs_dir, run_id)
+    if not zustaende:
+        return {"verfuegbar": False, "grund": "Keine Mitschrift vorhanden."}
+    aktuell = zustaende[-1]
+    conn = kb.connect(db)
+    try:
+        namen = nahrung._deutsch(conn)
+        waren = []
+        for ware, menge in nahrung._bestand_auf_waren(conn, aktuell.get("storage") or {}).items():
+            if not menge:
+                continue
+            zeile = conn.execute(
+                "SELECT category, eatable, eating_fullness, burnable, burning_time, "
+                "sell_value, buy_value FROM resources WHERE en = ? COLLATE NOCASE",
+                (ware,)).fetchone()
+            eintrag: dict[str, Any] = {"ware": ware, "ware_de": namen.get(ware, ware),
+                                       "menge": menge}
+            if zeile:
+                eintrag.update({
+                    "kategorie": zeile["category"],
+                    "essbar": bool(zeile["eatable"]) if zeile["eatable"] is not None else None,
+                    "saettigung": zeile["eating_fullness"],
+                    "brennbar": bool(zeile["burnable"]) if zeile["burnable"] is not None else None,
+                    "brenndauer": zeile["burning_time"],
+                    "verkaufswert": zeile["sell_value"],
+                    "kaufwert": zeile["buy_value"]})
+            waren.append({k: v for k, v in eintrag.items() if v is not None})
+
+        verfuegbar = _verfuegbar(aktuell) or {}
+        kb_gebaeude = {nahrung._schluessel(r["en"]): r for r in conn.execute(
+            "SELECT en, category, purpose, worker_slots, cost, products FROM buildings")}
+        erzeugt: dict[str, list[dict]] = {}
+        for r in conn.execute("SELECT product, building, stars FROM production "
+                              "ORDER BY stars DESC NULLS LAST, product"):
+            erzeugt.setdefault(nahrung._schluessel(r["building"]), []).append(
+                {"ware": r["product"], "sterne": r["stars"]})
+        gebaeude = {}
+        for name, status in list(verfuegbar.items())[:150]:
+            s = nahrung._schluessel(name)
+            zeile = kb_gebaeude.get(s)
+            if zeile is None and s not in erzeugt:
+                continue
+            eintrag = {"status": status, "gebaeude_de": namen.get(name)}
+            if zeile is not None:
+                try:
+                    kosten = json.loads(zeile["cost"]) if zeile["cost"] else None
+                except (json.JSONDecodeError, TypeError):
+                    kosten = zeile["cost"]
+                eintrag.update({"kategorie": zeile["category"], "zweck": zeile["purpose"],
+                                "arbeitsplaetze": zeile["worker_slots"], "kosten": kosten})
+            if s in erzeugt:
+                eintrag["erzeugnisse"] = erzeugt[s][:8]
+            elif status != "steht":
+                # Baubar, aber stellt nichts her: Zaun, Lampe, Weg. Fuer den
+                # Rat ohne Belang, und der Auszug bleibt klein.
+                continue
+            if isinstance(eintrag.get("zweck"), str) and len(eintrag["zweck"]) > 120:
+                eintrag["zweck"] = eintrag["zweck"][:117] + "…"
+            gebaeude[name] = {k: v for k, v in eintrag.items() if v is not None}
+    finally:
+        conn.close()
+
+    trends = {"fallend": [], "steigend": []}
+    if len(zustaende) >= 2:
+        vorher = zustaende[-2]
+        alle = forecast.waren_trends(aktuell.get("goods_trends") or {},
+                                     vorher.get("goods_trends") or {},
+                                     vorher.get("game_time"), aktuell.get("game_time"))
+        for t in alle:
+            t["ware_de"] = namen.get(t["ware"], t["ware"])
+        trends["fallend"] = sorted((t for t in alle if t["rate_je_minute"] < 0),
+                                   key=lambda t: t["rate_je_minute"])[:5]
+        trends["steigend"] = sorted((t for t in alle if t["rate_je_minute"] > 0),
+                                    key=lambda t: -t["rate_je_minute"])[:3]
+    return {"verfuegbar": True, "quelle": quelle, "waren": waren,
+            "gebaeude": gebaeude, "trends": trends}
 
 
 @_wall

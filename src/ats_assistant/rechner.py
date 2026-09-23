@@ -159,6 +159,7 @@ class Rechner(threading.Thread):
                 self.ausgang.put(("nahrung", tools_api.food_forecast(self.runs_dir, lauf)))
                 self.ausgang.put(("ungeduld", tools_api.impatience_forecast(self.runs_dir, lauf)))
                 self.ausgang.put(("ketten", tools_api.food_advice(self.runs_dir, self.db, lauf)))
+                self.ausgang.put(("wissen", tools_api.lage_wissen(self.runs_dir, self.db, lauf)))
             self.ausgang.put(("umgebung", umgebungslage(self.save_dir, self.runs_dir, self.db)))
             # Ob der Reiter "Rat" ueberhaupt fragen kann -- gepruft, bevor
             # jemand fragt. Kostet keine Anfrage, nur einen Blick.
@@ -181,7 +182,8 @@ class Rechner(threading.Thread):
         auszug = berater.kontext(
             zustand=daten.get("zustand"), nahrung=daten.get("nahrung"),
             ungeduld=daten.get("ungeduld"), auswahl=daten.get("auswahl"),
-            frage=daten.get("frage"), ketten=daten.get("ketten"))
+            frage=daten.get("frage"), ketten=daten.get("ketten"),
+            wissen=daten.get("wissen"))
         try:
             antwort = berater.frage(
                 auszug, modell=daten.get("modell", berater.MODELL),

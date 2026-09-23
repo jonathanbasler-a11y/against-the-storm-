@@ -314,6 +314,7 @@ class App:
         self.rechner.bitte("rat", zustand=self.zustand, nahrung=self.nahrung,
                            ungeduld=self.ungeduld, auswahl=self.auswahl,
                            ketten=getattr(self, "nahrungsrat", None),
+                           wissen=getattr(self, "wissen", None),
                            frage=self.rat_frage.get().strip() or None,
                            modell=self.modell.get())
 
@@ -322,7 +323,8 @@ class App:
         auszug = berater.kontext(zustand=self.zustand, nahrung=self.nahrung,
                                  ungeduld=self.ungeduld, auswahl=self.auswahl,
                                  frage=self.rat_frage.get().strip() or None,
-                                 ketten=getattr(self, "nahrungsrat", None))
+                                 ketten=getattr(self, "nahrungsrat", None),
+                                 wissen=getattr(self, "wissen", None))
         self.root.clipboard_clear()
         self.root.clipboard_append(json.dumps(auszug, ensure_ascii=False, indent=1))
         self.rat_fuss.configure(text="Lage in der Zwischenablage – in Claude einfügen.")
@@ -393,6 +395,9 @@ class App:
         elif art == "ketten":
             self.nahrungsrat = wert
             self._zeige_ketten(wert)
+        elif art == "wissen":
+            self.wissen = wert
+            self._zeige_trends(wert)
         elif art == "auswahl":
             _eigenes_foto_loeschen(wert.get("quelle"))
             self.auswahl = wert
@@ -447,7 +452,7 @@ class App:
         Grundsteinwahl bei jeder spaeteren Frage mit.
         """
         if neu.get("verfuegbar") is False:
-            self.nahrung = self.ungeduld = self.nahrungsrat = None
+            self.nahrung = self.ungeduld = self.nahrungsrat = self.wissen = None
             verfallen = True
         else:
             lauf, zeit = neu.get("mitschrift"), neu.get("spielzeit")
@@ -482,7 +487,8 @@ class App:
         """Zustand und Nahrung warnen beide in dieselbe Zeile. Vorher
         ueberschrieb die Nahrung im selben Durchgang, was der Zustand sagte."""
         teile = [t for t in (getattr(self, "_warn_zustand", ""),
-                             getattr(self, "_warn_nahrung", "")) if t]
+                             getattr(self, "_warn_nahrung", ""),
+                             getattr(self, "_warn_trends", "")) if t]
         self.warnung.configure(text="  ·  ".join(teile))
 
     def _zeige_zustand(self, z: dict) -> None:
@@ -537,6 +543,15 @@ class App:
         self.balken["reichweite"].configure(
             value=min(reichweite / 3600 * 100, 100) if reichweite else 0)
         self._warn_nahrung = n.get("warnung") or n.get("grund") or ""
+        self._warnung_zeigen()
+
+    def _zeige_trends(self, wissen: dict) -> None:
+        """Die Waren, die am schnellsten fallen -- wie „Verlauf" im Spiel,
+        nur alle auf einmal."""
+        fallend = ((wissen or {}).get("trends") or {}).get("fallend") or []
+        teile = [f"{t.get('ware_de') or t['ware']} {t['rate_je_minute']:+.1f}/min"
+                 for t in fallend[:4]]
+        self._warn_trends = ("Fällt: " + ", ".join(teile)) if teile else ""
         self._warnung_zeigen()
 
     def _zeige_ketten(self, rat: dict) -> None:

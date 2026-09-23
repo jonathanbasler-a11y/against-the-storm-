@@ -627,3 +627,15 @@ def test_die_kettentabelle_zeigt_ob_das_gebaeude_fehlt(gui, tmp_path: Path) -> N
     app._zeige_ketten({"empfehlung": "x", "ketten": [
         {"gebaeude": "Grill", "einsatz": [], "gewinn": 25, "faktor": 6.0, "status": "fehlt"}]})
     assert zeilen[0][0] == "Grill (fehlt)"
+
+
+def test_fallende_waren_stehen_in_der_lage(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    gesagt: list[str] = []
+    app.warnung = Wurzel()
+    app.warnung.configure = lambda **kw: gesagt.append(kw.get("text", ""))
+    app._anzeigen("wissen", {"verfuegbar": True, "trends": {"fallend": [
+        {"ware": "Eggs", "ware_de": "Eier", "rate_je_minute": -6.0}], "steigend": []}})
+    assert "Eier -6.0/min" in gesagt[-1]
+    app._rat_holen()
+    assert app.rechner.gebeten[-1][1]["wissen"]["trends"]["fallend"][0]["ware"] == "Eggs"
