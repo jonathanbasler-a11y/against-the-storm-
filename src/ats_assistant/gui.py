@@ -260,6 +260,7 @@ class App:
         self._schreiben(self.rat_text, "wird gefragt …")
         self.rechner.bitte("rat", zustand=self.zustand, nahrung=self.nahrung,
                            ungeduld=self.ungeduld, auswahl=self.auswahl,
+                           ketten=getattr(self, "nahrungsrat", None),
                            frage=self.rat_frage.get().strip() or None,
                            modell=self.modell.get())
 
@@ -267,7 +268,8 @@ class App:
         import json
         auszug = berater.kontext(zustand=self.zustand, nahrung=self.nahrung,
                                  ungeduld=self.ungeduld, auswahl=self.auswahl,
-                                 frage=self.rat_frage.get().strip() or None)
+                                 frage=self.rat_frage.get().strip() or None,
+                                 ketten=getattr(self, "nahrungsrat", None))
         self.root.clipboard_clear()
         self.root.clipboard_append(json.dumps(auszug, ensure_ascii=False, indent=1))
         self.rat_fuss.configure(text="Lage in der Zwischenablage – in Claude einfügen.")
@@ -314,6 +316,7 @@ class App:
             self.felder["verlust"].configure(
                 text=_minuten(wert.get("sekunden_bis_verlust")))
         elif art == "ketten":
+            self.nahrungsrat = wert
             self._zeige_ketten(wert)
         elif art == "auswahl":
             self.auswahl = wert

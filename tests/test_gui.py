@@ -369,3 +369,13 @@ def test_unlesbare_felder_stehen_in_der_warnung(gui, tmp_path: Path) -> None:
     text = " ".join(gesagt)
     assert "nicht lesbar" in text and "storage" in text and "buildings" in text
     assert "nicht gefunden" in text.lower() and "biome" in text
+
+
+def test_die_ketten_gehen_mit_in_den_rat(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    ketten = {"empfehlung": "Grill", "ketten": [{"gebaeude": "Grill", "einsatz": [],
+                                                 "gewinn": 25, "faktor": 6.0}]}
+    app._anzeigen("ketten", ketten)
+    app._rat_holen()
+    art, daten = app.rechner.gebeten[-1]
+    assert art == "rat" and daten["ketten"] == ketten

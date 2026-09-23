@@ -115,7 +115,7 @@ def systemtext(pfad: Path | None = None) -> str:
 
 def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             ungeduld: dict | None = None, auswahl: dict | None = None,
-            frage: str | None = None) -> dict:
+            frage: str | None = None, ketten: dict | None = None) -> dict:
     """Die kompakte Lage. Zahlen und Namen, sonst nichts."""
     def sauber(quelle: dict | None, felder: tuple[str, ...]) -> dict | None:
         if not quelle:
@@ -131,6 +131,7 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             # Ohne "vorkommen": gemessen sind das alle Rohstoffknoten der
             # Karte (5760 nach 600 Sekunden), nicht die erreichbaren.
             "reputation_ziel", "lager", "gebaeude", "gebaeude_liste", "lichtungen",
+            "bauplaene_ungebaut", "ruf_quellen", "ruf_je_volk", "auftraege",
             "grundsteine", "spielzeit",
             # Was nicht gelesen werden konnte, geht mit. Sonst sieht ein
             # nicht gefundenes Lager aus wie ein leeres -- und das ist der
@@ -139,6 +140,18 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
     if nahrung:
         auszug["nahrung"] = sauber(nahrung, (
             "bestand", "rate_je_spielzeitsekunde", "reichweite_sekunden", "warnung"))
+    if ketten and (ketten.get("ketten") or ketten.get("essbar_im_lager")):
+        # Die Rechnung aus dem Reiter „Nahrung". Ohne sie riet der Rat am
+        # Spielrechner zu Kueche und Paketen, waehrend die Rechnung den Grill
+        # mit Faktor 6 zeigte.
+        auszug["nahrung_rat"] = {
+            "ketten": [
+                {k: kette[k] for k in ("gebaeude", "gebaeude_de", "produkt", "produkt_de",
+                                       "einsatz", "gewinn", "faktor", "engpass",
+                                       "reichweite_plus_sekunden") if k in kette}
+                for kette in (ketten.get("ketten") or [])[:3]],
+            "essbar_im_lager": ketten.get("essbar_im_lager") or [],
+        }
     if ungeduld:
         auszug["ungeduld"] = sauber(ungeduld, (
             "jetzt", "schwelle", "je_spielzeitsekunde", "sekunden_bis_verlust"))

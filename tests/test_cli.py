@@ -187,3 +187,17 @@ def test_form_kennt_alle_und_pfad(tmp_path: Path, capsys) -> None:
     assert cli.main(["form", "--pfad", "mainStorage", "--save-dir", str(ordner),
                      "--sofort"]) == 0
     assert "storedGoods" in capsys.readouterr().out
+
+
+def test_lage_zeigt_die_ruf_quellen(tmp_path: Path, capsys) -> None:
+    ordner = tmp_path / "save"
+    ordner.mkdir()
+    (ordner / "Save.save").write_text(json.dumps({
+        "time": 600.0, "year": 1,
+        "gameObjectives": {"reputationSources": [0.0, 0.0, 0.07539226, 0.0]},
+    }), encoding="utf-8")
+    db = kleine_basis(tmp_path / "kb.sqlite")
+    cli.main(["--save-dir", str(ordner), "--runs", str(tmp_path / "runs"),
+              "--db", str(db), "--sofort"])
+    ausgabe = capsys.readouterr().out
+    assert "Ruf-Quellen" in ausgabe and "Zufriedenheit 0.08" in ausgabe

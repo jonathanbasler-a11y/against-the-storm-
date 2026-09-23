@@ -79,6 +79,14 @@ class GameState:
     deposits: int | None = None
     cornerstones: list[str] = field(default_factory=list)
 
+    # Gemessen am 23.09.2026 (1.10.4). Der Ruf je Quelle ist ein Vektor aus
+    # vier Zahlen; belegt ist nur Index 2 (Zufriedenheit, gleich dem Gewinn
+    # der Fuechse). Die Auftraege bleiben Dicts in der Form des Spielstands.
+    reputation_sources: list[float] = field(default_factory=list)
+    reputation_by_race: dict[str, float] = field(default_factory=dict)
+    blueprints: list[str] = field(default_factory=list)
+    orders: list[dict[str, Any]] = field(default_factory=list)
+
     # Zeitreihen: 180 Stuetzstellen à rund 10 Spielzeitsekunden, je Ware und
     # je Warenkategorie. Daraus kommt die Steigung fuer food_forecast.
     goods_trends: dict[str, list[float]] = field(default_factory=dict)
@@ -257,6 +265,21 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
         deposits = pick(save, idx, "deposits", ("world.naturalResources",),
                         ("naturalResources", "deposits"), list)
         state.deposits = len(deposits) if isinstance(deposits, list) else None
+
+        quellen = pick(save, idx, "reputation_sources", ("gameObjectives.reputationSources",),
+                       want=list)
+        state.reputation_sources = [float(q) for q in (quellen or [])
+                                    if isinstance(q, (int, float)) and not isinstance(q, bool)]
+        voelker = pick(save, idx, "reputation_by_race", ("actors.racesReputationGains",),
+                       want=dict)
+        state.reputation_by_race = {k: float(v) for k, v in (voelker or {}).items()
+                                    if isinstance(v, (int, float)) and not isinstance(v, bool)}
+        plaene = pick(save, idx, "blueprints", ("content.buildings",), want=list)
+        state.blueprints = [b for b in (plaene or []) if isinstance(b, str)]
+        raw_orders = pick(save, idx, "orders", ("orders.currentOrders",), want=list)
+        state.orders = [o for o in (raw_orders or [])
+                        if isinstance(o, dict) and isinstance(o.get("model"), str)]
+        _form_pruefen(notes[-1], raw_orders, state.orders)
 
         raw_buildings = pick(save, idx, "buildings", ("buildings.buildings", "buildings"))
         state.buildings = _buildings(raw_buildings)

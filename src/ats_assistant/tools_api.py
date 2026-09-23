@@ -49,6 +49,49 @@ def _wall(fn):
     return gehuellt
 
 
+# Gemessen am 23.09.2026: Index 2 war genau der Zufriedenheitsgewinn der
+# Fuechse. Die anderen drei sind nicht belegt und heissen deshalb so --
+# bestaetigt werden sie, sobald ein abgeschlossener Auftrag Index 0 hebt.
+RUF_QUELLEN = ("Aufträge (vermutet)", "Lichtungen (vermutet)", "Zufriedenheit",
+               "Sonstiges (vermutet)")
+
+
+def _ruf_quellen(werte: list[float]) -> dict[str, float]:
+    return {name: wert for name, wert in zip(RUF_QUELLEN, werte)}
+
+
+def _auftraege(orders: list[dict]) -> dict:
+    """Aktive Auftraege und das Angebot einer offenen Wahl.
+
+    Was ein Auftrag verlangt (Ware, Zielmenge), steht nicht im Spielstand --
+    je Ziel nur ein Zaehler. Ob der das Ziel oder der Stand ist, ist nicht
+    belegt, also heisst er Zaehler und nicht Fortschritt.
+    """
+    aktiv, zur_wahl = [], []
+    for o in orders:
+        if o.get("completed") or o.get("isFailed"):
+            continue
+        if o.get("picked"):
+            eintrag = {
+                "name": o["model"],
+                "belohnungen": [r for r in o.get("rewards") or [] if isinstance(r, str)],
+                "ziele": [{"typ": z.get("type"), "zaehler": z.get("amount"),
+                           "erledigt": z.get("completed")}
+                          for z in o.get("objectives") or [] if isinstance(z, dict)],
+            }
+            if o.get("shouldBeFailable") and isinstance(o.get("timeLeft"), (int, float)):
+                eintrag["zeitlimit_sekunden"] = o["timeLeft"]
+            aktiv.append(eintrag)
+        else:
+            for p in o.get("picks") or []:
+                if isinstance(p, dict) and isinstance(p.get("model"), str) and not p.get("failed"):
+                    zur_wahl.append({
+                        "name": p["model"],
+                        "belohnungen": [r for r in p.get("rewards") or []
+                                        if isinstance(r, str)]})
+    return {"aktiv": aktiv, "zur_wahl": zur_wahl}
+
+
 def _gebaeude_liste(gebaeude) -> list[dict]:
     """Welche Gebaeude, wie viele, wie viele Arbeiter -- die Zahl allein
     liess den Rat raten, was schon steht."""
@@ -87,6 +130,11 @@ def _zustand_als_dict(state: GameState) -> dict:
         "lager": state.storage,
         "gebaeude": len(state.buildings),
         "gebaeude_liste": _gebaeude_liste(state.buildings),
+        "bauplaene_ungebaut": sorted(
+            set(state.blueprints) - {b.model for b in state.buildings if b.model}),
+        "ruf_quellen": _ruf_quellen(state.reputation_sources),
+        "ruf_je_volk": state.reputation_by_race,
+        "auftraege": _auftraege(state.orders),
         "lichtungen": state.glades,
         "vorkommen": state.deposits,
         "grundsteine": state.cornerstones,
@@ -387,6 +435,7 @@ def food_advice(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
     conn = kb.connect(db)
     try:
         r = nahrung.rat(conn, aktuell.storage or {}, verbrauch, reichweite)
+        essbar = nahrung.essbar_im_lager(conn, aktuell.storage or {})
     finally:
         conn.close()
 
@@ -398,6 +447,9 @@ def food_advice(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
         "alternative": r.alternative,
         "verbrauch_je_spielzeitsekunde": verbrauch,
         "reichweite_sekunden": reichweite,
+        # Was im Lager ueberhaupt Nahrung ist -- aus `eatable` der Spieldaten.
+        # Der Rat riet sonst, Vorratspakete zu oeffnen.
+        "essbar_im_lager": essbar,
         "ketten": [
             {
                 "gebaeude": v.gebaeude,

@@ -204,3 +204,12 @@ def test_die_lage_sagt_auch_ob_eine_anmeldung_da_ist(tmp_path: Path, monkeypatch
     r._ausfuehren(rechner.Auftrag("lage"))
     arten = {art: wert for art, wert in list(ausgang.queue)}
     assert arten["anmeldung"] is False
+
+
+def test_der_rat_bekommt_die_nahrungsketten(tmp_path: Path, ohne_anmeldung) -> None:
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(tmp_path / "save", tmp_path / "runs",
+                        tmp_path / "kb.sqlite", ausgang)
+    antwort = r._rat({"zustand": {"jahr": 1},
+                      "ketten": {"ketten": [{"gebaeude": "Grill", "faktor": 6.0}]}})
+    assert antwort["auszug"]["nahrung_rat"]["ketten"][0]["gebaeude"] == "Grill"
