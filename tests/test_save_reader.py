@@ -346,3 +346,34 @@ def test_formbericht_sucht_nach_stichworten_in_allen_dateien(tmp_path: Path) -> 
     assert "MetaSave.save" in text and "unlockedBlueprints" in text
     assert "Order_A" not in text and "Smokehouse" not in text      # keine Werte
     assert "glades" not in text                                      # nur Gesuchtes
+
+
+def test_stichwortsuche_mit_alle_zeigt_auch_den_rest(tmp_path: Path) -> None:
+    """Am Spielrechner schnitt die Grenze von 30 Zeilen genau die Pfade ab,
+    um die es ging: alphabetisch nach `$.effects` kamen `$.orders` und
+    `$.reputation`."""
+    from ats_assistant.save_reader import formbericht
+    viele = {f"effects{i:02d}Order": 1 for i in range(40)}
+    ordner = schreibe_buendel(tmp_path, save={**viele, "zzOrders": [{"model": "x"}]})
+    kurz = "\n".join(formbericht(ordner, wait=False, stichworte=("order",)))
+    lang = "\n".join(formbericht(ordner, wait=False, stichworte=("order",), grenze=None))
+    assert "zzOrders" not in kurz and "weitere" in kurz
+    assert "zzOrders" in lang and "weitere" not in lang
+
+
+def test_ein_pfad_wird_ganz_gezeigt(tmp_path: Path) -> None:
+    """Die Skizze zeigt sonst sechs Schlüssel je Knoten -- die gesuchten
+    Baupläne können der siebte sein."""
+    from ats_assistant.save_reader import formbericht
+    inhalt = {f"feld{i}": [f"wert{i}"] for i in range(10)}
+    ordner = schreibe_buendel(tmp_path, save={"content": inhalt})
+    for pfad in ("$.content", "content"):              # PowerShell mag kein $
+        text = "\n".join(formbericht(ordner, wait=False, pfad=pfad))
+        assert "feld9" in text and "[1x str]" in text
+        assert "wert" not in text
+
+
+def test_ein_fehlender_pfad_ergibt_einen_satz(tmp_path: Path) -> None:
+    from ats_assistant.save_reader import formbericht
+    text = "\n".join(formbericht(schreibe_buendel(tmp_path), wait=False, pfad="gibtsnicht"))
+    assert "nicht gefunden" in text.lower()
