@@ -496,3 +496,89 @@ def test_get_state_nennt_die_gebaeude_nicht_nur_ihre_zahl(tmp_path: Path) -> Non
     assert out["gebaeude_liste"] == [
         {"gebaeude": "Beaver House", "anzahl": 2, "arbeiter": 0},
         {"gebaeude": "Foragers' Camp", "anzahl": 1, "arbeiter": 1}]
+
+
+def _mit(save_dir: Path, **felder) -> Path:
+    pfad = save_dir / "Save.save"
+    save = json.loads(pfad.read_text(encoding="utf-8"))
+    save.update(felder)
+    pfad.write_text(json.dumps(save), encoding="utf-8")
+    return save_dir
+
+
+def _auftrag(model: str, **felder) -> dict:
+    eintrag = {"model": model, "picked": False, "shouldBeFailable": False,
+               "timeLeft": 0.0, "isFailed": False, "rewards": [], "picks": [],
+               "started": False, "completed": False,
+               "objectives": [{"type": 2, "amount": 3, "completed": False}]}
+    eintrag.update(felder)
+    return eintrag
+
+
+def test_get_state_ruf_quellen_nennen_nur_das_belegte_sicher(tmp_path: Path) -> None:
+    """Index 2 entsprach am Spielrechner genau dem Gewinn der Füchse -- also
+    Zufriedenheit. Die anderen drei sind nicht belegt und heißen so."""
+    save_dir = _mit(buendel(tmp_path / "save"),
+                    gameObjectives={"reputationSources": [1.0, 0.0, 0.5, 0.0]},
+                    actors={"racesReputationGains": {"Foxes": 0.5}})
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    assert out["ruf_quellen"]["Zufriedenheit"] == 0.5
+    assert out["ruf_quellen"]["Aufträge (vermutet)"] == 1.0
+    assert out["ruf_je_volk"] == {"Foxes": 0.5}
+
+
+def test_get_state_bauplaene_ungebaut(tmp_path: Path) -> None:
+    save_dir = _mit(buendel(tmp_path / "save"),
+                    content={"buildings": ["Grill", "Smokehouse", "Beaver House"]},
+                    buildings={"workshops": [{"model": "Smokehouse"}]})
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    assert out["bauplaene_ungebaut"] == ["Beaver House", "Grill"]
+
+
+def test_get_state_auftraege_aktiv_und_zur_wahl(tmp_path: Path) -> None:
+    save_dir = _mit(buendel(tmp_path / "save"), orders={"currentOrders": [
+        _auftrag("Order A", picked=True, started=True, rewards=["Planks x10"]),
+        _auftrag("Order B", picks=[
+            {"model": "Beaver Influx", "failed": False, "rewards": ["Resin x15"]},
+            {"model": "Beaver Colony", "failed": False, "rewards": ["Amber x40"]}]),
+        _auftrag("Order C", picked=True, completed=True),
+        _auftrag("Order D", picked=True, started=True, shouldBeFailable=True,
+                 timeLeft=480.0),
+        _auftrag("Order E", picked=True, isFailed=True),
+        _auftrag("Order F"),                         # weder gewählt noch angeboten
+    ]})
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    auftraege = out["auftraege"]
+    assert [a["name"] for a in auftraege["aktiv"]] == ["Order A", "Order D"]
+    assert auftraege["aktiv"][0]["belohnungen"] == ["Planks x10"]
+    assert "zeitlimit_sekunden" not in auftraege["aktiv"][0]
+    assert auftraege["aktiv"][1]["zeitlimit_sekunden"] == 480.0
+    # Ein Zähler, kein Fortschritt: ob `amount` Ziel oder Stand ist, ist nicht belegt.
+    assert auftraege["aktiv"][0]["ziele"] == [{"typ": 2, "zaehler": 3, "erledigt": False}]
+    assert [a["name"] for a in auftraege["zur_wahl"]] == ["Beaver Influx", "Beaver Colony"]
+    assert auftraege["zur_wahl"][1]["belohnungen"] == ["Amber x40"]
+
+
+def test_food_advice_nennt_was_im_lager_essbar_ist(tmp_path: Path) -> None:
+    """Der Rat empfahl am Spielrechner, Vorratspakete zu öffnen. Was essbar
+    ist, steht in den Spieldaten -- das soll er bekommen, nicht erraten."""
+    save_dir = buendel(tmp_path / "save")
+    pfad = save_dir / "Save.save"
+    save = json.loads(pfad.read_text(encoding="utf-8"))
+    save["storage"]["goods"].append({"Key": "[Packs] Pack of Provisions", "Value": 5})
+    pfad.write_text(json.dumps(save), encoding="utf-8")
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    conn.execute("INSERT INTO resources (en, save_id, eatable, eating_fullness) "
+                 "VALUES ('Meat', '[Food Raw] Meat', 1, 1.0)")
+    conn.execute("INSERT INTO resources (en, save_id, eatable, eating_fullness) "
+                 "VALUES ('Pack of Provisions', '[Packs] Pack of Provisions', 0, NULL)")
+    conn.commit()
+    conn.close()
+
+    out = tools_api.food_advice(runs, db, run_id="lauf")
+    assert out["essbar_im_lager"] == [
+        {"ware": "Meat", "ware_de": "Meat", "menge": 42.0, "saettigung": 1.0}]

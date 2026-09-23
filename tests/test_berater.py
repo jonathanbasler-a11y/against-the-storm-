@@ -316,3 +316,40 @@ def test_die_gebaeudeliste_geht_an_den_rat() -> None:
     liste = [{"gebaeude": "Foragers' Camp", "anzahl": 1, "arbeiter": 1}]
     auszug = berater.kontext(zustand={"jahr": 1, "gebaeude": 1, "gebaeude_liste": liste})
     assert auszug["siedlung"]["gebaeude_liste"] == liste
+
+
+def test_nahrungsketten_und_essbares_gehen_an_den_rat() -> None:
+    """Der Reiter „Nahrung" rechnete den Grill aus, der Rat riet zu Küche
+    und Paketen -- er hatte die Rechnung nie bekommen."""
+    ketten = {
+        "ketten": [{"gebaeude": "Grill", "gebaeude_de": "Grill", "produkt": "Skewers",
+                    "produkt_de": "Fleischspieße",
+                    "einsatz": [{"menge": 2, "ware": "Insekten", "ware_en": "Insects"}],
+                    "gewinn": 25.0, "faktor": 6.0, "engpass": "Insekten",
+                    "reichweite_plus_sekunden": 180, "durchlaeufe": 1.0,
+                    "saettigung_rein": 5, "saettigung_raus": 30, "sekunden": 120,
+                    "engpass_en": "Insects"}] * 5,
+        "essbar_im_lager": [{"ware": "Eggs", "ware_de": "Eier", "menge": 14.0,
+                             "saettigung": 1.0}],
+    }
+    auszug = berater.kontext(zustand={"jahr": 1}, ketten=ketten)
+    rat = auszug["nahrung_rat"]
+    assert len(rat["ketten"]) == 3
+    assert rat["ketten"][0]["gebaeude"] == "Grill" and rat["ketten"][0]["faktor"] == 6.0
+    assert "saettigung_rein" not in rat["ketten"][0]
+    assert rat["essbar_im_lager"][0]["ware_de"] == "Eier"
+
+
+def test_bauplaene_ruf_und_auftraege_gehen_an_den_rat() -> None:
+    zustand = {"jahr": 1, "bauplaene_ungebaut": ["Grill"],
+               "ruf_quellen": {"Zufriedenheit": 0.07}, "ruf_je_volk": {"Foxes": 0.07},
+               "auftraege": {"aktiv": [], "zur_wahl": [{"name": "Beaver Influx"}]}}
+    siedlung = berater.kontext(zustand=zustand)["siedlung"]
+    for feld in ("bauplaene_ungebaut", "ruf_quellen", "ruf_je_volk", "auftraege"):
+        assert siedlung[feld] == zustand[feld]
+
+
+def test_der_systemtext_sagt_was_als_nahrung_zaehlt() -> None:
+    text = berater.systemtext()
+    assert "essbar_im_lager" in text
+    assert "bauplaene_ungebaut" in text and "auftraege" in text

@@ -49,6 +49,9 @@ def cmd_lage(args) -> int:
                                f"{zustand.get('reputation_ziel')}"))
     print(_zeile("Ungeduld", f"{zustand.get('ungeduld')} von "
                              f"{zustand.get('ungeduld_schwelle')}"))
+    if zustand.get("ruf_quellen"):
+        print(_zeile("Ruf-Quellen", ", ".join(
+            f"{name} {wert:.2f}" for name, wert in zustand["ruf_quellen"].items())))
     # Ein leeres Lager und ein nicht gelesenes sehen sonst gleich aus.
     if zustand.get("nicht_gefunden"):
         print(_zeile("Im Spielstand nicht gefunden",

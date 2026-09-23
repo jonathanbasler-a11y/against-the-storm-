@@ -211,6 +211,21 @@ def rohquellen(conn: sqlite3.Connection, grenze: int = 4) -> list[Rohquelle]:
     return out[:grenze]
 
 
+def essbar_im_lager(conn: sqlite3.Connection, bestand: dict[str, float]) -> list[dict]:
+    """Was im Lager essbar ist, mit Saettigung je Stueck -- meiste zuerst."""
+    saettigung = {
+        r["en"]: float(r["eating_fullness"] or 0.0)
+        for r in conn.execute(
+            "SELECT en, eating_fullness FROM resources WHERE eatable = 1")
+    }
+    namen = _deutsch(conn)
+    out = [{"ware": ware, "ware_de": namen.get(ware, ware), "menge": menge,
+            "saettigung": saettigung[ware]}
+           for ware, menge in _bestand_auf_waren(conn, bestand).items()
+           if ware in saettigung and menge > 0]
+    return sorted(out, key=lambda e: -e["menge"])
+
+
 def _deutsch(conn: sqlite3.Connection) -> dict[str, str]:
     return {
         r["en"]: r["de"]

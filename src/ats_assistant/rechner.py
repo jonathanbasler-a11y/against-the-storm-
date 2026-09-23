@@ -162,7 +162,7 @@ class Rechner(threading.Thread):
         auszug = berater.kontext(
             zustand=daten.get("zustand"), nahrung=daten.get("nahrung"),
             ungeduld=daten.get("ungeduld"), auswahl=daten.get("auswahl"),
-            frage=daten.get("frage"))
+            frage=daten.get("frage"), ketten=daten.get("ketten"))
         try:
             antwort = berater.frage(
                 auszug, modell=daten.get("modell", berater.MODELL),

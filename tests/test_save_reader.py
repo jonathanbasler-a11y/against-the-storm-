@@ -29,6 +29,23 @@ from ats_assistant.save_reader import (
 )
 
 
+def _auftrag(model: str, **felder) -> dict:
+    """Ein Eintrag aus `orders.currentOrders` in der gemessenen Form."""
+    eintrag = {
+        "model": model, "tierModel": "Tier 1", "setIndex": 0, "seed": 1, "difficulty": 1,
+        "id": 1, "picked": False, "seen": True, "tracked": False,
+        "shouldBeFailable": False, "timeLeft": 0.0, "isFailed": False,
+        "analyticsType": None, "rewards": [], "picks": [], "startTime": 0.0,
+        "completedTime": 0.0, "started": False, "complied": False, "completed": False,
+        "anyObjectiveTimed": False,
+        "objectives": [{"type": 2, "amount": 3, "initTime": 0.0, "floatAmount": 0.0,
+                        "completed": False, "canCount": True, "complying": False,
+                        "complyTime": 0.0}],
+    }
+    eintrag.update(felder)
+    return eintrag
+
+
 def schreibe_buendel(tmp_path: Path, **abweichungen) -> Path:
     save = {
         "time": 8746.994,
@@ -67,6 +84,24 @@ def schreibe_buendel(tmp_path: Path, **abweichungen) -> Path:
             "goodsTrends": {"[Crafting] Oil": [4.0] * 180},
         },
         "unbekanntes_feld": {"nichts": "davon faellt uns auf die Fuesse"},
+        # Gemessen am 23.09.2026 (1.10.4) mit `lage.py form --pfad`.
+        "gameObjectives": {"reputation": 0.07539226,
+                           "reputationSources": [0.0, 0.0, 0.07539226, 0.0]},
+        "actors": {"racesReputationGains": {"Beaver": 0.0, "Foxes": 0.07539226, "Frog": 0.0}},
+        "content": {"buildings": ["Smokehouse", "Bakery", "Grill", "Beaver House"],
+                    "essentialBuildings": ["Main Storage"] * 3},
+        "orders": {"currentOrders": [
+            _auftrag("Order A", picked=True, started=True, rewards=["Planks x10"]),
+            _auftrag("Order B", picked=False, picks=[
+                {"model": "Beaver Influx", "setIndex": 0, "firstSeenTime": 500.0,
+                 "failed": False, "rewards": ["Villagers Beaver x5", "Planks x10", "Resin x15"]},
+                {"model": "Beaver Colony", "setIndex": 1, "firstSeenTime": 500.0,
+                 "failed": False, "rewards": ["Amber x40"]}]),
+            _auftrag("Order C", picked=True, started=True, completed=True),
+            _auftrag("Order D", picked=True, started=True, shouldBeFailable=True,
+                     timeLeft=480.0, anyObjectiveTimed=True),
+            _auftrag("Order E", picked=True, isFailed=True),
+        ]},
     }
     meta = {
         "gameConditions": {
@@ -377,3 +412,34 @@ def test_ein_fehlender_pfad_ergibt_einen_satz(tmp_path: Path) -> None:
     from ats_assistant.save_reader import formbericht
     text = "\n".join(formbericht(schreibe_buendel(tmp_path), wait=False, pfad="gibtsnicht"))
     assert "nicht gefunden" in text.lower()
+
+
+# --------------------------------------------------------------------------
+# Ruf, Baupläne, Aufträge -- gemessen am 23.09.2026
+# --------------------------------------------------------------------------
+
+
+def test_ruf_je_quelle_und_je_volk(tmp_path: Path) -> None:
+    state, _ = read_state(schreibe_buendel(tmp_path), wait=False)
+    assert state.reputation_sources == [0.0, 0.0, 0.07539226, 0.0]
+    assert state.reputation_by_race == {"Beaver": 0.0, "Foxes": 0.07539226, "Frog": 0.0}
+
+
+def test_bauplaene_aus_content_buildings(tmp_path: Path) -> None:
+    state, _ = read_state(schreibe_buendel(tmp_path), wait=False)
+    assert state.blueprints == ["Smokehouse", "Bakery", "Grill", "Beaver House"]
+
+
+def test_auftraege_in_der_gemessenen_form(tmp_path: Path) -> None:
+    state, notes = read_state(schreibe_buendel(tmp_path), wait=False)
+    assert [o["model"] for o in state.orders] == [
+        "Order A", "Order B", "Order C", "Order D", "Order E"]
+    assert state.orders[1]["picks"][0]["model"] == "Beaver Influx"
+    assert _note(notes, "orders").how == "pfad"
+
+
+def test_auftraege_in_fremder_form_werden_gemeldet(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"orders": {"currentOrders": ["Order A"]}})
+    state, notes = read_state(ordner, wait=False)
+    assert state.orders == []
+    assert _note(notes, "orders").how == "form_unbekannt"
