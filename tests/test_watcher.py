@@ -168,3 +168,39 @@ def test_dieselbe_spielzeit_verlaengert_die_datei_nicht(tmp_path: Path) -> None:
 
     zeilen = (runs / f"{kennung}.jsonl").read_text(encoding="utf-8").strip().splitlines()
     assert len(zeilen) == 1
+
+
+def test_ein_besser_gelesener_stand_ersetzt_die_letzte_zeile(tmp_path: Path) -> None:
+    """Am Spielrechner: das Spiel stand in der Pause, der Leser war
+    inzwischen repariert -- aber die Mitschrift behielt die alte Zeile mit
+    `lager: {}`, weil die Spielzeit dieselbe war. Der Reiter „Nahrung"
+    rechnete weiter auf leer, während der Rat das Lager schon kannte."""
+    runs = tmp_path / "runs"
+    save = buendel(tmp_path / "save", 500.0)
+    frueher, _ = read_state(save, wait=False)
+    kennung, _ = mitschreiben(frueher, runs)
+
+    save = buendel(tmp_path / "save", 600.0)
+    alt, _ = read_state(save, wait=False)              # so las der alte Leser
+    mitschreiben(alt, runs)
+    neu, _ = read_state(save, wait=False)
+    neu.storage = {"Berries": 16.0, "Eggs": 14.0}      # so liest der neue
+    _, geschrieben = mitschreiben(neu, runs)
+
+    assert geschrieben is True
+    zeilen = (runs / f"{kennung}.jsonl").read_text(encoding="utf-8").strip().splitlines()
+    assert len(zeilen) == 2                             # ersetzt, nicht angehängt
+    assert json.loads(zeilen[0])["game_time"] == 500.0  # Früheres bleibt
+    assert json.loads(zeilen[1])["storage"] == {"Berries": 16.0, "Eggs": 14.0}
+
+
+def test_nur_der_zeitstempel_anders_ist_kein_neuer_stand(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    save = buendel(tmp_path / "save", 600.0)
+    erster, _ = read_state(save, wait=False)
+    kennung, _ = mitschreiben(erster, runs)
+    zweiter, _ = read_state(save, wait=False)
+    zweiter.captured_at = "2099-01-01T00:00:00+00:00"
+    assert mitschreiben(zweiter, runs) == (kennung, False)
+    zeilen = (runs / f"{kennung}.jsonl").read_text(encoding="utf-8").strip().splitlines()
+    assert json.loads(zeilen[0])["captured_at"] == erster.captured_at
