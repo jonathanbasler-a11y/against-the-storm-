@@ -256,6 +256,17 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
         getroffen = [g for g in gelesen if g["eindeutig"]]
         for eintrag in getroffen:
             eintrag["belegt"] = _belegt(conn, eintrag, arten)
+            if not eintrag["belegt"]:
+                # Derselbe deutsche Name fuer mehrere Eintraege ("Glücksbringer"):
+                # belegt ist vielleicht ein anderer. Dann gilt der.
+                for (andere,) in conn.execute(
+                        "SELECT en FROM name_map WHERE de = ? AND en != ? AND "
+                        "confidence = 'localization' ORDER BY en",
+                        (eintrag["de"], eintrag["en"])):
+                    probe = dict(eintrag, en=andere)
+                    if _belegt(conn, probe, arten):
+                        eintrag.update(probe, belegt=True)
+                        break
     finally:
         conn.close()
 

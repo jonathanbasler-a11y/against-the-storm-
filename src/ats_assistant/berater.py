@@ -147,7 +147,8 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             # Ohne "vorkommen": gemessen sind das alle Rohstoffknoten der
             # Karte (5760 nach 600 Sekunden), nicht die erreichbaren.
             "reputation_ziel", "lager", "gebaeude", "gebaeude_liste", "lichtungen",
-            "bauplaene_ungebaut", "ruf_quellen", "ruf_je_volk", "auftraege",
+            "bauplaene_ungebaut", "bauplaene_ungebaut_weggelassen",
+            "gebaeude_liste_weggelassen", "ruf_quellen", "ruf_je_volk", "auftraege",
             "grundsteine", "spielzeit",
             # Was nicht gelesen werden konnte, geht mit. Sonst sieht ein
             # nicht gefundenes Lager aus wie ein leeres -- und das ist der
@@ -192,6 +193,8 @@ def _gekappt(zustand: dict) -> dict:
         out["lager"] = {k: v for k, v in out["lager"].items() if v}
     for feld in ("bauplaene_ungebaut", "gebaeude_liste"):
         if isinstance(out.get(feld), list) and len(out[feld]) > LISTENGRENZE:
+            # Gekappt, aber gesagt: sonst haelt das Modell die Liste fuer vollstaendig.
+            out[f"{feld}_weggelassen"] = len(out[feld]) - LISTENGRENZE
             out[feld] = out[feld][:LISTENGRENZE]
     return out
 

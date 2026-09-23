@@ -259,7 +259,9 @@ class Mitschreiber:
                 # verwirft den gesamten naechsten Lauf.
                 log.info("Spielzeit sprang von %.1f auf %.1f zurueck -- neuer Lauf",
                          self._letzte_uhr, state.game_time)
-                self._run_id = run_id_fuer(state)
+                # Ueber `lauf_kennung`: hat das Fenster die neue Siedlung schon
+                # angelegt, wird deren Datei fortgeschrieben statt einer zweiten.
+                self._run_id = lauf_kennung(state, self.runs_dir)
                 self._letzte_uhr = None
 
         if self._run_id is None:

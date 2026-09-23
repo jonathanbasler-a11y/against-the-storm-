@@ -236,3 +236,14 @@ def test_der_bildweg_reicht_das_foto_durch(tmp_path: Path, monkeypatch) -> None:
     r = rechner.Rechner(tmp_path, tmp_path / "runs", tmp_path / "kb.sqlite", queue.Queue())
     r._ausfuehren(rechner.Auftrag("auswahl", {"bild": "foto.png", "arten": ("order",)}))
     assert gesehen["bild"] == "foto.png" and gesehen["aufnehmen"] is False
+
+
+def test_ohne_spielstand_gehen_keine_alten_vorhersagen_hinaus(tmp_path: Path) -> None:
+    """Nahrung, Ungeduld und Ketten kamen aus der Mitschrift der letzten
+    Siedlung und füllten die gerade geleerten Felder wieder."""
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(tmp_path / "weg", tmp_path / "runs", tmp_path / "kb.sqlite", ausgang)
+    r._ausfuehren(rechner.Auftrag("lage"))
+    arten = [a for a, _ in list(ausgang.queue)]
+    assert "zustand" in arten
+    assert not {"nahrung", "ungeduld", "ketten"} & set(arten)

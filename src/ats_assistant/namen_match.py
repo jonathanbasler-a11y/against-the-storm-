@@ -58,6 +58,9 @@ def kandidaten(conn: sqlite3.Connection,
     if arten:
         sql += " AND kind IN (%s)" % ",".join("?" * len(arten))
         params = arten
+    # Feste Reihenfolge: bei gleichem deutschem Namen fuer zwei Eintraege
+    # entschied sonst die Einfuegereihenfolge, welcher zurueckkam.
+    sql += " ORDER BY de, en"
     return [(r["de"], r["en"], r["kind"]) for r in conn.execute(sql, params)]
 
 

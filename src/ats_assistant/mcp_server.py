@@ -117,7 +117,9 @@ def werkzeuge(save_dir: Path, runs_dir: Path, db: Path) -> list[dict]:
                 },
             },
             "handler": lambda bild=None, text=None, arten=None, **kw: tools_api.read_choice(
-                bild=bild, text=text, db=db, arten=tuple(arten or ("effect",)),
+                bild=bild, text=text, db=db,
+                # Eine Zeichenkette wurde sonst zu ('o','r','d','e','r').
+                arten=((arten,) if isinstance(arten, str) else tuple(arten or ("effect",))),
                 aufnehmen=bild is None and not text),
         },
         {

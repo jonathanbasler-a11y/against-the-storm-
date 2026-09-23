@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import queue
+import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
@@ -37,12 +38,30 @@ VERSTECKT_MS = 250
 # Und wann es spaetestens zurueckkommt, auch wenn keine Antwort kaeme.
 SICHERUNG_MS = 8000
 
+# Wie lange eine gelesene Auswahl gilt, gemessen in Spielzeit. Die
+# Grundsteinwahl haelt das Spiel nicht an: ein Speichern kurz nach dem Lesen
+# darf sie nicht verwerfen, eine lange weitergespielte Siedlung schon.
+AUSWAHL_GILT_S = 600
+
 log = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------
 # Das Fenster
 # --------------------------------------------------------------------------
+
+
+def _eigenes_foto_loeschen(quelle: str | None) -> None:
+    """Nur was `screen.neuer_bildpfad` angelegt hat, nie ein fremdes Bild."""
+    if not quelle:
+        return
+    pfad = Path(quelle)
+    import tempfile
+    if pfad.name.startswith("ats-auswahl-") and pfad.parent == Path(tempfile.gettempdir()):
+        try:
+            pfad.unlink()
+        except OSError:
+            pass
 
 
 def _anmeldehinweis(gefunden: bool | None) -> str:
@@ -236,25 +255,36 @@ class App:
         # Oberfläche statt der Karten. Also geht es kurz aus dem Weg.
         self._schreiben(self.auswahl_text, "wird gelesen …")
         self.root.withdraw()
-        self._sicherung = self.root.after(SICHERUNG_MS, self._fenster_zurueck)
+        self._foto_zu_spaet = False
+        self._sicherung = self.root.after(SICHERUNG_MS, self._sicherheitsnetz)
         self.root.after(VERSTECKT_MS, self._foto_machen)
 
     def _foto_machen(self) -> None:
-        """Das Foto hier, im Hauptthread, solange das Fenster weg ist.
+        """Das Foto in einem eigenen Faden, solange das Fenster weg ist.
 
-        Vorher ging nur ein Auftrag an den Arbeits-Thread, und der stand
-        hinter allem, was gerade lief -- eine Rat-Frage dauert bis zu einer
-        Minute. Nach acht Sekunden holte das Sicherheitsnetz das Fenster
-        zurück, und fotografiert wurde es selbst.
+        Nicht über den Arbeits-Thread: der stand hinter allem, was gerade
+        lief -- eine Rat-Frage dauert bis zu einer Minute --, und fotografiert
+        wurde am Ende das Fenster selbst. Und nicht im Hauptthread: die
+        PowerShell-Aufnahme dauert Sekunden, und solange konnte das
+        Sicherheitsnetz nicht feuern.
         """
+        threading.Thread(target=self._foto_aufnehmen, args=(self.art.get(),),
+                         daemon=True).start()
+
+    def _foto_aufnehmen(self, art: str) -> None:
+        """Im Faden: nur aufnehmen und das Ergebnis in die Warteschlange legen.
+        Tk wird von hier aus nicht angefasst."""
         try:
-            pfad = screen.aufnehmen()
+            pfad = screen.aufnehmen(screen.neuer_bildpfad())
         except Exception as exc:
-            self._fenster_zurueck()
-            self._schreiben(self.auswahl_text, f"Keine Aufnahme: {exc}")
+            self.ausgang.put(("foto", {"fehler": str(exc)}))
             return
+        self.ausgang.put(("foto", {"bild": str(pfad), "art": art}))
+
+    def _sicherheitsnetz(self) -> None:
+        # Kommt das Foto erst danach, ist das Fenster womoeglich mit drauf.
+        self._foto_zu_spaet = True
         self._fenster_zurueck()
-        self.rechner.bitte("auswahl", arten=(self.art.get(),), bild=str(pfad))
 
     def _fenster_zurueck(self) -> None:
         """Zurückholen, was der Bildweg versteckt hat -- auch nach einem Fehler.
@@ -270,7 +300,14 @@ class App:
                 self.root.after_cancel(kennung)
             except Exception:          # eine abgelaufene Kennung ist kein Fehler
                 pass
-        self.root.deiconify()
+        # Nur ein verstecktes Fenster zurueckholen: `deiconify` auf einem
+        # sichtbaren hebt es ueber das Spiel und nimmt ihm den Fokus.
+        try:
+            versteckt = self.root.state() == "withdrawn"
+        except Exception:
+            versteckt = True
+        if versteckt:
+            self.root.deiconify()
 
     def _rat_holen(self) -> None:
         self._schreiben(self.rat_text, "wird gefragt …")
@@ -331,14 +368,21 @@ class App:
 
     def _anzeigen(self, art: str, wert) -> None:
         if art == "zustand":
-            # Eine gelesene Auswahl gilt, bis das Spiel weiterlaeuft. Sonst
-            # ging eine alte Grundsteinwahl bei jeder spaeteren Frage mit.
-            alt = (getattr(self, "zustand", None) or {}).get("spielzeit")
-            neu = (wert or {}).get("spielzeit")
-            if alt is not None and neu is not None and neu != alt:
-                self.auswahl = None
+            self._alte_lage_verwerfen(wert or {})
             self.zustand = wert
             self._zeige_zustand(wert)
+        elif art == "foto":
+            if getattr(self, "_foto_zu_spaet", False):
+                self._schreiben(self.auswahl_text,
+                                "Das Foto dauerte zu lange – das Fenster war schon wieder "
+                                "zu sehen. Bitte nochmal „Bildschirm lesen“.")
+                return
+            self._fenster_zurueck()
+            if wert.get("fehler"):
+                self._schreiben(self.auswahl_text, f"Keine Aufnahme: {wert['fehler']}")
+                return
+            self.rechner.bitte("auswahl", arten=(wert.get("art") or self.art.get(),),
+                               bild=wert["bild"])
         elif art == "nahrung":
             self.nahrung = wert
             self._zeige_nahrung(wert)
@@ -350,7 +394,11 @@ class App:
             self.nahrungsrat = wert
             self._zeige_ketten(wert)
         elif art == "auswahl":
+            _eigenes_foto_loeschen(wert.get("quelle"))
             self.auswahl = wert
+            jetzt = getattr(self, "zustand", None) or {}
+            self._auswahl_lauf = jetzt.get("mitschrift")
+            self._auswahl_zeit = jetzt.get("spielzeit")
             self._fenster_zurueck()
             self._zeige_auswahl(wert)
         elif art == "nachschlag":
@@ -390,6 +438,31 @@ class App:
         elif art == "fehler":
             self.status.configure(text=f"Fehler: {wert}")
 
+    def _alte_lage_verwerfen(self, neu: dict) -> None:
+        """Was zur vorigen Lage gehoert, geht nicht mehr an den Rat.
+
+        Ohne Spielstand gehen Nahrung, Ungeduld, Ketten und Auswahl der
+        letzten Siedlung. Eine Auswahl verfaellt ausserdem mit einer neuen
+        Siedlung oder wenn lange weitergespielt wurde -- sonst ging eine alte
+        Grundsteinwahl bei jeder spaeteren Frage mit.
+        """
+        if neu.get("verfuegbar") is False:
+            self.nahrung = self.ungeduld = self.nahrungsrat = None
+            verfallen = True
+        else:
+            lauf, zeit = neu.get("mitschrift"), neu.get("spielzeit")
+            start = getattr(self, "_auswahl_zeit", None)
+            verfallen = (
+                (lauf is not None and getattr(self, "_auswahl_lauf", None) is not None
+                 and lauf != self._auswahl_lauf)
+                or (zeit is not None and start is not None
+                    and (zeit < start or zeit - start > AUSWAHL_GILT_S)))
+        if verfallen and getattr(self, "auswahl", None):
+            self.auswahl = None
+            self._schreiben(self.auswahl_text,
+                            "Die gelesene Auswahl ist verfallen – das Spiel lief weiter. "
+                            "Neu lesen, falls sie noch offen ist.")
+
     def _kopf_auffrischen(self) -> None:
         """Das Alter im Kopf laeuft mit -- sonst stand "gerade eben" ewig."""
         z = getattr(self, "zustand", None)
@@ -399,9 +472,11 @@ class App:
             wann = _alter(z["gespeichert"], "gespeichert")
         else:
             wann = _alter(z.get("zeitpunkt"))
-        self.kopf.configure(
-            text=f"Jahr {z.get('jahr', '?')} · {z.get('biom') or '?'} · "
-                 f"Prestige {z.get('prestige', '?')} · {wann}")
+        text = (f"Jahr {z.get('jahr', '?')} · {z.get('biom') or '?'} · "
+                f"Prestige {z.get('prestige', '?')} · {wann}")
+        if text != getattr(self, "_kopf_text", None):
+            self._kopf_text = text
+            self.kopf.configure(text=text)
 
     def _warnung_zeigen(self) -> None:
         """Zustand und Nahrung warnen beide in dieselbe Zeile. Vorher

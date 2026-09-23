@@ -428,3 +428,47 @@ def test_rohquellen_nennen_jede_ware_einmal(tmp_path: Path) -> None:
     quelle = {q.gebaeude: q for q in nahrung.rohquellen(conn)}["Trappers' Camp"]
     assert quelle.waren == ["Meat"]
     conn.close()
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 5: Nachprüfung der eigenen Korrekturen
+# --------------------------------------------------------------------------
+
+
+def _keller_mit_zwei_gruppen(conn):
+    _rezept(conn, 30, "Cellar", [[{"menge": 2, "ware": "Insects"}, {"menge": 2, "ware": "Meat"}],
+                                 [{"menge": 2, "ware": "Insects"}, {"menge": 2, "ware": "Berries"}]],
+            "Pickled Goods", 10, 60)
+    conn.commit()
+
+
+def test_eine_spaetere_gruppe_wird_bei_der_wahl_mitgedacht(tmp_path: Path) -> None:
+    """Gruppe 1 nahm die Insekten, Gruppe 2 fand keine mehr -- obwohl Fleisch
+    für Gruppe 1 und die Insekten für Gruppe 2 einen Durchlauf trugen."""
+    conn = wissensbasis(tmp_path)
+    _keller_mit_zwei_gruppen(conn)
+    keller = [v for v in nahrung.vorschlaege(conn, {"[Food Raw] Insects": 2, "[Food Raw] Meat": 2})
+              if v.gebaeude_laut_seite == "Cellar" or v.produkt == "Pickled Goods"]
+    assert keller and keller[0].zyklen == 1
+    assert sorted(z.ware for z in keller[0].zutaten) == ["Insects", "Meat"]
+    conn.close()
+
+
+def test_bei_gleichstand_zaehlt_die_ganze_kombination(tmp_path: Path) -> None:
+    """20 Insekten, 20 Fleisch: Insekten+Insekten tragen 5, Fleisch+Insekten 10."""
+    conn = wissensbasis(tmp_path)
+    _keller_mit_zwei_gruppen(conn)
+    keller = [v for v in nahrung.vorschlaege(conn, {"[Food Raw] Insects": 20, "[Food Raw] Meat": 20})
+              if v.produkt == "Pickled Goods"][0]
+    assert keller.zyklen == 10
+    conn.close()
+
+
+def test_dieselbe_ware_steht_im_satz_einmal(tmp_path: Path) -> None:
+    conn = wissensbasis(tmp_path)
+    _keller_mit_zwei_gruppen(conn)
+    keller = [v for v in nahrung.vorschlaege(conn, {"[Food Raw] Insects": 20})
+              if v.produkt == "Pickled Goods"][0]
+    assert keller.satz().count("Insects") == 1
+    assert "20 Insects" in keller.satz()
+    conn.close()
