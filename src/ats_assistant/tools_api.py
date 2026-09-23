@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import analysis, kb, nahrung, namen_match, screen, watcher
+from . import analysis, kb, nahrung, namen_match, save_reader, screen, watcher
 from .forecast import food_forecast as _food_forecast
 from .forecast import impatience_forecast as _impatience_forecast
 from .save_reader import GameState, read_state
@@ -518,12 +518,12 @@ def analyze_runs(n: int = 10, save_dir: str | Path | None = None,
     if save_dir:
         meta_pfad = Path(save_dir) / "MetaSave.save"
         if meta_pfad.exists():
-            try:
-                meta = json.loads(meta_pfad.read_text(encoding="utf-8", errors="replace"))
+            # `_load` kennt BOM und halb geschriebene Dateien; ein eigenes
+            # json.loads meldete bei einer BOM "keine Laufhistorie".
+            meta = save_reader._load(meta_pfad)
+            if isinstance(meta, dict):
                 records = ((meta.get("gamesHistory") or {}).get("records")) or []
                 quelle = "MetaSave.gamesHistory"
-            except (json.JSONDecodeError, OSError) as exc:
-                log.warning("MetaSave nicht lesbar: %s", exc)
 
     if not records:
         return {"verfuegbar": False,

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import re
 import time
 from dataclasses import asdict, dataclass, field
@@ -120,10 +121,7 @@ def wait_for_quiet(directory: Path, settle: float = SETTLE_SECONDS,
     last_sig: tuple | None = None
     quiet_since = time.monotonic()
     while time.monotonic() < deadline:
-        sig = tuple(
-            (p.stat().st_mtime_ns, p.stat().st_size)
-            for p in (directory / n for n in SAVE_FILES) if p.exists()
-        )
+        sig = _ruhesignatur(directory)
         now = time.monotonic()
         if sig != last_sig:
             last_sig, quiet_since = sig, now
@@ -132,6 +130,20 @@ def wait_for_quiet(directory: Path, settle: float = SETTLE_SECONDS,
         time.sleep(poll)
     log.warning("Spielordner kam in %.0fs nicht zur Ruhe, lese trotzdem", timeout)
     return False
+
+
+def _ruhesignatur(directory: Path) -> tuple:
+    """Groesse und Zeit je Datei. Ersetzt das Spiel eine Datei gerade, wirft
+    `stat()` -- das ist dann eben Bewegung, kein Absturz."""
+    out = []
+    for name in SAVE_FILES:
+        try:
+            st = (directory / name).stat()
+        except OSError:
+            out.append((name, None))
+            continue
+        out.append((name, st.st_mtime_ns, st.st_size))
+    return tuple(out)
 
 
 def _load(path: Path) -> Any | None:
@@ -205,8 +217,13 @@ def _series(raw: Any) -> dict[str, list[float]]:
     for key, values in raw.items():
         if not isinstance(key, str) or not isinstance(values, list):
             continue
+        # Jeden Wert pruefen, nicht nur die ersten fuenf: ein `None` dahinter
+        # riss `read_state` mit, ein "NaN" wurde zu nan. Einzelne Werte
+        # auslassen geht nicht -- im Ringpuffer zaehlt die Stelle.
         if not values or not all(isinstance(v, (int, float)) and not isinstance(v, bool)
-                                 for v in values[:5]):
+                                 and math.isfinite(v) for v in values):
+            if values:
+                log.warning("Zeitreihe %s enthaelt Unlesbares, uebersprungen", key)
             continue
         name, _ = strip_prefixes(key)
         out[name] = [float(v) for v in values]

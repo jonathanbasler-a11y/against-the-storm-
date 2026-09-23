@@ -204,3 +204,95 @@ def test_nur_der_zeitstempel_anders_ist_kein_neuer_stand(tmp_path: Path) -> None
     assert mitschreiben(zweiter, runs) == (kennung, False)
     zeilen = (runs / f"{kennung}.jsonl").read_text(encoding="utf-8").strip().splitlines()
     assert json.loads(zeilen[0])["captured_at"] == erster.captured_at
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 2 (23.09.2026): Mitschrift
+# --------------------------------------------------------------------------
+
+
+def _zeilen(runs: Path, kennung: str) -> list[dict]:
+    return [json.loads(z) for z in
+            (runs / f"{kennung}.jsonl").read_text(encoding="utf-8").splitlines() if z.strip()]
+
+
+def test_eine_notiz_am_ende_zerteilt_die_mitschrift_nicht(tmp_path: Path) -> None:
+    """`log_event` hängt eine Notiz an. Danach begann der nächste Stand eine
+    neue Datei -- die Notiz hat keine Spielzeit -- oder derselbe Stand
+    wurde ein zweites Mal geschrieben."""
+    runs = tmp_path / "runs"
+    zustand, _ = read_state(buendel(tmp_path / "save", 500.0), wait=False)
+    kennung, _ = mitschreiben(zustand, runs)
+    with (runs / f"{kennung}.jsonl").open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"typ": "notiz", "text": "Grundstein gewählt"}) + "\n")
+
+    nochmal, _ = read_state(buendel(tmp_path / "save", 500.0), wait=False)
+    assert mitschreiben(nochmal, runs) == (kennung, False)        # kein Doppel
+    spaeter, _ = read_state(buendel(tmp_path / "save", 800.0), wait=False)
+    assert mitschreiben(spaeter, runs) == (kennung, True)         # dieselbe Datei
+    assert [z.get("game_time") for z in _zeilen(runs, kennung)] == [500.0, None, 800.0]
+
+
+def test_ein_halb_gelesenes_buendel_beginnt_keinen_neuen_lauf(tmp_path: Path) -> None:
+    """MetaSave kurz gesperrt: Biom und Stufe fehlen. Das ist keine neue
+    Siedlung, sondern ein unvollständiger Blick auf dieselbe."""
+    runs = tmp_path / "runs"
+    zustand, _ = read_state(buendel(tmp_path / "save", 500.0), wait=False)
+    kennung, _ = mitschreiben(zustand, runs)
+
+    save = buendel(tmp_path / "save", 800.0)
+    (save / "MetaSave.save").unlink()
+    halb, _ = read_state(save, wait=False)
+    assert halb.biome is None
+    assert lauf_kennung(halb, runs) == kennung
+
+
+def test_ein_schlechter_gelesener_stand_ersetzt_keinen_besseren(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    zustand, _ = read_state(buendel(tmp_path / "save", 500.0), wait=False)
+    kennung, _ = mitschreiben(zustand, runs)
+    schlechter, _ = read_state(buendel(tmp_path / "save", 500.0), wait=False)
+    schlechter.biome = None
+    schlechter.prestige = None
+    assert mitschreiben(schlechter, runs) == (kennung, False)
+    assert _zeilen(runs, kennung)[-1]["biome"] == "Coral Forest"
+
+
+def test_leerzeilen_am_ende_werden_gleich_gezaehlt(tmp_path: Path) -> None:
+    """`_letzte_zeile` übersprang alle Umbrüche, das Ersetzen nur einen: bei
+    `A\\nB\\n\\n` wurde eine dritte Zeile angehängt statt B ersetzt."""
+    from ats_assistant.watcher import _letzte_zeile, _letzte_zeile_ersetzen
+    datei = tmp_path / "lauf.jsonl"
+    datei.write_bytes(b'{"a":1}\n{"b":2}\n\n')
+    assert _letzte_zeile(datei) == '{"b":2}'
+    _letzte_zeile_ersetzen(datei, '{"c":3}')
+    assert datei.read_bytes() == b'{"a":1}\n{"c":3}\n'
+
+
+def test_der_waechter_schreibt_nicht_doppelt_neben_dem_fenster(tmp_path: Path) -> None:
+    """Das Fenster schreibt denselben Spielstand zuerst; `ats-watch` hängte
+    ihn danach ein zweites Mal an -- die Vorhersage hatte null Sekunden."""
+    runs = tmp_path / "runs"
+    save = buendel(tmp_path / "save", 500.0)
+    zustand, _ = read_state(save, wait=False)
+    kennung, _ = mitschreiben(zustand, runs)           # das Fenster
+    waechter = Mitschreiber(save, runs)
+    waechter.einmal_lesen(wait=False)
+    assert waechter.run_id == kennung
+    assert len(_zeilen(runs, kennung)) == 1
+
+
+def test_der_waechter_ueberlebt_einen_fehler(tmp_path: Path, monkeypatch) -> None:
+    from ats_assistant import watcher
+    aufrufe = []
+
+    def platzt(self, wait=True):
+        aufrufe.append(wait)
+        raise PermissionError("vom Spiel gesperrt")
+
+    monkeypatch.setattr(watcher.Mitschreiber, "einmal_lesen", platzt)
+    monkeypatch.setattr(watcher, "ABTASTUNG_SEKUNDEN", 0.0)
+    signaturen = iter([("a",), ("b",), ("c",)] + [("c",)] * 1000)
+    monkeypatch.setattr(watcher, "_signatur", lambda _: next(signaturen))
+    watcher.beobachten(tmp_path / "save", tmp_path / "runs", minuten=0.0005)
+    assert len(aufrufe) >= 2                           # weitergelaufen
