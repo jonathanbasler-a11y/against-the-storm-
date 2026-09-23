@@ -808,3 +808,83 @@ def test_lage_wissen_nennt_deutsche_namen_fuer_bauplan_und_effekte(tmp_path: Pat
     namen = tools_api.lage_wissen(runs, db, run_id="lauf")["namen_de"]
     assert namen == {"Smokehouse": "Räucherei",
                      "[Biome] Wood in Woodlands": "Holz im Königswald"}
+
+
+# --------------------------------------------------------------------------
+# 23.09.2026: Randleisten, Rezepte beim Nachschlagen, angebotene Baupläne
+# --------------------------------------------------------------------------
+
+
+def test_read_choice_uebergeht_die_randleisten(tmp_path: Path, monkeypatch) -> None:
+    from ats_assistant import localization
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Reward_BedAndBreakfast_Name", "Bed and Breakfast",
+                             "Frühstückspension", "effect"),
+        localization.Eintrag("Reward_BuildingMaterials_Name", "Building Materials",
+                             "Baumaterialien", "effect")])
+    for en in ("Bed and Breakfast", "Building Materials"):
+        conn.execute("INSERT INTO cornerstones (en, rarity) VALUES (?, 'Epic')", (en,))
+    conn.commit()
+    conn.close()
+    bild = tmp_path / "schirm.png"
+    bild.write_bytes(b"\x89PNG\r\n\x1a\n" + (13).to_bytes(4, "big") + b"IHDR"
+                     + (2000).to_bytes(4, "big") + (1125).to_bytes(4, "big") + b"\x08\x02\0\0\0")
+    monkeypatch.setattr(tools_api.screen, "erkenne", lambda pfad, **kw: [
+        tools_api.screen.Zeile("FRÜHSTÜCKSPENSION", 618, 635, 200, 20),
+        tools_api.screen.Zeile("BAUMATERIALIEN", 1737, 408, 130, 15)])
+    out = tools_api.read_choice(bild=bild, db=db)
+    assert [a["en"] for a in out["angebot"]] == ["Bed and Breakfast"]
+    assert out["am_rand_verworfen"] == 1
+
+
+def _rezept_basis(db: Path) -> None:
+    conn = kb.connect(db)
+    conn.execute("INSERT INTO buildings (en, worker_slots) VALUES ('Kiln', 2)")
+    conn.execute("INSERT INTO name_map (en, de, kind, confidence) "
+                 "VALUES ('Kiln', 'Brennofen', 'building', 'localization')")
+    conn.execute("INSERT INTO production (product, building, stars, inputs) VALUES "
+                 "('Coal', 'Kiln', 3, ?)", (json.dumps([[{"menge": 5, "ware": "Wood"}]]),))
+    conn.execute("INSERT INTO production (product, building, stars) VALUES "
+                 "('Bricks', 'Kiln', 1)")
+    conn.execute("INSERT INTO recipes (building, inputs, stars, product) VALUES "
+                 "('Kiln', ?, 1, 'Bricks')",
+                 (json.dumps([[{"menge": 3, "ware": "Clay"}, {"menge": 3, "ware": "Stone"}]]),))
+    conn.execute("INSERT INTO resources (en, save_id, category) "
+                 "VALUES ('Coal', '[Fuel] Coal', 'Fuel')")
+    conn.commit()
+    conn.close()
+
+
+def test_nachschlagen_nennt_rezepte_mit_zutaten(tmp_path: Path) -> None:
+    db = tmp_path / "kb.sqlite"
+    _rezept_basis(db)
+    out = tools_api.query_kb("Brennofen", db=db)          # deutsch gesucht
+    assert out["gebaeude"]["en"] == "Kiln"
+    rezepte = {r["produkt"]: r for r in out["rezepte"]}
+    assert rezepte["Coal"]["sterne"] == 3
+    assert rezepte["Coal"]["zutaten"] == [[{"menge": 5, "ware": "Wood"}]]
+    # Zutaten aus `recipes`, wo `production` keine hat.
+    assert rezepte["Bricks"]["zutaten"][0][1] == {"menge": 3, "ware": "Stone"}
+    ware = tools_api.query_kb("Coal", db=db)
+    assert ware["hergestellt_in"][0]["gebaeude"] == "Kiln"
+
+
+def test_angebotene_bauplaene_kommen_mit_rezepten_in_den_auszug(tmp_path: Path) -> None:
+    save_dir = _mit(buendel(tmp_path / "save"), reputationRewards={"currentPick": {
+        "options": [{"building": "Kiln", "set": "S"}]}})
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+    db = tmp_path / "kb.sqlite"
+    _rezept_basis(db)
+    gebaeude = tools_api.lage_wissen(runs, db, run_id="lauf")["gebaeude"]
+    ofen = gebaeude["Kiln"]
+    assert ofen["status"] == "angeboten" and ofen["gebaeude_de"] == "Brennofen"
+    assert ofen["rezepte"][0] == {"produkt": "Coal", "sterne": 3,
+                                  "zutaten": [[{"menge": 5, "ware": "Wood"}]]}
+    from ats_assistant import berater
+    wissen = {"gebaeude": {**{f"G{i}": {"status": "steht"} for i in range(60)},
+                           "Kiln": ofen}}
+    auszug = berater.kontext(zustand={"jahr": 1}, wissen=wissen)
+    assert next(iter(auszug["gebaeude_wissen"])) == "Kiln"     # nicht weggekappt

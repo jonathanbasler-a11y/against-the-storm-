@@ -325,6 +325,42 @@ def _erkenne_tesseract(bild: Path, sprache: str) -> list[Zeile]:
 # --------------------------------------------------------------------------
 
 
+# Die Leisten am Rand gehoeren nicht zur Wahl. Gemessen am Bildschirmfoto vom
+# 23.09.2026 (2000 Pixel breit): links Voelker und Benachrichtigungen bis
+# etwa 390, rechts die Auftragsleiste ab etwa 1710; das Wahlfenster liegt
+# dazwischen (390-1610). Die Auftragsueberschrift „BAUMATERIALIEN“ rechts
+# wurde als Grundstein gleichen Namens gelesen und empfohlen -- auf einem
+# Bildschirm mit zwei Karten, von denen keine so hiess.
+MITTE_LINKS = 0.20
+MITTE_RECHTS = 0.85
+
+
+def bildbreite(bild: Path | str) -> int | None:
+    """Die Breite aus dem PNG-Kopf -- ohne Bildbibliothek. None, wenn es
+    kein PNG ist oder sich nicht lesen laesst."""
+    try:
+        with open(bild, "rb") as fh:
+            kopf = fh.read(24)
+    except OSError:
+        return None
+    if len(kopf) < 24 or kopf[:8] != b"\x89PNG\r\n\x1a\n" or kopf[12:16] != b"IHDR":
+        return None
+    breite = int.from_bytes(kopf[16:20], "big")
+    return breite or None
+
+
+def nur_mitte(zeilen: list[Zeile], breite: int | None) -> tuple[list[Zeile], int]:
+    """Zeilen, deren Mitte im Wahlfenster liegt, und wie viele wegfielen.
+
+    Ohne bekannte Breite bleibt alles -- lieber eine Leiste zu viel als eine
+    Karte zu wenig."""
+    if not breite:
+        return zeilen, 0
+    links, rechts = breite * MITTE_LINKS, breite * MITTE_RECHTS
+    behalten = [z for z in zeilen if links <= z.mitte_x <= rechts]
+    return behalten, len(zeilen) - len(behalten)
+
+
 def sortiere_nach_karten(zeilen: list[Zeile]) -> list[Zeile]:
     """Von links nach rechts, so wie die Karten stehen.
 

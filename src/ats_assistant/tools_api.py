@@ -246,6 +246,7 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
     """
     zeilen: list[str] = []
     quelle = "hand"
+    am_rand = 0
     if text:
         # Eine einzelne Zeichenkette ist ein Name, keine Liste von Buchstaben.
         # Das Fenster uebergibt eine Liste, die Kommandozeile nicht zwingend.
@@ -270,7 +271,8 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
             }
         quelle = str(pfad)
         try:
-            erkannt = screen.sortiere_nach_karten(screen.erkenne(pfad))
+            erkannt, am_rand = screen.nur_mitte(screen.erkenne(pfad), screen.bildbreite(pfad))
+            erkannt = screen.sortiere_nach_karten(erkannt)
         except Exception as exc:
             return {"verfuegbar": False, "grund": str(exc),
                     "umgebung": screen.verfuegbar()}
@@ -329,6 +331,8 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
         "unsicher": unsicher[:5],
         "unklar": unklar[:5],
         "gelesene_zeilen": len(zeilen),
+        # Zeilen aus den Randleisten (Voelker, Auftraege), nicht gelesen.
+        "am_rand_verworfen": am_rand,
         "grund": None if sicher else _nichts_erkannt(quelle, [], unsicher),
     }
 
@@ -403,6 +407,75 @@ def _nichts_erkannt(quelle: str, sonst: list | None = None,
             "Auswahlbildschirm offen, als das Bild entstand?")
 
 
+REZEPTE_HOECHSTENS = 8
+
+
+def _zutaten(roh: Any) -> list[list[dict]]:
+    """`inputs` aus der Wissensbasis: je Gruppe die Alternativen, kompakt."""
+    try:
+        gruppen = json.loads(roh) if isinstance(roh, str) else roh
+    except (json.JSONDecodeError, TypeError):
+        return []
+    out = []
+    for gruppe in gruppen if isinstance(gruppen, list) else []:
+        wahl = [{"menge": z.get("menge"), "ware": z.get("ware")}
+                for z in (gruppe if isinstance(gruppe, list) else [])
+                if isinstance(z, dict) and z.get("ware")]
+        if wahl:
+            out.append(wahl)
+    return out
+
+
+def _rezepte(conn, gebaeude: str | None = None, produkt: str | None = None) -> list[dict]:
+    """Rezepte eines Gebaeudes oder fuer eine Ware -- mit Sternen und Zutaten.
+
+    `production` ist die belastbare Zuordnung Ware -> Gebaeude mit Sternen;
+    `recipes` traegt die Mengen. Beides zusammen, `production` zuerst.
+    """
+    out: list[dict] = []
+    gesehen: set[tuple] = set()
+    if gebaeude:
+        zeilen = conn.execute(
+            "SELECT product, building, stars, inputs FROM production "
+            "WHERE building = ? COLLATE NOCASE ORDER BY stars DESC, product", (gebaeude,))
+    else:
+        zeilen = conn.execute(
+            "SELECT product, building, stars, inputs FROM production "
+            "WHERE product = ? COLLATE NOCASE ORDER BY stars DESC, building", (produkt,))
+    for r in zeilen:
+        eintrag = {"produkt": r["product"], "gebaeude": r["building"], "sterne": r["stars"]}
+        zutaten = _zutaten(r["inputs"])
+        if not zutaten:
+            rezept = conn.execute(
+                "SELECT inputs FROM recipes WHERE product = ? COLLATE NOCASE "
+                "AND (building = ? COLLATE NOCASE OR building IS NULL) "
+                "ORDER BY building IS NULL LIMIT 1",
+                (r["product"], r["building"])).fetchone()
+            zutaten = _zutaten(rezept["inputs"]) if rezept else []
+        if zutaten:
+            eintrag["zutaten"] = zutaten
+        gesehen.add((str(r["product"]).lower(), str(r["building"]).lower()))
+        out.append(eintrag)
+    # Rezepte, die `production` nicht kennt (nur von der Gebaeudeseite).
+    if gebaeude:
+        rest = conn.execute(
+            "SELECT product, building, stars, inputs FROM recipes "
+            "WHERE building = ? COLLATE NOCASE AND product IS NOT NULL", (gebaeude,))
+    else:
+        rest = conn.execute(
+            "SELECT product, building, stars, inputs FROM recipes "
+            "WHERE product = ? COLLATE NOCASE AND building IS NOT NULL", (produkt,))
+    for r in rest:
+        if (str(r["product"]).lower(), str(r["building"]).lower()) in gesehen:
+            continue
+        gesehen.add((str(r["product"]).lower(), str(r["building"]).lower()))
+        eintrag = {"produkt": r["product"], "gebaeude": r["building"], "sterne": r["stars"]}
+        if _zutaten(r["inputs"]):
+            eintrag["zutaten"] = _zutaten(r["inputs"])
+        out.append(eintrag)
+    return [{k: v for k, v in e.items() if v is not None} for e in out[:REZEPTE_HOECHSTENS]]
+
+
 @_wall
 def query_kb(name: str, entity: str | None = None, db: str | Path = "kb.sqlite") -> dict:
     """Nachschlag in der Wissensbasis, deutsch oder englisch."""
@@ -431,16 +504,30 @@ def query_kb(name: str, entity: str | None = None, db: str | Path = "kb.sqlite")
                 break
 
         if entity == "building" or "ware" not in treffer:
-            zeile = conn.execute(
-                "SELECT en, cost, worker_slots, source_page FROM buildings "
-                "WHERE en = ? COLLATE NOCASE", (name,)).fetchone()
-            if zeile:
-                treffer["gebaeude"] = dict(zeile)
+            for kandidat in kandidaten:
+                zeile = conn.execute(
+                    "SELECT en, cost, worker_slots, source_page FROM buildings "
+                    "WHERE en = ? COLLATE NOCASE", (kandidat,)).fetchone()
+                if zeile:
+                    treffer["gebaeude"] = dict(zeile)
+                    break
+
+        # Rezepte mit Zutaten. Ohne sie riet der Rat am 23.09.2026, woraus
+        # ein Baumaterialpaket entsteht, und was ein angebotener Brennofen
+        # herstellt.
+        if "gebaeude" in treffer:
+            rezepte = _rezepte(conn, gebaeude=treffer["gebaeude"]["en"])
+            if rezepte:
+                treffer["rezepte"] = rezepte
+        if "ware" in treffer:
+            rezepte = _rezepte(conn, produkt=treffer["ware"]["en"])
+            if rezepte:
+                treffer["hergestellt_in"] = rezepte
 
         if not namen and "ware" not in treffer and "gebaeude" not in treffer:
             treffer["hinweis"] = (
                 "Nichts gefunden. Die Wissensbasis ist erst teilweise gefüllt: "
-                "Waren stehen drin, Grundsteine und Rezepte noch nicht.")
+                "Waren, Gebäude und Rezepte stehen drin, Grundsteine nur als Namen.")
         return treffer
     finally:
         conn.close()
@@ -514,6 +601,25 @@ def lage_wissen(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
                 continue
             if isinstance(eintrag.get("zweck"), str) and len(eintrag["zweck"]) > 120:
                 eintrag["zweck"] = eintrag["zweck"][:117] + "…"
+            gebaeude[name] = {k: v for k, v in eintrag.items() if v is not None}
+
+        # Was die offene Bauplanwahl anbietet: mit Rezepten und Zutaten. Am
+        # 23.09.2026 riet der Rat, was ein angebotener Brennofen herstellt --
+        # die Wissensbasis wusste es, der Auszug nicht.
+        for name in (aktuell.get("blueprint_pick") or {}).get("angebot") or []:
+            if not isinstance(name, str):
+                continue
+            eintrag = dict(gebaeude.get(name) or {})
+            eintrag["status"] = "angeboten"
+            eintrag.setdefault("gebaeude_de", namen.get(name))
+            zeile = kb_gebaeude.get(nahrung._schluessel(name))
+            if zeile is not None:
+                eintrag.setdefault("arbeitsplaetze", zeile["worker_slots"])
+            rezepte = _rezepte(conn, gebaeude=name)
+            if rezepte:
+                eintrag["rezepte"] = [{k: v for k, v in r.items() if k != "gebaeude"}
+                                      for r in rezepte]
+            eintrag.pop("erzeugnisse", None)       # stehen in `rezepte`
             gebaeude[name] = {k: v for k, v in eintrag.items() if v is not None}
     finally:
         conn.close()

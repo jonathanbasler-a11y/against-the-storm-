@@ -182,10 +182,12 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             if auszug.get("siedlung"):
                 auszug["siedlung"].pop("lager", None)     # steht in `waren`
         if wissen.get("gebaeude"):
-            # Stehendes zuerst; ohne den englischen Zwecktext und mit hoechstens
-            # vier Erzeugnissen -- sonst riss eine grosse Siedlung die Grenze.
+            # Angebotenes zuerst -- darum geht die Frage --, dann Stehendes;
+            # ohne den englischen Zwecktext und mit hoechstens vier
+            # Erzeugnissen -- sonst riss eine grosse Siedlung die Grenze.
+            rang = {"angeboten": 0, "steht": 1}
             eintraege = sorted(wissen["gebaeude"].items(),
-                               key=lambda kv: kv[1].get("status") != "steht")
+                               key=lambda kv: rang.get(kv[1].get("status"), 2))
             auszug["gebaeude_wissen"] = {
                 name: {k: (v[:4] if k == "erzeugnisse" else v)
                        for k, v in eintrag.items() if k != "zweck"}
@@ -341,7 +343,9 @@ NACHSCHLAG_WERKZEUG = {
     "description": (
         "Schlägt einen Namen (deutsch oder englisch) in der lokalen Wissensbasis "
         "aus den Spieldaten nach: bei einer Ware Kategorie, essbar, Sättigung, "
-        "brennbar, Handelswerte; bei einem Gebäude Kosten und Arbeitsplätze. "
+        "brennbar, Handelswerte und in welchen Gebäuden sie woraus entsteht "
+        "(`hergestellt_in`); bei einem Gebäude Kosten, Arbeitsplätze und die "
+        "Rezepte mit Sternen und Zutaten (`rezepte`). "
         "Vor jeder Aussage über eine Mechanik nutzen, die nicht im Auszug steht."),
     "input_schema": {
         "type": "object",
