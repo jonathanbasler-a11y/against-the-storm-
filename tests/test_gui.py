@@ -615,3 +615,15 @@ def test_das_eigene_foto_wird_nach_dem_lesen_geloescht(gui, tmp_path: Path) -> N
         app._anzeigen("auswahl", {"verfuegbar": False, "quelle": str(pfad),
                                   "gelesene_zeilen": 0, "grund": "Nichts erkannt."})
     assert not eigen.exists() and fremd.exists()
+
+
+def test_die_kettentabelle_zeigt_ob_das_gebaeude_fehlt(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    zeilen = []
+    app.ketten = Wurzel()
+    app.ketten.get_children = lambda: []
+    app.ketten.delete = lambda *a: None
+    app.ketten.insert = lambda *a, values=(), **k: zeilen.append(values)
+    app._zeige_ketten({"empfehlung": "x", "ketten": [
+        {"gebaeude": "Grill", "einsatz": [], "gewinn": 25, "faktor": 6.0, "status": "fehlt"}]})
+    assert zeilen[0][0] == "Grill (fehlt)"

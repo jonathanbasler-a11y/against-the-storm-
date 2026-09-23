@@ -556,7 +556,7 @@ def test_get_state_auftraege_aktiv_und_zur_wahl(tmp_path: Path) -> None:
     assert "zeitlimit_sekunden" not in auftraege["aktiv"][0]
     assert auftraege["aktiv"][1]["zeitlimit_sekunden"] == 480.0
     # Ein Zähler, kein Fortschritt: ob `amount` Ziel oder Stand ist, ist nicht belegt.
-    assert auftraege["aktiv"][0]["ziele"] == [{"typ": 2, "zaehler": 3, "erledigt": False}]
+    assert auftraege["aktiv"][0]["ziele"] == [{"typ": 2, "stand": 3, "erledigt": False}]
     assert [a["name"] for a in auftraege["zur_wahl"]] == ["Beaver Influx", "Beaver Colony"]
     assert auftraege["zur_wahl"][1]["belohnungen"] == ["Amber x40"]
 
@@ -638,3 +638,79 @@ def test_bei_doppeltem_deutschem_namen_gilt_der_belegte_eintrag(tmp_path: Path) 
     conn.close()
     out = tools_api.read_choice(text=["GLUCKSBRINGER"], db=db)
     assert [a["en"] for a in out["belegt"]] == ["Lucky Talisman"]
+
+
+# --------------------------------------------------------------------------
+# Runde 6 (23.09.2026)
+# --------------------------------------------------------------------------
+
+
+def test_food_advice_kennt_gebautes_und_freigeschaltetes(tmp_path: Path) -> None:
+    save_dir = _mit(buendel(tmp_path / "save"),
+                    content={"buildings": ["Field Kitchen"]},
+                    buildings={"camps": [{"model": "Primitive Forager's Camp"}]})
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    for en, save_id, fuelle in (("Meat", "[Food Raw] Meat", 1.0),
+                                ("Jerky", "[Food Processed] Jerky", 2.0)):
+        conn.execute("INSERT INTO resources (en, save_id, eatable, eating_fullness) "
+                     "VALUES (?,?,1,?)", (en, save_id, fuelle))
+    conn.execute(
+        "INSERT INTO recipes (id, building, inputs, stars, seconds, product, product_amount) "
+        "VALUES (1, 'Smokehouse', ?, 1, 60, 'Jerky', 10)",
+        (json.dumps([[{"menge": 5, "ware": "Meat"}]]),))
+    for gebaeude, sterne in (("Smokehouse", 3), ("Field Kitchen", 1)):
+        conn.execute("INSERT INTO production (product, building, stars) VALUES ('Jerky',?,?)",
+                     (gebaeude, sterne))
+    conn.commit()
+    conn.close()
+
+    kette = tools_api.food_advice(runs, db, run_id="lauf")["ketten"][0]
+    assert kette["gebaeude"] == "Field Kitchen" and kette["status"] == "baubar"
+
+
+def test_auftraege_zeigen_den_stand_und_kein_leeres_zeitlimit(tmp_path: Path) -> None:
+    """Gemessen: `amount` 0 bei „0/2", „0/6", „0/2" im Spiel -- der Stand.
+    `timeLeft` 0 bei einem Auftrag ohne laufende Uhr sah aus wie abgelaufen."""
+    save_dir = _mit(buendel(tmp_path / "save"), orders={"currentOrders": [
+        _auftrag("I Cysts", picked=True, started=True, shouldBeFailable=True, timeLeft=0.0)]})
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    aktiv = out["auftraege"]["aktiv"][0]
+    assert aktiv["ziele"] == [{"typ": 2, "stand": 3, "erledigt": False}]
+    assert "zeitlimit_sekunden" not in aktiv
+
+
+def test_read_choice_nennt_ein_angebot_nur_einmal(tmp_path: Path) -> None:
+    """Auftragsübersicht: jeder Name stand in der Seitenleiste und auf der Karte."""
+    from ats_assistant import localization
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Order_IThePurge_Name", "The Purge", "Die Läuterung", "order")])
+    conn.close()
+    out = tools_api.read_choice(text=["Die Läuterung", "DIE LÄUTERUNG"], db=db, arten=("order",))
+    assert [a["de"] for a in out["angebot"]] == ["Die Läuterung"]
+
+
+def test_get_state_liest_die_bauplanwahl_aus_dem_spielstand(tmp_path: Path) -> None:
+    """Gemessen: `reputationRewards.currentPick.options` hatte zwei Einträge,
+    als Nahrungssammlerlager und Räucherei zur Wahl standen. Welche zwei
+    Schlüssel ein Eintrag hat, zeigte die Messung nicht -- also der Text."""
+    save_dir = _mit(buendel(tmp_path / "save"), reputationRewards={
+        "currentRerolls": 1, "currentPick": {"isWild": False, "id": 3, "options": [
+            {"building": "Foragers' Camp", "cost": 0},
+            {"building": "Smokehouse", "cost": 0}]}})
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    assert out["bauplan_wahl"] == {"angebot": ["Foragers' Camp", "Smokehouse"],
+                                   "neu_wuerfeln": 1, "joker": False}
+
+
+def test_ohne_offene_bauplanwahl_kein_feld(tmp_path: Path) -> None:
+    save_dir = _mit(buendel(tmp_path / "save"), reputationRewards={
+        "currentPick": {"isWild": False, "id": 0, "options": []}})
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    assert "bauplan_wahl" not in out

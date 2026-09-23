@@ -149,6 +149,7 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             "reputation_ziel", "lager", "gebaeude", "gebaeude_liste", "lichtungen",
             "bauplaene_ungebaut", "bauplaene_ungebaut_weggelassen",
             "gebaeude_liste_weggelassen", "ruf_quellen", "ruf_je_volk", "auftraege",
+            "bauplan_wahl",
             "grundsteine", "spielzeit",
             # Was nicht gelesen werden konnte, geht mit. Sonst sieht ein
             # nicht gefundenes Lager aus wie ein leeres -- und das ist der
@@ -165,7 +166,7 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             "ketten": [
                 {k: kette[k] for k in ("gebaeude", "gebaeude_de", "produkt", "produkt_de",
                                        "einsatz", "gewinn", "faktor", "engpass",
-                                       "reichweite_plus_sekunden") if k in kette}
+                                       "reichweite_plus_sekunden", "status") if k in kette}
                 for kette in (ketten.get("ketten") or [])[:3]],
             "essbar_im_lager": ketten.get("essbar_im_lager") or [],
         }

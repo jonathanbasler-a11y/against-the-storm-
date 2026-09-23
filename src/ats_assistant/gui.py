@@ -546,8 +546,13 @@ class App:
         self.ketten.delete(*self.ketten.get_children())
         for k in rat.get("ketten", []):
             einsatz = ", ".join(f"{e['menge']:.0f} {e['ware']}" for e in k["einsatz"])
+            name = k.get("gebaeude_de") or k.get("gebaeude") or "?"
+            # Steht es, laesst es sich bauen, oder fehlt es? Am Spielrechner
+            # stand hier ein Grill, den es in der Siedlung nicht gab.
+            if k.get("status") in ("steht", "baubar", "fehlt"):
+                name += f" ({k['status']})"
             self.ketten.insert("", "end", values=(
-                k.get("gebaeude_de") or k.get("gebaeude") or "?", einsatz,
+                name, einsatz,
                 f"{k['gewinn']:.0f}", k.get("faktor") or "–", k.get("engpass") or "–",
                 _minuten(k.get("sekunden")),
                 _minuten(k.get("reichweite_plus_sekunden"))))

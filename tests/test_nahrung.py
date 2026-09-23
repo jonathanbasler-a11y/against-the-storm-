@@ -472,3 +472,59 @@ def test_dieselbe_ware_steht_im_satz_einmal(tmp_path: Path) -> None:
     assert keller.satz().count("Insects") == 1
     assert "20 Insects" in keller.satz()
     conn.close()
+
+
+# --------------------------------------------------------------------------
+# Runde 6 (23.09.2026): Am Spielrechner empfahl der Reiter „Nahrung" den
+# Grill -- der weder stand noch freigeschaltet war.
+# --------------------------------------------------------------------------
+
+
+def _grill_und_feldkueche(conn):
+    _grill(conn)
+    conn.execute("INSERT INTO production (product, building, stars) "
+                 "VALUES ('Skewers', 'Field Kitchen', 1)")
+    conn.commit()
+
+
+def test_ein_verfuegbares_gebaeude_schlaegt_ein_besseres_das_fehlt(tmp_path: Path) -> None:
+    conn = wissensbasis(tmp_path)
+    _grill_und_feldkueche(conn)
+    lager = {"[Food Raw] Insects": 2, "[Food Raw] Eggs": 14}
+    spiess = [v for v in nahrung.vorschlaege(conn, lager, verfuegbar={"Field Kitchen": "baubar"})
+              if v.produkt == "Skewers"][0]
+    assert spiess.gebaeude == "Field Kitchen" and spiess.status == "baubar"
+    assert "baubar" in spiess.satz()
+    conn.close()
+
+
+def test_ohne_verfuegbaren_hersteller_steht_fehlt_da(tmp_path: Path) -> None:
+    conn = wissensbasis(tmp_path)
+    _grill_und_feldkueche(conn)
+    lager = {"[Food Raw] Insects": 2, "[Food Raw] Eggs": 14, "[Food Raw] Meat": 20}
+    liste = nahrung.vorschlaege(conn, lager, verfuegbar={"Smokehouse": "steht"})
+    spiess = [v for v in liste if v.produkt == "Skewers"][0]
+    assert spiess.status == "fehlt" and "nicht freigeschaltet" in spiess.satz()
+    # Verfügbares zuerst, auch wenn es weniger bringt.
+    assert liste[0].status == "steht"
+    conn.close()
+
+
+def test_namen_aus_dem_spielstand_und_der_wissensbasis_treffen_sich(tmp_path: Path) -> None:
+    """Der Spielstand schreibt „Forager's Camp", das Wiki „Foragers' Camp"."""
+    conn = wissensbasis(tmp_path)
+    _grill_und_feldkueche(conn)
+    lager = {"[Food Raw] Insects": 2, "[Food Raw] Eggs": 14}
+    spiess = [v for v in nahrung.vorschlaege(conn, lager, verfuegbar={"field kitchen": "steht"})
+              if v.produkt == "Skewers"][0]
+    assert spiess.status == "steht"
+    conn.close()
+
+
+def test_ohne_verfuegbarkeit_bleibt_alles_wie_bisher(tmp_path: Path) -> None:
+    conn = wissensbasis(tmp_path)
+    _grill_und_feldkueche(conn)
+    lager = {"[Food Raw] Insects": 2, "[Food Raw] Eggs": 14}
+    spiess = [v for v in nahrung.vorschlaege(conn, lager) if v.produkt == "Skewers"][0]
+    assert spiess.gebaeude == "Grill" and spiess.status is None
+    conn.close()
