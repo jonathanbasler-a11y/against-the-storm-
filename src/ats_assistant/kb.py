@@ -441,7 +441,7 @@ def import_species(conn: sqlite3.Connection, zeilen: list[dict],
         vorhanden = conn.execute("SELECT * FROM species WHERE en = ?", (name,)).fetchone()
         alt = dict(vorhanden) if vorhanden else {}
         # `or alt` machte aus einer echten 0 ein NULL oder den alten Wert.
-        def neu_oder_alt(wert, feld):
+        def neu_oder_alt(wert, feld, alt=alt):
             return wert if wert is not None else alt.get(feld)
 
         werte = {
