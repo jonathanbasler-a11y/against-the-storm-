@@ -250,3 +250,19 @@ def test_lage_zeigt_statistik_und_effekte(tmp_path: Path, capsys) -> None:
     ausgabe = capsys.readouterr().out
     assert "Hunger 3× · 2 gegangen · 0 tot · 1 Lichtungen" in ausgabe
     assert "Frog Newcomer Bonus" in ausgabe and "Hungermultiplikator" in ausgabe
+
+
+def test_lage_zeigt_abweichende_effekte(tmp_path: Path, capsys) -> None:
+    ordner = tmp_path / "save"
+    ordner.mkdir()
+    (ordner / "Save.save").write_text(json.dumps({
+        "time": 600.0, "year": 1,
+        "effects": {"constructionCost": 1.5, "stormLength": 2.0, "plantingSpeed": 1.0,
+                    **{f"bonus{i}": 0 for i in range(3)}},
+    }), encoding="utf-8")
+    db = kleine_basis(tmp_path / "kb.sqlite")
+    cli.main(["--save-dir", str(ordner), "--runs", str(tmp_path / "runs"),
+              "--db", str(db), "--sofort"])
+    ausgabe = capsys.readouterr().out
+    assert "Baukosten 1.5 (sonst 1)" in ausgabe and "Sturmdauer 2 (sonst 1)" in ausgabe
+    assert "Pflanztempo" not in ausgabe

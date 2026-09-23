@@ -65,7 +65,11 @@ Bonus überhaupt greift.
   oder `gegangen`, ist das der Befund, nicht eine Vermutung.
 - **`effekte.aktiv`** ist, was gerade wirkt (Reiter „Allgemeine Effekte“),
   dazu `hunger_multiplikator` und `mehrverbrauch`. Ein Bonus, der dort nicht
-  steht, wirkt nicht.
+  steht, wirkt nicht. **`effekte.abweichungen`** nennt jede Rate, die auf
+  dieser Siedlung vom Grundwert abweicht (z. B. Baukosten 1,5 statt 1) — das
+  ist gemessen und gilt vor den Prestige-Heuristiken unten. `mehrverbrauch`
+  nur als Wert nennen: wie die Chance genau wirkt, ist nicht gemessen; der
+  tatsächliche Verbrauch steckt in der gemessenen Nahrungsrate.
 - **`ruf_quellen`**: nur „Zufriedenheit“ ist belegt, die Einträge mit
   „(vermutet)“ im Namen sind es nicht. `ruf_je_volk` zeigt, welches Volk über
   Zufriedenheit Ruf bringt.
@@ -100,6 +104,7 @@ ist nicht belegt.
 | Ruf-Quelle „Zufriedenheit“ entspricht dem Zufriedenheitsgewinn der Völker | gemessen, 23.09.2026 |
 | Bauplanwahl und Auftragswahl stehen im Spielstand, Grundsteinwahl nicht | gemessen |
 | Hunger, Tote, Gegangene und gewählte Grundsteine stehen unter `stats` | gemessen, 23.09.2026 |
+| Hohes Prestige: Verkaufspreise ×0,5, je 2 Bauplan- und Grundsteinoptionen weniger, Ereignistempo ×0,67 | gemessen in `effects`, 23.09.2026 |
 
 **Nachschlagen statt raten.** Das Werkzeug `nachschlagen(name)` sieht in der
 Wissensbasis aus den Spieldaten nach — Ware oder Gebäude, deutsch oder
