@@ -88,10 +88,20 @@ def _merkmale(siege: list[dict], niederlagen: list[dict], feld: str,
     return out
 
 
+def _zeitstempel(r: dict) -> tuple[int, float, str]:
+    t = r.get("endTimestamp")
+    if isinstance(t, (int, float)) and not isinstance(t, bool):
+        return (1, float(t), "")
+    if isinstance(t, str) and t:
+        return (1, 0.0, t)
+    return (0, 0.0, "")
+
+
 def compare_runs(records: Iterable[dict], n: int | None = None) -> Laufvergleich:
     """Die letzten n abgeschlossenen Laeufe gegenueberstellen."""
     alle = [r for r in records if isinstance(r, dict)]
-    alle.sort(key=lambda r: r.get("endTimestamp") or 0, reverse=True)
+    # Zeitstempel kommen als Zahl oder Text; gemischt verglichen warf das.
+    alle.sort(key=_zeitstempel, reverse=True)
     if n:
         alle = alle[:n]
 
@@ -144,7 +154,9 @@ def read_run_log(pfad: Path) -> list[dict]:
     out: list[dict] = []
     if not Path(pfad).exists():
         return out
-    for zeile in Path(pfad).read_text(encoding="utf-8").splitlines():
+    # Eine beim Schreiben abgerissene Zeile kann mitten in einem Umlaut
+    # enden; streng gelesen fiel damit jede Vorhersage aus.
+    for zeile in Path(pfad).read_text(encoding="utf-8", errors="replace").splitlines():
         zeile = zeile.strip()
         if not zeile:
             continue

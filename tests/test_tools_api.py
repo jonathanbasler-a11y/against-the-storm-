@@ -584,3 +584,11 @@ def test_food_advice_nennt_was_im_lager_essbar_ist(tmp_path: Path) -> None:
     out = tools_api.food_advice(runs, db, run_id="lauf")
     assert out["essbar_im_lager"] == [
         {"ware": "Meat", "ware_de": "Meat", "menge": 42.0, "saettigung": 1.0}]
+
+
+def test_analyze_runs_liest_metasave_mit_bom(tmp_path: Path) -> None:
+    save_dir = buendel(tmp_path / "save")
+    pfad = save_dir / "MetaSave.save"
+    pfad.write_bytes(b"\xef\xbb\xbf" + pfad.read_bytes())
+    out = tools_api.analyze_runs(save_dir=save_dir)
+    assert out["verfuegbar"] is True

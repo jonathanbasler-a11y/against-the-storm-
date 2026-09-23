@@ -443,3 +443,34 @@ def test_auftraege_in_fremder_form_werden_gemeldet(tmp_path: Path) -> None:
     state, notes = read_state(ordner, wait=False)
     assert state.orders == []
     assert _note(notes, "orders").how == "form_unbekannt"
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 2 (23.09.2026)
+# --------------------------------------------------------------------------
+
+
+def test_zeitreihe_mit_luecke_hinter_der_fuenften_stelle(tmp_path: Path) -> None:
+    """Geprüft wurden nur die ersten fünf Werte: ein `None` dahinter warf
+    und riss `read_state` mit, ein „NaN" wurde zu nan."""
+    ordner = schreibe_buendel(tmp_path, save={"trends": {"goodsCategoriesTrends": {
+        "Food": [1.0, 2.0, 3.0, 4.0, 5.0, None],
+        "Fuel": [1.0, 2.0, 3.0, 4.0, 5.0, "NaN"],
+        "Wood": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]}}})
+    state, _ = read_state(ordner, wait=False)
+    assert set(state.category_trends) == {"Wood"}
+
+
+def test_warten_auf_ruhe_uebersteht_eine_verschwundene_datei(tmp_path: Path,
+                                                             monkeypatch) -> None:
+    from ats_assistant import save_reader
+    ordner = schreibe_buendel(tmp_path)
+    echt = Path.stat
+
+    def wackelt(self, *a, **kw):
+        if self.name == "Save.save":
+            raise FileNotFoundError(self)
+        return echt(self, *a, **kw)
+
+    monkeypatch.setattr(Path, "stat", wackelt)
+    assert save_reader.wait_for_quiet(ordner, settle=0.0, timeout=0.5, poll=0.0) in (True, False)

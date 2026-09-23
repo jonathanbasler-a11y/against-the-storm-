@@ -75,3 +75,18 @@ def test_mitschrift_ueberspringt_kaputte_zeilen(tmp_path: Path) -> None:
 
 def test_fehlende_mitschrift_ergibt_leere_liste(tmp_path: Path) -> None:
     assert analysis.read_run_log(tmp_path / "gibtsnicht.jsonl") == []
+
+
+def test_gemischte_zeitstempel_werfen_nicht() -> None:
+    from ats_assistant.analysis import compare_runs
+    compare_runs([{"hasWon": True, "endTimestamp": "2026-09-20"},
+                  {"hasWon": False}, {"hasWon": True, "endTimestamp": 5}], n=2)
+
+
+def test_zerrissene_zeile_in_der_mitschrift(tmp_path) -> None:
+    """Fenster während des Schreibens geschlossen: die letzte Zeile endet
+    mitten in einem Umlaut. Vorher fiel damit jede Vorhersage aus."""
+    from ats_assistant.analysis import read_run_log
+    datei = tmp_path / "lauf.jsonl"
+    datei.write_bytes(b'{"game_time": 1}\n{"biome": "K\xc3')
+    assert read_run_log(datei) == [{"game_time": 1}]

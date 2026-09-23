@@ -48,56 +48,86 @@ def run_id_fuer(state: GameState) -> str:
     return "-".join(t.replace(" ", "_") for t in teile)
 
 
-def _letzte_zeile(pfad: Path, fenster: int = 1 << 18) -> str | None:
-    """Die letzte Zeile einer Datei, ohne sie ganz zu lesen.
+def _zeilen_rueckwaerts(pfad: Path, fenster: int = 1 << 18):
+    """Nichtleere Zeilen vom Dateiende her, je (Anfang in Bytes, Inhalt).
 
     Eine Zeile ist ein ganzer Zustand samt Zeitreihen -- gut 200 kB. Eine
     lange Mitschrift ganz einzulesen, nur um ihr Ende zu sehen, waere bei
     jedem Schreibvorgang des Spiels neu bezahlt.
     """
+    with pfad.open("rb") as fh:
+        fh.seek(0, os.SEEK_END)
+        pos = fh.tell()
+        rest = b""                 # angefangene Zeile, deren Anfang noch fehlt
+        while pos > 0:
+            schritt = min(fenster, pos)
+            pos -= schritt
+            fh.seek(pos)
+            puffer = fh.read(schritt) + rest
+            teile = puffer.split(b"\n")
+            rest = teile[0]
+            anfang = pos + len(rest) + 1
+            fertig = []
+            for teil in teile[1:]:
+                fertig.append((anfang, teil))
+                anfang += len(teil) + 1
+            for start, teil in reversed(fertig):
+                if teil.strip():
+                    yield start, teil
+        if rest.strip():
+            yield 0, rest
+
+
+def _letzte_zeile(pfad: Path, fenster: int = 1 << 18) -> str | None:
+    """Die letzte nichtleere Zeile einer Datei, ohne sie ganz zu lesen."""
     try:
-        with pfad.open("rb") as fh:
-            fh.seek(0, os.SEEK_END)
-            ende = fh.tell()
-            gelesen = b""
-            while ende > 0:
-                schritt = min(fenster, ende)
-                ende -= schritt
-                fh.seek(ende)
-                gelesen = fh.read(schritt) + gelesen
-                teile = gelesen.strip(b"\n").rsplit(b"\n", 1)
-                if len(teile) == 2:
-                    return teile[1].decode("utf-8", "replace")
-            text = gelesen.strip().decode("utf-8", "replace")
-            return text or None
+        for _, zeile in _zeilen_rueckwaerts(pfad, fenster):
+            return zeile.decode("utf-8", "replace").strip()
     except OSError:
-        return None
+        pass
+    return None
+
+
+def _letzter_zustand(pfad: Path, fenster: int = 1 << 18,
+                     hoechstens: int = 50) -> tuple[dict | None, int | None]:
+    """Der letzte Zustand der Mitschrift und wo seine Zeile beginnt.
+
+    Notizen (`log_event`) und unlesbare Zeilen werden uebersprungen: eine
+    Notiz hat keine Spielzeit, und als letzte Zeile genommen, begann der
+    naechste Stand eine neue Datei. Der Anfang wird nur geliefert, wenn der
+    Zustand wirklich die letzte Zeile ist -- nur dann darf sie ersetzt werden.
+    """
+    try:
+        for i, (start, zeile) in enumerate(_zeilen_rueckwaerts(pfad, fenster)):
+            if i >= hoechstens:
+                break
+            try:
+                eintrag = json.loads(zeile.decode("utf-8", "replace"))
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(eintrag, dict) or eintrag.get("typ") == "notiz":
+                continue
+            return eintrag, (start if i == 0 else None)
+    except OSError:
+        pass
+    return None, None
 
 
 def _ohne_zeitstempel(zustand: dict) -> dict:
     return {k: v for k, v in zustand.items() if k != "captured_at"}
 
 
-def _letzte_zeile_ersetzen(pfad: Path, zeile: str, fenster: int = 1 << 18) -> None:
+def _gefuellt(zustand: dict) -> int:
+    """Wie viele Felder etwas enthalten -- ein halb gelesenes Buendel hat weniger."""
+    return sum(1 for k, v in zustand.items()
+               if k != "captured_at" and v not in (None, "", [], {}))
+
+
+def _letzte_zeile_ersetzen(pfad: Path, zeile: str, anfang: int | None = None) -> None:
     """Die letzte Zeile abschneiden und neu schreiben; davor bleibt alles."""
+    if anfang is None:
+        anfang = next((s for s, _ in _zeilen_rueckwaerts(pfad)), 0)
     with pfad.open("r+b") as fh:
-        fh.seek(0, os.SEEK_END)
-        ende = fh.tell()
-        # Ein abschliessender Zeilenumbruch gehoert zur letzten Zeile.
-        pos = ende
-        fh.seek(max(pos - 1, 0))
-        if pos and fh.read(1) == b"\n":
-            pos -= 1
-        anfang = 0
-        while pos > 0:
-            schritt = min(fenster, pos)
-            fh.seek(pos - schritt)
-            stueck = fh.read(schritt)
-            stelle = stueck.rfind(b"\n")
-            if stelle >= 0:
-                anfang = pos - schritt + stelle + 1
-                break
-            pos -= schritt
         fh.seek(anfang)
         fh.truncate()
         fh.write(zeile.encode("utf-8") + b"\n")
@@ -122,8 +152,14 @@ def _setzt_fort(letzter: dict, state: GameState) -> bool:
     uhr = letzter.get("game_time")
     if uhr is None or state.game_time is None or state.game_time < uhr:
         return False
-    return (letzter.get("biome") == state.biome
-            and letzter.get("prestige") == state.prestige)
+    # Nur Bekanntes vergleichen: war MetaSave beim Lesen kurz gesperrt, fehlen
+    # Biom und Stufe. Das ist ein unvollstaendiger Blick auf dieselbe
+    # Siedlung, keine neue -- vorher zerfiel die Mitschrift daran in drei.
+    for feld, jetzt in (("biome", state.biome), ("prestige", state.prestige)):
+        vorher = letzter.get(feld)
+        if vorher is not None and jetzt is not None and vorher != jetzt:
+            return False
+    return True
 
 
 def lauf_kennung(state: GameState, runs_dir: Path) -> str:
@@ -137,12 +173,8 @@ def lauf_kennung(state: GameState, runs_dir: Path) -> str:
     """
     letzte = _neueste_mitschrift(Path(runs_dir))
     if letzte is not None:
-        zeile = _letzte_zeile(letzte)
-        try:
-            letzter = json.loads(zeile) if zeile else None
-        except json.JSONDecodeError:
-            letzter = None
-        if isinstance(letzter, dict) and _setzt_fort(letzter, state):
+        letzter, _ = _letzter_zustand(letzte)
+        if letzter is not None and _setzt_fort(letzter, state):
             return letzte.stem
     return _freie_kennung(run_id_fuer(state), Path(runs_dir))
 
@@ -180,16 +212,17 @@ def mitschreiben(state: GameState, runs_dir: Path,
     kennung = run_id or lauf_kennung(state, runs_dir)
     datei = runs_dir / f"{kennung}.jsonl"
     if datei.exists():
-        zeile = _letzte_zeile(datei)
-        try:
-            letzter = json.loads(zeile) if zeile else None
-        except json.JSONDecodeError:
-            letzter = None
-        if isinstance(letzter, dict) and letzter.get("game_time") == state.game_time:
+        letzter, anfang = _letzter_zustand(datei)
+        if letzter is not None and letzter.get("game_time") == state.game_time:
             jetzt = json.loads(state.to_json())
             if _ohne_zeitstempel(jetzt) == _ohne_zeitstempel(letzter):
                 return kennung, False
-            _letzte_zeile_ersetzen(datei, state.to_json())
+            # Ersetzt wird nur ein besserer Blick auf denselben Moment, und
+            # nur, wenn er die letzte Zeile ist. War WorldSave kurz gesperrt,
+            # hat der neue Stand weniger Felder -- dann bleibt der alte.
+            if anfang is None or _gefuellt(jetzt) < _gefuellt(letzter):
+                return kennung, False
+            _letzte_zeile_ersetzen(datei, state.to_json(), anfang)
             return kennung, True
     append_run_log(state, kennung, runs_dir)
     return kennung, True
@@ -236,8 +269,13 @@ class Mitschreiber:
             self._run_id = lauf_kennung(state, self.runs_dir)
             log.info("Lauf: %s", self._run_id)
 
-        append_run_log(state, self._run_id, self.runs_dir)
+        # Ueber `mitschreiben`, nicht am Dateiende vorbei: schreibt das Fenster
+        # denselben Spielstand zuerst, haengte der Waechter ihn sonst ein
+        # zweites Mal an.
+        _, geschrieben = mitschreiben(state, self.runs_dir, self._run_id)
         self._letzte_uhr = state.game_time
+        if not geschrieben:
+            return state
         self.geschrieben += 1
         log.info("Zustand mitgeschrieben: Jahr %s, Spielzeit %.1f, Lauf %s",
                  state.year, state.game_time, self._run_id)
@@ -267,9 +305,18 @@ def beobachten(save_dir: Path, runs_dir: Path = Path("runs"),
     save_dir = Path(save_dir)
     mit = Mitschreiber(save_dir, runs_dir)
 
+    def lesen(wait: bool) -> GameState | None:
+        # Ein gesperrter Spielstand, ein voller Datentraeger, eine OneDrive-
+        # Sperre -- nichts davon darf die Beobachtung beenden.
+        try:
+            return mit.einmal_lesen(wait=wait)
+        except Exception:
+            log.exception("Lesen gescheitert, naechster Versuch beim naechsten Speichern")
+            return None
+
     # Den Ausgangszustand gleich mitnehmen, sonst wartet man bis zu 300
     # Spielzeitsekunden auf den ersten Eintrag.
-    mit.einmal_lesen(wait=False)
+    lesen(False)
 
     laeuft = True
 
@@ -291,7 +338,7 @@ def beobachten(save_dir: Path, runs_dir: Path = Path("runs"),
         if jetzt == letzte:
             continue
         letzte = jetzt
-        state = mit.einmal_lesen(wait=True)
+        state = lesen(True)
         if state is not None and rueckmeldung:
             rueckmeldung(state)
         letzte = _signatur(save_dir)   # das Warten hat Zeit gekostet
