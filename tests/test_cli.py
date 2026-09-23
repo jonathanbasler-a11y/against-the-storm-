@@ -167,3 +167,14 @@ def test_lage_zeigt_die_feindseligkeit_als_satz(tmp_path: Path, capsys) -> None:
     ausgabe = capsys.readouterr().out
     assert "Stufe 0 · 81 Punkte" in ausgabe
     assert "sourceAmount" not in ausgabe
+
+
+def test_form_nimmt_stichworte(tmp_path: Path, capsys) -> None:
+    ordner = _buendel_mit_fremdem_lager(tmp_path / "save")
+    pfad = ordner / "Save.save"
+    save = json.loads(pfad.read_text(encoding="utf-8"))
+    save["orders"] = [{"model": "Order_A", "tasks": []}]
+    pfad.write_text(json.dumps(save), encoding="utf-8")
+    assert cli.main(["form", "order", "--save-dir", str(ordner), "--sofort"]) == 0
+    ausgabe = capsys.readouterr().out
+    assert "$.orders" in ausgabe and "storedGoods" not in ausgabe

@@ -223,3 +223,18 @@ def test_das_fenster_geht_wirklich_weg_und_kommt_wieder(app) -> None:
     app._fenster_zurueck()
     app.root.update_idletasks()
     assert app.root.state() == "normal"
+
+
+def _alle_widgets(w):
+    yield w
+    for kind in w.winfo_children():
+        yield from _alle_widgets(kind)
+
+
+def test_der_auswahlreiter_kennt_auftraege(app) -> None:
+    """Am Spielrechner stand „Wähle einen Auftrag aus" offen, und der Reiter
+    konnte nur Grundsteine oder Baupläne suchen -- er las das Hauptlager im
+    Hintergrund statt der drei Aufträge."""
+    werte = {str(w.cget("value")) for w in _alle_widgets(app.root)
+             if w.winfo_class() == "TRadiobutton"}
+    assert {"effect", "building", "order"} <= werte

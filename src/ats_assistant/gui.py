@@ -176,7 +176,9 @@ class App:
         ttk.Radiobutton(oben, text="Grundsteine", variable=self.art,
                         value="effect").pack(side="left")
         ttk.Radiobutton(oben, text="Baupläne", variable=self.art,
-                        value="building").pack(side="left", padx=(8, 16))
+                        value="building").pack(side="left", padx=(8, 0))
+        ttk.Radiobutton(oben, text="Aufträge", variable=self.art,
+                        value="order").pack(side="left", padx=(8, 16))
         ttk.Button(oben, text="Bildschirm lesen",
                    command=self._auswahl_lesen).pack(side="left")
 

@@ -329,3 +329,20 @@ def test_lichtungen_ohne_entdeckt_feld_zaehlen_alle(tmp_path: Path) -> None:
     ordner = schreibe_buendel(tmp_path, save={"world": {"glades": [{"id": 1}, {"id": 2}]}})
     state, _ = read_state(ordner, wait=False)
     assert state.glades == 2
+
+
+def test_formbericht_sucht_nach_stichworten_in_allen_dateien(tmp_path: Path) -> None:
+    """Für Aufträge, Ruf und Baupläne ist die Stelle im Spielstand nicht
+    bekannt. Gesucht wird in allen drei Dateien -- wo sie liegen, weiß
+    niemand, bevor gemessen ist."""
+    from ats_assistant.save_reader import formbericht
+    ordner = schreibe_buendel(tmp_path, save={
+        "orders": {"orders": [{"model": "Order_A", "tasks": [{"progress": 3}],
+                               "reward": {"reputation": 1.0}}]}})
+    (ordner / "MetaSave.save").write_text(json.dumps({
+        "unlockedBlueprints": ["Smokehouse"]}), encoding="utf-8")
+    text = "\n".join(formbericht(ordner, wait=False, stichworte=("order", "blueprint")))
+    assert "Save.save" in text and "$.orders" in text and "tasks" in text
+    assert "MetaSave.save" in text and "unlockedBlueprints" in text
+    assert "Order_A" not in text and "Smokehouse" not in text      # keine Werte
+    assert "glades" not in text                                      # nur Gesuchtes

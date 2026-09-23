@@ -393,12 +393,20 @@ FORM_FELDER = ("storage", "buildings", "glades", "deposits")
 FORM_STICHWORTE = ("goods", "storage", "building", "glade", "resource", "deposit")
 
 
-def formbericht(directory: Path, wait: bool = True, grenze: int = 30) -> list[str]:
+def formbericht(directory: Path, wait: bool = True, grenze: int = 30,
+                stichworte: tuple[str, ...] = ()) -> list[str]:
     """Wie das Spiel die fraglichen Felder wirklich ablegt -- zum Einfuegen
-    in den Chat. Nur Pfade, Schluessel und Typen; keine Werte."""
+    in den Chat. Nur Pfade, Schluessel und Typen; keine Werte.
+
+    Mit Stichworten wird stattdessen in allen drei Dateien nach Schluesseln
+    gesucht, die eines davon enthalten: so war das Lager gefunden, und so
+    werden Auftraege, Ruf und Bauplaene gefunden.
+    """
     directory = Path(directory)
     if not (directory / "Save.save").exists():
         return [f"Kein Spielstand unter {directory}."]
+    if stichworte:
+        return _stichwortsuche(directory, tuple(w.lower() for w in stichworte), grenze)
     _, notes = read_state(directory, wait=wait)
     save = _load(directory / "Save.save")
     zeilen = ["Gelesen:"]
@@ -422,6 +430,26 @@ def formbericht(directory: Path, wait: bool = True, grenze: int = 30) -> list[st
         zeilen.append(f"  {pfad}{mal}: {form_skizze(wert, tiefe=2)}")
     if len(kandidaten) > grenze:
         zeilen.append(f"  … und {len(kandidaten) - grenze} weitere")
+    return zeilen
+
+
+def _stichwortsuche(directory: Path, woerter: tuple[str, ...], grenze: int) -> list[str]:
+    zeilen: list[str] = []
+    for datei in ("Save.save", "WorldSave.save", "MetaSave.save"):
+        data = _load(directory / datei)
+        if data is None:
+            continue
+        idx = index_keys(data)
+        kandidaten = sorted(
+            (pfad, name, idx.counts.get(name, 0), wert)
+            for name, (pfad, wert, _tiefe) in idx.by_name.items()
+            if any(w in name.lower() for w in woerter))
+        zeilen.append(f"{datei} ({len(kandidaten)}):")
+        for pfad, name, anzahl, wert in kandidaten[:grenze]:
+            mal = f" ({anzahl}x)" if anzahl > 1 else ""
+            zeilen.append(f"  {pfad}{mal}: {form_skizze(wert, tiefe=3)}")
+        if len(kandidaten) > grenze:
+            zeilen.append(f"  … und {len(kandidaten) - grenze} weitere")
     return zeilen
 
 
