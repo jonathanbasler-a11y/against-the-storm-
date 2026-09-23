@@ -434,3 +434,38 @@ def test_der_systemtext_verbietet_erfundene_bedienschritte() -> None:
     assert "Bedienschritte" in text
     assert "noch zu öffnen" in text
     assert "fehlt" in text and "bauplan_wahl" in text
+
+
+def test_das_wissen_zur_lage_geht_mit_und_ersetzt_die_blosse_lagerliste() -> None:
+    wissen = {"waren": [{"ware": "Pack of Provisions", "menge": 5, "essbar": False,
+                         "kategorie": "Packs"}],
+              "gebaeude": {"Field Kitchen": {"status": "baubar"}},
+              "trends": {"fallend": [{"ware": "Eggs", "rate_je_minute": -6.0}], "steigend": []}}
+    auszug = berater.kontext(zustand={"jahr": 1, "lager": {"Pack of Provisions": 5}},
+                             wissen=wissen)
+    assert auszug["waren"] == wissen["waren"]
+    assert auszug["gebaeude_wissen"] == wissen["gebaeude"]
+    assert auszug["trends"] == wissen["trends"]
+    assert "lager" not in auszug["siedlung"]            # nicht doppelt
+
+
+def test_der_systemtext_nennt_die_mechanik_mit_herkunft() -> None:
+    text = berater.systemtext()
+    assert "## Mechanik" in text and "Herkunft" in text
+    assert "gebaeude_wissen" in text and "trends" in text
+
+
+def test_eine_grosse_siedlung_mit_wissen_passt_in_den_auszug() -> None:
+    """60 Waren mit Eigenschaften und 80 Gebäude mit Erzeugnissen lagen bei
+    48 000 Zeichen -- über der Grenze, und jede Frage wäre gescheitert."""
+    wissen = {
+        "waren": [{"ware": f"Ware {i}", "ware_de": f"Ware {i}", "menge": 10,
+                   "kategorie": "Food Raw", "essbar": True, "saettigung": 1.0,
+                   "verkaufswert": 2.5, "kaufwert": 5.0} for i in range(60)],
+        "gebaeude": {f"Gebäude {i}": {"status": "baubar", "zweck": "x" * 120,
+                                      "arbeitsplaetze": 2, "kosten": {"Planks": 5},
+                                      "erzeugnisse": [{"ware": "Skewers", "sterne": 1}] * 8}
+                     for i in range(80)}}
+    auszug = berater.kontext(zustand={"jahr": 1}, wissen=wissen)
+    berater.pruefe_auszug(auszug)
+    assert len(auszug["gebaeude_wissen"]) <= berater.GEBAEUDE_GRENZE

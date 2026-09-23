@@ -47,7 +47,7 @@ def test_ein_auftrag_legt_jede_antwort_in_die_warteschlange(tmp_path: Path) -> N
     arten = []
     while not ausgang.empty():
         arten.append(ausgang.get_nowait()[0])
-    assert arten == ["zustand", "nahrung", "ungeduld", "ketten", "umgebung",
+    assert arten == ["zustand", "nahrung", "ungeduld", "ketten", "wissen", "umgebung",
                      "anmeldung"]
 
 
@@ -260,3 +260,11 @@ def test_eine_offene_bauplanwahl_gilt_als_wahl(tmp_path: Path, monkeypatch) -> N
     r = rechner.Rechner(tmp_path, tmp_path / "runs", tmp_path / "kb.sqlite", queue.Queue())
     r._rat({"zustand": {"jahr": 1, "bauplan_wahl": {"angebot": ["Smokehouse"]}}})
     assert gesehen["wahl"] is True
+
+
+def test_die_lage_liefert_auch_das_wissen(tmp_path: Path) -> None:
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(buendel(tmp_path / "save"), tmp_path / "runs",
+                        tmp_path / "kb.sqlite", ausgang)
+    r._ausfuehren(rechner.Auftrag("lage"))
+    assert "wissen" in [a for a, _ in list(ausgang.queue)]

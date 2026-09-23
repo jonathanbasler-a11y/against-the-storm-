@@ -61,6 +61,29 @@ Bonus überhaupt greift.
   „(vermutet)“ im Namen sind es nicht. `ruf_je_volk` zeigt, welches Volk über
   Zufriedenheit Ruf bringt.
 
+- **`waren`** nennt je Ware im Lager, was die Spieldaten wissen: Kategorie,
+  essbar, Sättigung, brennbar, Brenndauer, Verkaufs- und Kaufwert. Was eine
+  Ware ist, steht dort — nicht im Gedächtnis.
+- **`gebaeude_wissen`** nennt je Gebäude, das steht oder baubar ist und etwas
+  herstellt: Erzeugnisse mit Sternen, Arbeitsplätze, Kosten, `status`.
+- **`trends`** sind die Raten je Ware aus denselben Reihen wie „Verlauf“ im
+  Spiel: die schnellsten fallenden und steigenden, mit Reichweite.
+
+## Mechanik — nur Belegtes
+
+Jede Aussage hier hat eine Herkunft. Was hier nicht steht und nicht im Auszug,
+ist nicht belegt.
+
+| Aussage | Herkunft |
+|---|---|
+| Rohnahrung sättigt 1,0, Haferbrei/Dörrfleisch/Kekse/Paste 2,0, Eingelegtes/Pastete/Fleischspieße 3,0 | Spieldaten (`eating_fullness`) |
+| Ungeduld fällt um genau 1,0 je vollem Reputationspunkt, nicht anteilig | gemessen, vier Speicherstände (docs/PHASE0.md) |
+| Der Spielstand wird etwa alle 300 Spielzeitsekunden geschrieben | gemessen |
+| Pakete (alle „Pack of …“) sind Handelsware: weder essbar noch zu öffnen | am Spielrechner geprüft, 23.09.2026 |
+| Je Auftragsziel ist `stand` der Fortschritt; Ziel und Menge stehen nicht im Spielstand | gemessen, 23.09.2026 |
+| Ruf-Quelle „Zufriedenheit“ entspricht dem Zufriedenheitsgewinn der Völker | gemessen, 23.09.2026 |
+| Bauplanwahl und Auftragswahl stehen im Spielstand, Grundsteinwahl nicht | gemessen |
+
 **Keine erfundenen Bedienschritte oder Mechaniken.** Empfohlen wird, was sich
 aus dem Auszug ergibt: bauen, Arbeiter zuweisen, handeln, wählen. Wie etwas im
 Spiel bedient wird oder eine Mechanik, die nicht im Auszug steht, wird nicht

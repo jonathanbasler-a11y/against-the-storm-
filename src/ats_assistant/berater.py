@@ -45,6 +45,7 @@ MAX_ZEICHEN = 40_000
 # Lange Listen kappen, bevor sie die Grenze reissen: eine grosse Siedlung
 # lag mit 60 Waren und 63 Bauplaenen schon bei 16 700 Zeichen.
 LISTENGRENZE = 80
+GEBAEUDE_GRENZE = 40
 
 SKILL = Path(__file__).resolve().parents[2] / ".claude" / "skills" / "ats-advisor" / "SKILL.md"
 
@@ -130,7 +131,8 @@ def systemtext(pfad: Path | None = None) -> str:
 
 def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             ungeduld: dict | None = None, auswahl: dict | None = None,
-            frage: str | None = None, ketten: dict | None = None) -> dict:
+            frage: str | None = None, ketten: dict | None = None,
+            wissen: dict | None = None) -> dict:
     """Die kompakte Lage. Zahlen und Namen, sonst nichts."""
     def sauber(quelle: dict | None, felder: tuple[str, ...]) -> dict | None:
         if not quelle:
@@ -170,6 +172,25 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
                 for kette in (ketten.get("ketten") or [])[:3]],
             "essbar_im_lager": ketten.get("essbar_im_lager") or [],
         }
+    if wissen and wissen.get("verfuegbar", True):
+        # Was die Spieldaten wissen, statt was das Modell erinnert: Kategorie,
+        # essbar, Handelswert je Ware; Erzeugnisse je Gebaeude; Trends.
+        if wissen.get("waren"):
+            auszug["waren"] = wissen["waren"][:LISTENGRENZE]
+            if auszug.get("siedlung"):
+                auszug["siedlung"].pop("lager", None)     # steht in `waren`
+        if wissen.get("gebaeude"):
+            # Stehendes zuerst; ohne den englischen Zwecktext und mit hoechstens
+            # vier Erzeugnissen -- sonst riss eine grosse Siedlung die Grenze.
+            eintraege = sorted(wissen["gebaeude"].items(),
+                               key=lambda kv: kv[1].get("status") != "steht")
+            auszug["gebaeude_wissen"] = {
+                name: {k: (v[:4] if k == "erzeugnisse" else v)
+                       for k, v in eintrag.items() if k != "zweck"}
+                for name, eintrag in eintraege[:GEBAEUDE_GRENZE]}
+        if wissen.get("trends") and (wissen["trends"].get("fallend")
+                                     or wissen["trends"].get("steigend")):
+            auszug["trends"] = wissen["trends"]
     if ungeduld:
         auszug["ungeduld"] = sauber(ungeduld, (
             "jetzt", "schwelle", "je_spielzeitsekunde", "sekunden_bis_verlust"))

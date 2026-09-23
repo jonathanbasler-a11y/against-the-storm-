@@ -173,6 +173,49 @@ def slope_per_second(values: list[float], sample_seconds: float = SAMPLE_SECONDS
     return sum((x - mx) * (y - my) for x, y in zip(xs, values)) / denom
 
 
+def frische_werte(vorher: list[float], reihe: list[float],
+                  t0: float | None, t1: float | None) -> list[float] | None:
+    """Die neuen Stuetzstellen zwischen zwei Staenden -- oder None, wenn sich
+    ihre Reihenfolge nicht mehr herstellen laesst.
+
+    Aus der vergangenen Spielzeit folgt, wie viele Stuetzstellen dazugekommen
+    sein muessen -- rund eine je zehn Sekunden. Ist jede Stelle neu, verraet
+    der Ringpuffer seinen Schreibzeiger nicht; die Reihe roh zu nehmen ergab
+    am Rechner ein steigendes Lager, wo es fiel.
+    """
+    erwartet = None
+    if isinstance(t0, (int, float)) and isinstance(t1, (int, float)) and t1 > t0:
+        erwartet = max(round((t1 - t0) / SAMPLE_SECONDS), 0) or None
+    if len(vorher) == len(reihe) and reihe and (
+            (erwartet is not None and erwartet >= len(reihe))
+            or all(a != b for a, b in zip(vorher, reihe, strict=True))):
+        return None
+    return fresh_samples(vorher, reihe, erwartet)
+
+
+def waren_trends(aktuell: dict[str, list[float]], vorher: dict[str, list[float]],
+                 t0: float | None, t1: float | None) -> list[dict]:
+    """Je Ware Rate und, wenn sie faellt, Reichweite -- dieselben Reihen wie
+    „Verlauf" im Spiel, dieselbe Rechnung wie bei der Nahrung."""
+    out = []
+    for ware, reihe in aktuell.items():
+        alt = vorher.get(ware)
+        if not alt:
+            continue
+        werte = frische_werte(alt, reihe, t0, t1)
+        if not werte:
+            continue
+        rate = slope_per_second(werte)
+        if rate is None or rate == 0:
+            continue
+        eintrag = {"ware": ware, "bestand": werte[-1],
+                   "rate_je_minute": round(rate * 60, 2)}
+        if rate < 0 and werte[-1] > 0:
+            eintrag["reichweite_sekunden"] = round(werte[-1] / -rate, 1)
+        out.append(eintrag)
+    return out
+
+
 def food_forecast(
     current,
     previous=None,
@@ -186,26 +229,14 @@ def food_forecast(
                             f"Keine Zeitreihe '{category}' im Spielstand")
 
     if previous is not None and previous.category_trends.get(category):
-        # Aus der vergangenen Spielzeit folgt, wie viele Stuetzstellen
-        # dazugekommen sein muessen -- rund eine je zehn Sekunden.
-        erwartet = None
-        t0 = getattr(previous, "game_time", None)
-        t1 = getattr(current, "game_time", None)
-        if isinstance(t0, (int, float)) and isinstance(t1, (int, float)) and t1 > t0:
-            erwartet = max(round((t1 - t0) / SAMPLE_SECONDS), 0) or None
-        vorher = previous.category_trends[category]
-        if len(vorher) == len(series) and (
-                (erwartet is not None and erwartet >= len(series))
-                or all(a != b for a, b in zip(vorher, series, strict=True))):
-            # Jede Stuetzstelle ist neu. Der Ringpuffer verraet seinen
-            # Schreibzeiger nicht, also ist die Reihenfolge nicht mehr
-            # herzustellen -- die Reihe roh zu nehmen ergab am Rechner ein
-            # steigendes Lager, wo es fiel.
+        values = frische_werte(previous.category_trends[category], series,
+                               getattr(previous, "game_time", None),
+                               getattr(current, "game_time", None))
+        if values is None:
             return FoodForecast(
                 None, None, None, 0,
                 "Zwischen den zwei Spielständen liegt zu viel Spielzeit, um den "
                 "Verbrauch zu rechnen -- beim nächsten Speichern geht es wieder")
-        values = fresh_samples(vorher, series, erwartet)
     else:
         values = []
 

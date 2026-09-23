@@ -714,3 +714,58 @@ def test_ohne_offene_bauplanwahl_kein_feld(tmp_path: Path) -> None:
         "currentPick": {"isWild": False, "id": 0, "options": []}})
     out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
     assert "bauplan_wahl" not in out
+
+
+# --------------------------------------------------------------------------
+# Runde 7a: Wissen zur Lage -- Eigenschaften und Trends aus den Spieldaten
+# --------------------------------------------------------------------------
+
+
+def test_lage_wissen_nennt_eigenschaften_der_waren(tmp_path: Path) -> None:
+    """„Pakete öffnen" war erfundene Mechanik. Was eine Ware ist, steht in den
+    Spieldaten -- das soll mitgehen."""
+    save_dir = _mit(buendel(tmp_path / "save"), goods={"goods": {"goods": [
+        {"name": "[Packs] Pack of Provisions", "amount": 5},
+        {"name": "[Food Raw] Eggs", "amount": 14}]}})
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    conn.execute("INSERT INTO resources (en, save_id, category, eatable, eating_fullness, "
+                 "sell_value) VALUES ('Pack of Provisions', '[Packs] Pack of Provisions', "
+                 "'Packs', 0, NULL, 12.5)")
+    conn.execute("INSERT INTO resources (en, save_id, category, eatable, eating_fullness) "
+                 "VALUES ('Eggs', '[Food Raw] Eggs', 'Food Raw', 1, 1.0)")
+    conn.commit()
+    conn.close()
+    out = tools_api.lage_wissen(runs, db, run_id="lauf")
+    waren = {w["ware"]: w for w in out["waren"]}
+    assert waren["Pack of Provisions"]["essbar"] is False
+    assert waren["Pack of Provisions"]["kategorie"] == "Packs"
+    assert waren["Pack of Provisions"]["verkaufswert"] == 12.5
+    assert waren["Eggs"]["essbar"] is True and waren["Eggs"]["menge"] == 14
+
+
+def test_lage_wissen_nennt_was_gebaeude_herstellen(tmp_path: Path) -> None:
+    save_dir = _mit(buendel(tmp_path / "save"),
+                    content={"buildings": ["Field Kitchen"]},
+                    buildings={"camps": [{"model": "Primitive Forager's Camp"}]})
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    conn.execute("INSERT INTO buildings (en, category, worker_slots, cost) "
+                 "VALUES ('Field Kitchen', 'Food Production', 2, '{\"Planks\": 5}')")
+    conn.execute("INSERT INTO production (product, building, stars) "
+                 "VALUES ('Skewers', 'Field Kitchen', 1)")
+    conn.commit()
+    conn.close()
+    gebaeude = tools_api.lage_wissen(runs, db, run_id="lauf")["gebaeude"]
+    assert gebaeude["Field Kitchen"]["erzeugnisse"] == [{"ware": "Skewers", "sterne": 1}]
+    assert gebaeude["Field Kitchen"]["arbeitsplaetze"] == 2
+    assert gebaeude["Field Kitchen"]["status"] == "baubar"
+
+
+def test_lage_wissen_ohne_mitschrift_sagt_das(tmp_path: Path) -> None:
+    out = tools_api.lage_wissen(tmp_path / "leer", tmp_path / "kb.sqlite")
+    assert out["verfuegbar"] is False
