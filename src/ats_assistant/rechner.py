@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from . import berater, tools_api
+from . import berater, lernen, save_reader, tools_api
 from .mcp_server import lage as umgebungslage
 from .watcher import _signatur
 
@@ -76,6 +76,15 @@ def alter(zeitpunkt: str | None, wort: str = "gelesen") -> str:
     if sekunden < 5400:
         return f"vor {sekunden / 60:.0f} min {wort}"
     return f"vor {sekunden / 3600:.0f} h {wort}"
+
+
+def erster_satz(text: str, hoechstens: int = 300) -> str:
+    """Der erste Satz einer Antwort -- die Empfehlung, ohne Begründung."""
+    text = " ".join(text.split())
+    for i, zeichen in enumerate(text):
+        if zeichen in ".!?" and (i + 1 == len(text) or text[i + 1] == " "):
+            return text[:i + 1][:hoechstens]
+    return text[:hoechstens]
 
 
 # --------------------------------------------------------------------------
@@ -177,13 +186,66 @@ class Rechner(threading.Thread):
                 auftrag.daten["name"], db=self.db)))
         elif auftrag.art == "rat":
             self.ausgang.put(("rat", self._rat(auftrag.daten)))
+        elif auftrag.art == "korrektur":
+            self.ausgang.put(("korrektur", lernen.korrektur_merken(
+                self._korrekturpfad(), auftrag.daten.get("aussage") or "",
+                auftrag.daten.get("korrektur") or "")))
+        elif auftrag.art == "laeufe":
+            berichte = lernen.berichte(self.runs_dir, self._historie())
+            self.ausgang.put(("laeufe", {"berichte": berichte,
+                                         "lehren": lernen.lehren(berichte)}))
+
+    def _korrekturpfad(self) -> Path:
+        return lernen.wissensordner(self.runs_dir) / "korrekturen.jsonl"
+
+    def _historie(self) -> list[dict]:
+        """Die Spielhistorie aus MetaSave.save -- leer, wenn es sie nicht gibt."""
+        pfad = Path(self.save_dir) / "MetaSave.save"
+        if not pfad.exists():
+            return []
+        meta = save_reader._load(pfad)
+        if not isinstance(meta, dict):
+            return []
+        records = (meta.get("gamesHistory") or {}).get("records")
+        return records if isinstance(records, list) else []
+
+    def _gelerntes(self) -> dict:
+        """Was der Rat aus frueheren Laeufen und Korrekturen mitbekommt.
+
+        Scheitert hier etwas, fragt der Rat trotzdem -- nur ohne das Gelernte.
+        """
+        out: dict = {}
+        try:
+            out["korrekturen"] = lernen.korrekturen(self._korrekturpfad())
+            out["lehren"] = lernen.lehren(lernen.berichte(self.runs_dir, self._historie()))
+            historie = tools_api.analyze_runs(save_dir=self.save_dir, runs_dir=self.runs_dir)
+            if historie.get("verfuegbar"):
+                out["laufhistorie"] = historie.get("kurzfassung")
+        except Exception:
+            log.exception("Gelerntes nicht gelesen")
+        return {k: v for k, v in out.items() if v}
+
+    def _merken(self, daten: dict, text: str) -> None:
+        """Die Empfehlung als Notiz in die Mitschrift -- das Gedächtnis des Rats."""
+        zustand = daten.get("zustand") or {}
+        lauf = zustand.get("mitschrift")
+        if not lauf or not text:
+            return
+        satz = erster_satz(text)
+        if daten.get("frage"):
+            satz += f" (Frage: {str(daten['frage'])[:200]})"
+        try:
+            tools_api.log_event(satz, self.runs_dir, run_id=lauf, art="rat",
+                                spielzeit=zustand.get("spielzeit"), jahr=zustand.get("jahr"))
+        except Exception:
+            log.exception("Empfehlung nicht notiert")
 
     def _rat(self, daten: dict) -> dict:
         auszug = berater.kontext(
             zustand=daten.get("zustand"), nahrung=daten.get("nahrung"),
             ungeduld=daten.get("ungeduld"), auswahl=daten.get("auswahl"),
             frage=daten.get("frage"), ketten=daten.get("ketten"),
-            wissen=daten.get("wissen"))
+            wissen=daten.get("wissen"), lernen=self._gelerntes())
         try:
             antwort = berater.frage(
                 auszug, modell=daten.get("modell", berater.MODELL),
@@ -197,6 +259,7 @@ class Rechner(threading.Thread):
             return {"ok": False, "text": str(exc), "auszug": auszug, "zugang": False}
         except Exception as exc:
             return {"ok": False, "text": str(exc), "auszug": auszug, "zugang": True}
+        self._merken(daten, antwort.text)
         kosten = antwort.kosten_cent
         fuss = f"{antwort.modell}"
         if kosten is not None:

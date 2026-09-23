@@ -80,6 +80,31 @@ def _anmeldehinweis(gefunden: bool | None) -> str:
     return ""
 
 
+def _laeufe_text(wert: dict) -> str:
+    """Lehren oben, darunter je Siedlung eine kurze Zeile -- neueste zuerst."""
+    zeilen = ["Lehren:"] + [f"  • {s}" for s in wert.get("lehren") or []]
+    berichte = list(reversed(wert.get("berichte") or []))
+    zeilen.append("")
+    zeilen.append(f"Mitgeschriebene Läufe ({len(berichte)}):" if berichte
+                  else "Noch keine Mitschrift.")
+    for b in berichte:
+        teile = [b.get("biom") or "Biom unbekannt"]
+        if b.get("jahre"):
+            teile.append(f"{b['jahre']} Jahre")
+        teile.append(b.get("ausgang") or "offen")
+        knapp = b.get("nahrung_min_reichweite") or {}
+        if knapp.get("sekunden") is not None:
+            teile.append(f"Nahrung min. {_minuten(knapp['sekunden'])}"
+                         + (f" (Jahr {knapp['jahr']})" if knapp.get("jahr") else ""))
+        if isinstance(b.get("ungeduld_max"), (int, float)):
+            teile.append(f"Ungeduld max. {b['ungeduld_max']:.1f}")
+        zeilen.append(f"\n{b.get('kennung', '?')}: " + " · ".join(teile))
+        for e in b.get("empfehlungen") or []:
+            jahr = f"Jahr {e['jahr']}: " if e.get("jahr") else ""
+            zeilen.append(f"    Rat {jahr}{e.get('text', '')}")
+    return "\n".join(zeilen)
+
+
 def _herkunft(a: dict) -> str:
     """Welcher Weg diese Zeilen geliefert hat.
 
@@ -125,6 +150,7 @@ class App:
         self._reiter_nahrung()
         self._reiter_auswahl()
         self._reiter_rat()
+        self._reiter_laeufe()
 
         leiste = ttk.Frame(self.root)
         leiste.pack(fill="x", padx=8, pady=6)
@@ -237,6 +263,32 @@ class App:
         self.rat_fuss = ttk.Label(rahmen, text="", anchor="w")
         self.rat_fuss.pack(fill="x")
 
+        # Widerspruch zur letzten Antwort. Er geht bei jeder spaeteren Frage
+        # als gepruefte Tatsache mit -- so wird aus "Pakete oeffnen" einmal
+        # ein Fehler und nicht jedes Mal wieder.
+        unten = ttk.Frame(rahmen)
+        unten.pack(fill="x", pady=(6, 0))
+        ttk.Label(unten, text="Was stimmt nicht?").pack(side="left")
+        self.korrektur = tk.StringVar(value="")
+        feld = ttk.Entry(unten, textvariable=self.korrektur)
+        feld.pack(side="left", fill="x", expand=True, padx=6)
+        feld.bind("<Return>", lambda e: self._korrektur_senden())
+        ttk.Button(unten, text="Stimmt nicht",
+                   command=self._korrektur_senden).pack(side="left")
+        self.rat_letzte = ""
+
+    def _reiter_laeufe(self) -> None:
+        rahmen = ttk.Frame(self.reiter, padding=12)
+        self.reiter.add(rahmen, text="Läufe")
+        oben = ttk.Frame(rahmen)
+        oben.pack(fill="x")
+        ttk.Label(oben, text="Was die mitgeschriebenen Läufe zeigen:").pack(side="left")
+        ttk.Button(oben, text="Auswerten",
+                   command=lambda: self.rechner.bitte("laeufe")).pack(side="right")
+        self.laeufe_text = tk.Text(rahmen, wrap="word", height=20)
+        self.laeufe_text.pack(fill="both", expand=True, pady=(10, 0))
+        self.laeufe_text.configure(state="disabled")
+
     # -- Ereignisse --------------------------------------------------------
 
     def _auswahl_lesen(self, von_hand: bool = False) -> None:
@@ -338,6 +390,14 @@ class App:
         if name:
             self.rechner.bitte("nachschlag", name=name)
 
+    def _korrektur_senden(self) -> None:
+        korrektur = (self.korrektur.get() or "").strip()
+        if not korrektur:
+            return
+        self.rechner.bitte("korrektur", aussage=getattr(self, "rat_letzte", ""),
+                           korrektur=korrektur)
+        self.korrektur.set("")
+
     def _schliessen(self) -> None:
         self.rechner.stoppen()
         self.root.destroy()
@@ -419,12 +479,18 @@ class App:
             self._rat_gefragt = bool(wert.get("ok"))
             self._schreiben(self.rat_text, wert.get("text", ""))
             if wert.get("ok"):
+                self.rat_letzte = wert.get("text", "")
                 fuss = wert.get("fuss", "")
             elif not wert.get("zugang"):
                 fuss = "Ohne Anmeldung: „Lage kopieren“ und in Claude einfügen."
             else:
                 fuss = ""
             self.rat_fuss.configure(text=fuss)
+        elif art == "korrektur":
+            self.rat_fuss.configure(
+                text=f"Gemerkt, gilt ab der nächsten Frage: {wert.get('korrektur', '')}")
+        elif art == "laeufe":
+            self._schreiben(self.laeufe_text, _laeufe_text(wert))
         elif art == "umgebung":
             offen = wert.get("fehlt") or []
             if not offen:
