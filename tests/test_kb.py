@@ -349,3 +349,48 @@ def test_biom_sagt_was_es_hergibt(tmp_path: Path) -> None:
     assert kb.biom_hat(conn, "Coastal Grove", "Grain") is False
     assert kb.biom_hat(conn, "Bamboo Marshes", "Grain") is None    # nicht erfasst
     conn.close()
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 4 (23.09.2026)
+# --------------------------------------------------------------------------
+
+
+def test_nachschlag_mit_kleinem_umlaut(tmp_path: Path) -> None:
+    """SQLite faltet nur ASCII: „öl" fand nichts, „Öl" schon."""
+    from ats_assistant import localization
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    localization.import_localization(conn, [
+        localization.Eintrag("Good_Oil_Name", "Oil", "Öl", "resource")])
+    assert [t["en"] for t in kb.lookup(conn, "öl")] == ["Oil"]
+    conn.close()
+
+
+def test_nachschlag_nur_aus_zeichen_findet_nichts(tmp_path: Path) -> None:
+    """„?" wurde zur leeren Kennung und traf jede Zeile mit leerer en_id."""
+    from ats_assistant import localization
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    localization.import_localization(conn, [
+        localization.Eintrag("Building_Storage_Name", "", "Lagerhaus", "building")])
+    assert kb.lookup(conn, "?") == []
+    assert kb.lookup(conn, "—") == []
+    conn.close()
+
+
+def test_die_spalte_near_ist_text_und_source_page_eine_eigene(tmp_path: Path) -> None:
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    spalten = {r[1]: r[2] for r in conn.execute("PRAGMA table_info(buildings)")}
+    assert spalten["near"] == "TEXT"
+    assert "source_page" in spalten
+    conn.close()
+
+
+def test_eine_null_bei_der_spezies_bleibt_null(tmp_path: Path) -> None:
+    """`_zahl(...) or alt` machte aus einer echten 0 ein NULL oder den alten Wert."""
+    conn = kb.connect(tmp_path / "kb.sqlite")
+    kb.import_species(conn, [{"Species": "Frogs", "Decadence": "3", "Hunger Tolerance": "2"}])
+    kb.import_species(conn, [{"Species": "Frogs", "Decadence": "0", "Hunger Tolerance": "0"}])
+    zeile = conn.execute("SELECT decadence, hunger_tolerance FROM species "
+                         "WHERE en = 'Frogs'").fetchone()
+    assert (zeile["decadence"], zeile["hunger_tolerance"]) == (0, 0)
+    conn.close()

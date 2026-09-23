@@ -226,6 +226,9 @@ def lookup(conn: sqlite3.Connection, name: str) -> list[dict]:
     from . import localization      # lokal: kb ist die untere Schicht
     kennung = _normalform(name)
     kennung = _normalform(localization.ALIASE.get(kennung, kennung))
+    # Nur aus Zeichen ("?", "—") wird die Kennung leer -- und traf dann jede
+    # Zeile mit leerer en_id.
+    kennung = kennung or None
     treffer = conn.execute(
         "SELECT en, de, kind, category, confidence, source, note, loc_key, en_id "
         "FROM name_map "
@@ -236,6 +239,13 @@ def lookup(conn: sqlite3.Connection, name: str) -> list[dict]:
         "  WHEN 'spec_seed' THEN 4 WHEN 'observed' THEN 5 ELSE 6 END",
         (name, name, kennung),
     ).fetchall()
+    if not treffer and name.strip():
+        # SQLite faltet mit NOCASE nur ASCII: "öl" fand "Öl" nicht.
+        gefaltet = name.strip().casefold()
+        treffer = [r for r in conn.execute(
+            "SELECT en, de, kind, category, confidence, source, note, loc_key, en_id "
+            "FROM name_map")
+            if (r["de"] or "").casefold() == gefaltet or (r["en"] or "").casefold() == gefaltet]
     return [dict(r) for r in treffer]
 
 
@@ -430,21 +440,25 @@ def import_species(conn: sqlite3.Connection, zeilen: list[dict],
             continue
         vorhanden = conn.execute("SELECT * FROM species WHERE en = ?", (name,)).fetchone()
         alt = dict(vorhanden) if vorhanden else {}
+        # `or alt` machte aus einer echten 0 ein NULL oder den alten Wert.
+        def neu_oder_alt(wert, feld):
+            return wert if wert is not None else alt.get(feld)
+
         werte = {
-            "base_resolve": _zahl(_spalte(z, "Base Resolve")) or alt.get("base_resolve"),
-            "break_seconds": _dauer(_spalte(z, "Break Interval", "Break interval"))
-                             or alt.get("break_seconds"),
-            "hunger_tolerance": _zahl(_spalte(z, "Hunger Tolerance", "Hunger threshold"))
-                                or alt.get("hunger_tolerance"),
-            "decadence": _zahl(_spalte(z, "Decadence")) or alt.get("decadence"),
+            "base_resolve": neu_oder_alt(_zahl(_spalte(z, "Base Resolve")), "base_resolve"),
+            "break_seconds": neu_oder_alt(
+                _dauer(_spalte(z, "Break Interval", "Break interval")), "break_seconds"),
+            "hunger_tolerance": neu_oder_alt(
+                _zahl(_spalte(z, "Hunger Tolerance", "Hunger threshold")), "hunger_tolerance"),
+            "decadence": neu_oder_alt(_zahl(_spalte(z, "Decadence")), "decadence"),
             "resilience": _spalte(z, "Resilience") or alt.get("resilience"),
-            "demand": _zahl(_spalte(z, "Demand", "Demand (Resolve Threshold)"))
-                      or alt.get("demand"),
+            "demand": neu_oder_alt(
+                _zahl(_spalte(z, "Demand", "Demand (Resolve Threshold)")), "demand"),
             "comfort": _spalte(z, "Comfort") or alt.get("comfort"),
             "specialization": _spalte(z, "Proficiency", "Specialization")
                               or alt.get("specialization"),
-            "reputation_ratio": _zahl(_spalte(z, "Species Resolve to Reputation Ratio"))
-                                or alt.get("reputation_ratio"),
+            "reputation_ratio": neu_oder_alt(
+                _zahl(_spalte(z, "Species Resolve to Reputation Ratio")), "reputation_ratio"),
         }
         conn.execute(
             "INSERT OR REPLACE INTO species (en, base_resolve, break_seconds, "
