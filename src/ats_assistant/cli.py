@@ -18,6 +18,7 @@ from pathlib import Path
 
 from . import tools_api
 from .mcp_server import aufloesen
+from .orte import finde_spielordner
 
 
 def _minuten(sekunden: float | None) -> str:
@@ -176,7 +177,6 @@ def main(argv: list[str] | None = None) -> int:
     if getattr(args, "func", None) is None:
         args.func = cmd_lage
     if args.func in (cmd_lage, cmd_form) and not args.save_dir:
-        from .save_reader import finde_spielordner
         gefunden = finde_spielordner()
         if gefunden is None:
             print("Kein Spielordner gefunden. Mit --save-dir angeben.")
