@@ -150,3 +150,20 @@ def test_ohne_gefundenen_spielordner_kommt_ein_satz(capsys, monkeypatch) -> None
     monkeypatch.setattr(cli, "finde_spielordner", lambda: None)
     assert cli.main(["form", "--sofort"]) == 1
     assert "Kein Spielordner gefunden" in capsys.readouterr().out
+
+
+def test_lage_zeigt_die_feindseligkeit_als_satz(tmp_path: Path, capsys) -> None:
+    """Am Spielrechner stand hier das ganze Dictionary samt Quellen."""
+    ordner = tmp_path / "save"
+    ordner.mkdir()
+    (ordner / "Save.save").write_text(json.dumps({
+        "time": 600.0, "year": 1,
+        "hostility": {"level": 0, "points": 81, "sources": [
+            {"Key": 50, "Value": {"points": 78, "sourceAmount": 13}}]},
+    }), encoding="utf-8")
+    db = kleine_basis(tmp_path / "kb.sqlite")
+    cli.main(["--save-dir", str(ordner), "--runs", str(tmp_path / "runs"),
+              "--db", str(db), "--sofort"])
+    ausgabe = capsys.readouterr().out
+    assert "Stufe 0 · 81 Punkte" in ausgabe
+    assert "sourceAmount" not in ausgabe

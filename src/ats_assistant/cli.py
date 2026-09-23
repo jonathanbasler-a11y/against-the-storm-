@@ -19,6 +19,7 @@ from pathlib import Path
 from . import tools_api
 from .mcp_server import aufloesen
 from .orte import finde_spielordner
+from .rechner import feindseligkeit
 
 
 def _minuten(sekunden: float | None) -> str:
@@ -42,7 +43,7 @@ def cmd_lage(args) -> int:
     print(f"Jahr {zustand.get('jahr')}, {zustand.get('biom') or '?'}, "
           f"Prestige {zustand.get('prestige')}")
     print(_zeile("Bevölkerung", zustand.get("bevoelkerung")))
-    print(_zeile("Feindseligkeit", zustand.get("feindseligkeit")))
+    print(_zeile("Feindseligkeit", feindseligkeit(zustand.get("feindseligkeit"))))
     print(_zeile("Reputation", f"{zustand.get('reputation')} von "
                                f"{zustand.get('reputation_ziel')}"))
     print(_zeile("Ungeduld", f"{zustand.get('ungeduld')} von "

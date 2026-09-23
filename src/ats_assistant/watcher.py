@@ -74,6 +74,35 @@ def _letzte_zeile(pfad: Path, fenster: int = 1 << 18) -> str | None:
         return None
 
 
+def _ohne_zeitstempel(zustand: dict) -> dict:
+    return {k: v for k, v in zustand.items() if k != "captured_at"}
+
+
+def _letzte_zeile_ersetzen(pfad: Path, zeile: str, fenster: int = 1 << 18) -> None:
+    """Die letzte Zeile abschneiden und neu schreiben; davor bleibt alles."""
+    with pfad.open("r+b") as fh:
+        fh.seek(0, os.SEEK_END)
+        ende = fh.tell()
+        # Ein abschliessender Zeilenumbruch gehoert zur letzten Zeile.
+        pos = ende
+        fh.seek(max(pos - 1, 0))
+        if pos and fh.read(1) == b"\n":
+            pos -= 1
+        anfang = 0
+        while pos > 0:
+            schritt = min(fenster, pos)
+            fh.seek(pos - schritt)
+            stueck = fh.read(schritt)
+            stelle = stueck.rfind(b"\n")
+            if stelle >= 0:
+                anfang = pos - schritt + stelle + 1
+                break
+            pos -= schritt
+        fh.seek(anfang)
+        fh.truncate()
+        fh.write(zeile.encode("utf-8") + b"\n")
+
+
 def _neueste_mitschrift(runs_dir: Path) -> Path | None:
     if not runs_dir.is_dir():
         return None
@@ -141,6 +170,11 @@ def mitschreiben(state: GameState, runs_dir: Path,
     schon dasteht: zwei Aufrufe auf demselben Spielstand sind ein Zustand,
     kein zweiter. Sonst rechnete die Vorhersage eine Steigung ueber null
     Sekunden.
+
+    Dieselbe Spielzeit mit anderem Inhalt ersetzt die letzte Zeile: dann
+    hat sich nicht das Spiel geaendert, sondern das Lesen. Am Spielrechner
+    stand das Spiel in der Pause, der Leser war repariert, und die
+    Mitschrift behielt `lager: {}` bis zum naechsten Speichern.
     """
     runs_dir = Path(runs_dir)
     kennung = run_id or lauf_kennung(state, runs_dir)
@@ -152,7 +186,11 @@ def mitschreiben(state: GameState, runs_dir: Path,
         except json.JSONDecodeError:
             letzter = None
         if isinstance(letzter, dict) and letzter.get("game_time") == state.game_time:
-            return kennung, False
+            jetzt = json.loads(state.to_json())
+            if _ohne_zeitstempel(jetzt) == _ohne_zeitstempel(letzter):
+                return kennung, False
+            _letzte_zeile_ersetzen(datei, state.to_json())
+            return kennung, True
     append_run_log(state, kennung, runs_dir)
     return kennung, True
 
