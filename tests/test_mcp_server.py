@@ -179,3 +179,13 @@ def test_read_choice_kennt_die_art(tmp_path: Path) -> None:
     w = {w["name"]: w for w in mcp_server.werkzeuge(tmp_path, tmp_path, tmp_path / "kb.sqlite")}
     schema = w["read_choice"]["inputSchema"]["properties"]
     assert "arten" in schema
+
+
+def test_read_choice_nimmt_arten_auch_als_zeichenkette(tmp_path: Path, monkeypatch) -> None:
+    """`"order"` als Zeichenkette wurde zu ('o','r','d','e','r')."""
+    gesehen = {}
+    monkeypatch.setattr(mcp_server.tools_api, "read_choice",
+                        lambda **kw: gesehen.update(kw) or {})
+    w = {w["name"]: w for w in mcp_server.werkzeuge(tmp_path, tmp_path, tmp_path / "kb.sqlite")}
+    w["read_choice"]["handler"](text=["x"], arten="order")
+    assert gesehen["arten"] == ("order",)

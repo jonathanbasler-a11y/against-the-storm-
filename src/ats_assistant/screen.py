@@ -167,6 +167,15 @@ def _rat(windows: bool) -> str:
 # --------------------------------------------------------------------------
 
 
+def neuer_bildpfad() -> Path:
+    """Je Aufnahme eine eigene Datei: ein zweites Lesen, waehrend das erste
+    noch wartet, ueberschrieb sonst dessen Bild."""
+    fd, name = tempfile.mkstemp(prefix="ats-auswahl-", suffix=".png")
+    import os
+    os.close(fd)
+    return Path(name)
+
+
 def aufnehmen(ziel: Path | str | None = None, fenster: str | None = None) -> Path:
     """Ein Bildschirmfoto ablegen und den Pfad liefern.
 
@@ -208,9 +217,12 @@ $g.Dispose(); $bmp.Dispose()
 def _aufnehmen_powershell(ziel: Path) -> Path:
     """Ohne Zusatzpaket: Windows bringt die Bildschirmaufnahme selbst mit."""
     skript = _PS_AUFNAHME.replace("{ziel}", str(ziel).replace("\\", "\\\\"))
+    # Unter pythonw hat der Aufrufer keine Konsole; ohne CREATE_NO_WINDOW
+    # oeffnet Windows fuer PowerShell eine -- und die landete im Foto.
     ergebnis = subprocess.run(
         ["powershell", "-NoProfile", "-NonInteractive", "-Command", skript],
-        capture_output=True, text=True, timeout=60)
+        capture_output=True, text=True, timeout=20,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     if ergebnis.returncode != 0 or not ziel.exists():
         raise RuntimeError(f"Aufnahme fehlgeschlagen: {ergebnis.stderr.strip()[:300]}")
     return ziel

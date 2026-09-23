@@ -16,6 +16,7 @@ Kein Modell beteiligt. Was hier steht, ist Arithmetik auf den Rezepten aus
 
 from __future__ import annotations
 
+import itertools
 import json
 import math
 import sqlite3
@@ -246,7 +247,8 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
     """Jedes Rezept gegen den Bestand rechnen, nach Gewinn sortiert.
 
     `verbrauch_pro_sekunde` kommt aus `food_forecast().rate_per_second` --
-    als positive Zahl. Fehlt er, bleibt die Reichweite offen; die Rangfolge
+    mit Vorzeichen: negativ heisst, der Bestand faellt. Fehlt er, bleibt die
+    Reichweite offen; die Rangfolge
     steht auch ohne ihn.
 
     `nur_belegt` laesst nur Erzeugnisse zu, die die Produktionstabelle
@@ -280,56 +282,53 @@ def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
         if nur_belegt and r["product"] not in zustaendig:
             continue
 
-        zutaten: list[Zutat] = []
-        rein_je_zyklus = 0.0
-        vollstaendig = True
-        # Was fruehere Gruppen schon je Durchlauf beanspruchen. Dieselbe Ware
-        # in zwei Gruppen wurde sonst doppelt gezaehlt.
-        bedarf: dict[str, float] = {}
-        for gruppe in json.loads(r["inputs"] or "[]"):
-            # Das Spiel laesst die Wahl zwischen den Alternativen einer
-            # Zutat. Gewaehlt wird, was die meisten Durchlaeufe traegt, und
-            # bei Gleichstand, was roh am wenigsten saettigt. Vorher gewann
-            # das Billigste fuer einen Durchlauf: am Spielrechner standen so
-            # "2 Insekten, 3 Eier" im Rat, waehrend Fleisch fuer zwanzig
-            # Durchlaeufe im Lager lag.
-            def durchlaeufe(z: dict, bedarf: dict = bedarf) -> float:
-                return lager.get(z["ware"], 0.0) / (bedarf.get(z["ware"], 0.0) + z["menge"])
-
-            moeglich = [z for z in gruppe
-                        if z.get("menge", 0) > 0 and durchlaeufe(z) >= 1]
-            if not moeglich:
-                # Woran es scheitert, ist die eigentliche Auskunft: "lohnt
-                # sich nicht" schickt den Spieler in dieselbe Sackgasse
-                # zurueck, "es fehlt der Brennstoff" nicht.
-                gescheitert.append({
-                    "produkt": r["product"],
-                    "fehlt": [z["ware"] for z in gruppe if z.get("ware")],
-                    "menge": min((z["menge"] for z in gruppe if z.get("menge")),
-                                 default=None),
-                })
-                vollstaendig = False
-                break
-            gewaehlt = max(moeglich,
-                           key=lambda z: (math.floor(durchlaeufe(z)),
-                                          -saettigung.get(z["ware"], 0.0) * z["menge"]))
-            bedarf[gewaehlt["ware"]] = bedarf.get(gewaehlt["ware"], 0.0) + gewaehlt["menge"]
-            zutaten.append(Zutat(float(gewaehlt["menge"]), gewaehlt["ware"],
-                                 lager.get(gewaehlt["ware"], 0.0),
-                                 namen.get(gewaehlt["ware"])))
-            rein_je_zyklus += saettigung.get(gewaehlt["ware"], 0.0) * gewaehlt["menge"]
-        if not vollstaendig or not zutaten:
+        # Das Spiel laesst je Zutat die Wahl zwischen Alternativen. Gewaehlt
+        # wird die *Kombination*, die die meisten ganzen Durchlaeufe traegt,
+        # bei Gleichstand die, die roh am wenigsten saettigt. Einzeln je
+        # Gruppe entschieden, nahm Gruppe 1 die Insekten, die Gruppe 2 dann
+        # fehlten -- und vorher gewann das Billigste fuer einen Durchlauf
+        # ("2 Insekten, 3 Eier" am Spielrechner, bei Fleisch fuer zwanzig).
+        # Es sind hoechstens drei Gruppen mit wenigen Alternativen; alle
+        # Kombinationen durchzugehen kostet nichts.
+        gruppen = [[z for z in gruppe if z.get("ware") and (z.get("menge") or 0) > 0]
+                   for gruppe in json.loads(r["inputs"] or "[]")]
+        if not gruppen or not all(gruppen):
             continue
-
-        if any(z.ware == r["product"] for z in zutaten):
+        beste = None
+        for kombination in itertools.islice(itertools.product(*gruppen), 512):
+            bedarf: dict[str, float] = {}
+            for z in kombination:
+                bedarf[z["ware"]] = bedarf.get(z["ware"], 0.0) + float(z["menge"])
+            tragweite = {w: lager.get(w, 0.0) / m for w, m in bedarf.items()}
+            durchlaeufe = math.floor(min(tragweite.values()))
+            rein = sum(saettigung.get(w, 0.0) * m for w, m in bedarf.items())
+            schluessel = (durchlaeufe, -rein)
+            if beste is None or schluessel > beste[0]:
+                beste = (schluessel, bedarf, tragweite)
+        (durchlaeufe, minus_rein), bedarf, tragweite = beste
+        if durchlaeufe < 1:
+            # Woran es scheitert, ist die eigentliche Auskunft: "lohnt sich
+            # nicht" schickt den Spieler in dieselbe Sackgasse zurueck, "es
+            # fehlt der Brennstoff" nicht. Zuerst die Gruppe, fuer die gar
+            # nichts da ist; sonst die Ware, die sich die Gruppen teilen.
+            leer = next((g for g in gruppen
+                         if not any(lager.get(z["ware"], 0.0) >= z["menge"] for z in g)), None)
+            if leer is not None:
+                fehlt = [z["ware"] for z in leer]
+                menge = min(z["menge"] for z in leer)
+            else:
+                knapp = min(tragweite, key=tragweite.get)
+                fehlt, menge = [knapp], bedarf[knapp]
+            gescheitert.append({"produkt": r["product"], "fehlt": fehlt, "menge": menge})
+            continue
+        if r["product"] in bedarf:
             # Aus Fleisch wird kein Fleisch. Solche Zeilen entstehen, wenn
             # die Gebaeudeseite eine Zutatenliste als Rezept fuehrt.
             continue
-        # Nur ganze Durchlaeufe: 7 Fleisch sind einer zu 5, nicht 1,4.
-        tragweite = {ware: lager.get(ware, 0.0) / menge for ware, menge in bedarf.items()}
-        zyklen = float(math.floor(min(tragweite.values())))
-        if zyklen < 1:
-            continue
+        # Je Ware eine Zutat: "10 Insekten, 10 Insekten" hiess 20 Insekten.
+        zutaten = [Zutat(m, w, lager.get(w, 0.0), namen.get(w)) for w, m in bedarf.items()]
+        rein_je_zyklus = -minus_rein
+        zyklen = float(durchlaeufe)
         engpass = min(tragweite, key=tragweite.get)
         raus_je_zyklus = je_stueck * float(r["product_amount"] or 1.0)
 

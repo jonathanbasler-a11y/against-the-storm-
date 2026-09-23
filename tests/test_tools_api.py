@@ -618,3 +618,23 @@ def test_get_state_nennt_wann_das_spiel_gespeichert_hat(tmp_path: Path) -> None:
     os.utime(save_dir / "Save.save", (alt, alt))
     out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
     assert out["gespeichert"].startswith("2023-11-14")
+
+
+def test_bei_doppeltem_deutschem_namen_gilt_der_belegte_eintrag(tmp_path: Path) -> None:
+    """„Glücksbringer" steht für zwei englische Einträge; welcher zuerst kam,
+    hing an der Tabellenreihenfolge. Ist nur einer als Grundstein belegt,
+    gilt der."""
+    from ats_assistant import localization
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Effect_A_Name", "Lucky Charm", "Glücksbringer", "effect"),
+        localization.Eintrag("Effect_B_Name", "Lucky Talisman", "Glücksbringer", "effect"),
+    ])
+    conn.execute("INSERT INTO cornerstones (en, rarity, effect_text) "
+                 "VALUES ('Lucky Talisman', 'Rare', '+5 Glück')")
+    conn.commit()
+    conn.close()
+    out = tools_api.read_choice(text=["GLUCKSBRINGER"], db=db)
+    assert [a["en"] for a in out["belegt"]] == ["Lucky Talisman"]

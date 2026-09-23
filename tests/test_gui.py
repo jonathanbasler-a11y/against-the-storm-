@@ -204,9 +204,14 @@ class Wurzel(Egal):
 
     def withdraw(self):
         self.protokoll.append("withdraw")
+        self._zustand = "withdrawn"
 
     def deiconify(self):
         self.protokoll.append("deiconify")
+        self._zustand = "normal"
+
+    def state(self):
+        return getattr(self, "_zustand", "normal")
 
     def after(self, ms, fn=None):
         if fn is not None:
@@ -233,21 +238,43 @@ def _vorbereitet(gui, tmp_path: Path):
     app.rechner.stoppen()
     app.root = Wurzel()
     app.rechner = Rechner()
+    # Eine eigene Warteschlange: der echte Arbeits-Thread aus dem Aufbau kann
+    # sonst noch Meldungen hineinlegen, und ein Test liest die falsche.
+    import queue
+    app.ausgang = queue.Queue()
     return app
+
+
+def _gleichlaufend(monkeypatch, gui) -> None:
+    """Der Foto-Faden läuft im Test sofort, damit die Reihenfolge feststeht."""
+    class Faden:
+        def __init__(self, target, args=(), daemon=None):
+            self.target, self.args = target, args
+
+        def start(self):
+            self.target(*self.args)
+
+    monkeypatch.setattr(gui.threading, "Thread", Faden)
+
+
+def _foto_und_abholen(app) -> None:
+    """Nur den Foto-Aufruf (250 ms) ausführen, dann die Warteschlange leeren."""
+    min(app.root.auftraege, key=lambda a: a[0])[1]()
+    while not app.ausgang.empty():
+        app._anzeigen(*app.ausgang.get_nowait())
 
 
 def test_bildweg_versteckt_das_fenster(gui, tmp_path: Path, monkeypatch) -> None:
     app = _vorbereitet(gui, tmp_path)
+    _gleichlaufend(monkeypatch, gui)
     monkeypatch.setattr(gui.screen, "aufnehmen", lambda *a, **k: tmp_path / "foto.png")
     app._auswahl_lesen()
 
     assert "withdraw" in app.root.protokoll
     # Der Auftrag geht erst los, wenn das Fenster weg ist -- nicht sofort.
     assert app.rechner.gebeten == []
-    verzoegert = [fn for _, fn in app.root.auftraege]
-    assert verzoegert, "kein verzögerter Auftrag"
-    for fn in verzoegert:
-        fn()
+    assert app.root.auftraege, "kein verzögerter Auftrag"
+    _foto_und_abholen(app)
     assert [a for a, _ in app.rechner.gebeten] == ["auswahl"]
 
 
@@ -270,8 +297,8 @@ def test_ein_fremder_fehler_holt_das_fenster_nicht_vor_dem_foto(
     app._auswahl_lesen()
     app._anzeigen("fehler", "Ein anderer Auftrag scheiterte")
     assert "deiconify" not in app.root.protokoll
-    for _, fn in sorted(app.root.auftraege, key=lambda a: a[0]):
-        fn()
+    _gleichlaufend(monkeypatch, gui)
+    _foto_und_abholen(app)
     assert "deiconify" in app.root.protokoll
 
 
@@ -405,9 +432,9 @@ def test_das_foto_entsteht_bevor_das_fenster_zurueckkommt(gui, tmp_path: Path,
                         lambda *a, **k: reihenfolge.append("foto") or tmp_path / "foto.png")
     app.root.deiconify = lambda: reihenfolge.append("zurück")
     app.rechner.bitte = lambda art, **d: reihenfolge.append(f"bitte {art} {d.get('bild')}")
-    app._auswahl_lesen()
-    for _, fn in sorted(app.root.auftraege, key=lambda a: a[0]):
-        fn()
+    app.root.withdraw()
+    app._foto_aufnehmen("effect")
+    app._anzeigen(*app.ausgang.get_nowait())
     assert reihenfolge[:3] == ["foto", "zurück", f"bitte auswahl {tmp_path / 'foto.png'}"]
 
 
@@ -421,9 +448,9 @@ def test_scheitert_das_foto_kommt_das_fenster_mit_einem_satz_zurueck(
     monkeypatch.setattr(gui.screen, "aufnehmen", geht_nicht)
     geschrieben: list[str] = []
     app._schreiben = lambda feld, text: geschrieben.append(text)
-    app._auswahl_lesen()
-    for _, fn in list(app.root.auftraege):
-        fn()
+    app.root.withdraw()
+    app._foto_aufnehmen("effect")
+    app._anzeigen(*app.ausgang.get_nowait())
     assert "deiconify" in app.root.protokoll
     assert app.rechner.gebeten == []
     assert any("Keine Aufnahme" in t for t in geschrieben)
@@ -472,8 +499,8 @@ def test_eine_alte_auswahl_verfaellt_wenn_das_spiel_weiterlaeuft(gui, tmp_path: 
                               "angebot": [{"de": "Wucher", "en": "Usury", "guete": 1.0}]})
     app._anzeigen("zustand", {"verfuegbar": True, "spielzeit": 600.0})
     assert app.auswahl                                  # dieselbe Spielzeit: bleibt
-    app._anzeigen("zustand", {"verfuegbar": True, "spielzeit": 900.0})
-    assert not app.auswahl
+    app._anzeigen("zustand", {"verfuegbar": True, "spielzeit": 1500.0})
+    assert not app.auswahl                              # lange weitergespielt
 
 
 def test_der_anmeldehinweis_bleibt_bis_zur_ersten_antwort(gui, tmp_path: Path) -> None:
@@ -485,3 +512,106 @@ def test_der_anmeldehinweis_bleibt_bis_zur_ersten_antwort(gui, tmp_path: Path) -
     assert "Ohne Anmeldung" in fuss[-1]
     app._anzeigen("anmeldung", True)                  # Schlüssel inzwischen gesetzt
     assert fuss[-1] == ""                             # der alte Hinweis ist weg
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 5: Nachprüfung
+# --------------------------------------------------------------------------
+
+
+def test_das_foto_blockiert_den_hauptthread_nicht(gui, tmp_path: Path, monkeypatch) -> None:
+    """Die PowerShell-Aufnahme dauert Sekunden. Im Hauptthread fror sie das
+    Fenster ein, und das Sicherheitsnetz konnte nicht feuern."""
+    app = _vorbereitet(gui, tmp_path)
+    gestartet = []
+
+    class Faden:
+        def __init__(self, target, args=(), daemon=None):
+            gestartet.append((target, args))
+
+        def start(self):
+            pass
+
+    monkeypatch.setattr(gui.threading, "Thread", Faden)
+    aufgenommen = []
+    monkeypatch.setattr(gui.screen, "aufnehmen", lambda *a, **k: aufgenommen.append(1))
+    app._auswahl_lesen()
+    for _, fn in sorted(app.root.auftraege, key=lambda a: a[0])[:1]:
+        fn()                                           # nur das Foto, nicht das Netz
+    assert gestartet and not aufgenommen               # im Faden, nicht hier
+
+
+def test_das_foto_kommt_ueber_die_warteschlange(gui, tmp_path: Path, monkeypatch) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    monkeypatch.setattr(gui.screen, "aufnehmen", lambda *a, **k: tmp_path / "foto.png")
+    app.root.withdraw()
+    app._foto_aufnehmen("order")
+    art, wert = app.ausgang.get_nowait()
+    assert art == "foto"
+    app._anzeigen(art, wert)
+    assert "deiconify" in app.root.protokoll
+    assert app.rechner.gebeten[-1][0] == "auswahl"
+    assert app.rechner.gebeten[-1][1]["arten"] == ("order",)
+
+
+def test_ein_zu_spaetes_foto_wird_verworfen(gui, tmp_path: Path) -> None:
+    """Holte das Sicherheitsnetz das Fenster zurück, bevor das Foto kam,
+    ist es womöglich mit drauf."""
+    app = _vorbereitet(gui, tmp_path)
+    geschrieben: list[str] = []
+    app._schreiben = lambda feld, text: geschrieben.append(text)
+    app._auswahl_lesen()
+    netz = max(app.root.auftraege, key=lambda a: a[0])[1]
+    netz()                                             # nach acht Sekunden
+    app._anzeigen("foto", {"bild": str(tmp_path / "foto.png"), "art": "effect"})
+    assert app.rechner.gebeten == []
+    assert any("zu lange" in t for t in geschrieben)
+
+
+def test_ein_sichtbares_fenster_wird_nicht_nochmal_nach_vorn_geholt(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app._anzeigen("auswahl", {"verfuegbar": False, "quelle": "x.png", "gelesene_zeilen": 0,
+                              "grund": "Nichts erkannt."})
+    assert "deiconify" not in app.root.protokoll
+
+
+def test_kein_spielstand_leert_auch_nahrung_und_auswahl(gui, tmp_path: Path) -> None:
+    """Die Werte der letzten Siedlung gingen sonst weiter an den Rat."""
+    app = _vorbereitet(gui, tmp_path)
+    app.nahrung = {"bestand": 16}
+    app.ungeduld = {"jetzt": 1.5}
+    app.nahrungsrat = {"ketten": [{"gebaeude": "Grill"}]}
+    app.auswahl = {"angebot": [{"de": "Wucher"}]}
+    app._anzeigen("zustand", {"verfuegbar": False, "grund": "Kein Spielstand"})
+    assert app.nahrung is None and app.ungeduld is None
+    assert app.nahrungsrat is None and app.auswahl is None
+
+
+def test_eine_auswahl_ueberlebt_ein_speichern_aber_keine_neue_siedlung(
+        gui, tmp_path: Path) -> None:
+    """Die Grundsteinwahl hält das Spiel nicht an; ein Speichern kurz nach
+    dem Lesen darf sie nicht verwerfen. Eine neue Siedlung schon."""
+    app = _vorbereitet(gui, tmp_path)
+    geschrieben: list[str] = []
+    app._schreiben = lambda feld, text: geschrieben.append(text)
+    app._anzeigen("zustand", {"verfuegbar": True, "spielzeit": 600.0, "mitschrift": "a"})
+    app._anzeigen("auswahl", {"verfuegbar": True, "quelle": "hand", "gelesene_zeilen": 1,
+                              "angebot": [{"de": "Wucher", "en": "Usury", "guete": 1.0}]})
+    app._anzeigen("zustand", {"verfuegbar": True, "spielzeit": 900.0, "mitschrift": "a"})
+    assert app.auswahl
+    app._anzeigen("zustand", {"verfuegbar": True, "spielzeit": 50.0, "mitschrift": "b"})
+    assert not app.auswahl
+    assert any("verfallen" in t for t in geschrieben)
+
+
+def test_das_eigene_foto_wird_nach_dem_lesen_geloescht(gui, tmp_path: Path) -> None:
+    """Je Aufnahme eine Datei im Temp-Ordner -- ohne Aufräumen sammelten sie
+    sich an. Fremde Bilder (`--bild`) bleiben unberührt."""
+    app = _vorbereitet(gui, tmp_path)
+    eigen = gui.screen.neuer_bildpfad()
+    fremd = tmp_path / "mein-bild.png"
+    fremd.write_bytes(b"x")
+    for pfad in (eigen, fremd):
+        app._anzeigen("auswahl", {"verfuegbar": False, "quelle": str(pfad),
+                                  "gelesene_zeilen": 0, "grund": "Nichts erkannt."})
+    assert not eigen.exists() and fremd.exists()

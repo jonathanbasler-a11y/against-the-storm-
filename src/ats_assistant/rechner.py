@@ -151,16 +151,21 @@ class Rechner(threading.Thread):
         if auftrag.art == "lage":
             zustand = tools_api.get_state(self.save_dir, self.runs_dir)
             self.ausgang.put(("zustand", zustand))
-            self.ausgang.put(("nahrung", tools_api.food_forecast(self.runs_dir)))
-            self.ausgang.put(("ungeduld", tools_api.impatience_forecast(self.runs_dir)))
-            self.ausgang.put(("ketten", tools_api.food_advice(self.runs_dir, self.db)))
+            if zustand.get("verfuegbar") is not False:
+                # Nur mit Spielstand, und aus *seiner* Mitschrift: sonst kamen
+                # Nahrung und Ungeduld der letzten Siedlung und fuellten die
+                # gerade geleerten Felder wieder.
+                lauf = zustand.get("mitschrift")
+                self.ausgang.put(("nahrung", tools_api.food_forecast(self.runs_dir, lauf)))
+                self.ausgang.put(("ungeduld", tools_api.impatience_forecast(self.runs_dir, lauf)))
+                self.ausgang.put(("ketten", tools_api.food_advice(self.runs_dir, self.db, lauf)))
             self.ausgang.put(("umgebung", umgebungslage(self.save_dir, self.runs_dir, self.db)))
             # Ob der Reiter "Rat" ueberhaupt fragen kann -- gepruft, bevor
             # jemand fragt. Kostet keine Anfrage, nur einen Blick.
             self.ausgang.put(("anmeldung", berater.anmeldung_gefunden()))
         elif auftrag.art == "auswahl":
-            # Das Foto macht das Fenster selbst, im Hauptthread, solange es
-            # versteckt ist. Hier wird nur noch gelesen.
+            # Das Foto macht das Fenster selbst, in einem eigenen Faden,
+            # solange es versteckt ist. Hier wird nur noch gelesen.
             bild = auftrag.daten.get("bild")
             text = auftrag.daten.get("text")
             self.ausgang.put(("auswahl", tools_api.read_choice(
