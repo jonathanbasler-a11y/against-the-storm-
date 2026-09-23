@@ -56,7 +56,16 @@ Bonus überhaupt greift.
   dem Gedächtnis ergänzen; wenn es darauf ankommt, sagen, dass der Spieler im
   Auftragsfenster nachsehen soll.
 - **`bauplan_wahl`** ist das Angebot einer offenen Bauplanwahl, gelesen aus
-  dem Spielstand. Es gilt vor einer Bildschirmlesung unter `auswahl`.
+  dem Spielstand (je Option das Gebäude; `satz` ist ein ungedeuteter
+  Rohwert). Es gilt vor einer Bildschirmlesung unter `auswahl`. Deutsche
+  Namen stehen unter `namen_de`.
+- **`statistik`** sind Summen seit Siedlungsbeginn aus dem Reiter
+  „Stadtstatistiken" im Hauptlager: produziert und verbraucht je Ware,
+  `hunger` (Hungerereignisse), `gegangen`, `tot`, Zysten. Steigt `hunger`
+  oder `gegangen`, ist das der Befund, nicht eine Vermutung.
+- **`effekte.aktiv`** ist, was gerade wirkt (Reiter „Allgemeine Effekte“),
+  dazu `hunger_multiplikator` und `mehrverbrauch`. Ein Bonus, der dort nicht
+  steht, wirkt nicht.
 - **`ruf_quellen`**: nur „Zufriedenheit“ ist belegt, die Einträge mit
   „(vermutet)“ im Namen sind es nicht. `ruf_je_volk` zeigt, welches Volk über
   Zufriedenheit Ruf bringt.
@@ -90,6 +99,7 @@ ist nicht belegt.
 | Je Auftragsziel ist `stand` der Fortschritt; Ziel und Menge stehen nicht im Spielstand | gemessen, 23.09.2026 |
 | Ruf-Quelle „Zufriedenheit“ entspricht dem Zufriedenheitsgewinn der Völker | gemessen, 23.09.2026 |
 | Bauplanwahl und Auftragswahl stehen im Spielstand, Grundsteinwahl nicht | gemessen |
+| Hunger, Tote, Gegangene und gewählte Grundsteine stehen unter `stats` | gemessen, 23.09.2026 |
 
 **Nachschlagen statt raten.** Das Werkzeug `nachschlagen(name)` sieht in der
 Wissensbasis aus den Spieldaten nach — Ware oder Gebäude, deutsch oder

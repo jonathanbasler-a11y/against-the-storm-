@@ -61,6 +61,22 @@ def feindseligkeit(wert) -> str:
     return " · ".join(teile) or "–"
 
 
+def statistik_satz(statistik: dict | None, lichtungen: int | None = None) -> str:
+    """Hunger, Gegangene, Tote, Lichtungen in einer Zeile -- was fuer das
+    Scheitern zaehlt, aus dem Reiter „Stadtstatistiken“."""
+    statistik = statistik or {}
+    teile = []
+    if statistik.get("hunger") is not None:
+        teile.append(f"Hunger {statistik['hunger']}×")
+    if statistik.get("gegangen") is not None:
+        teile.append(f"{statistik['gegangen']} gegangen")
+    if statistik.get("tot") is not None:
+        teile.append(f"{statistik['tot']} tot")
+    if lichtungen is not None:
+        teile.append(f"{lichtungen} Lichtungen")
+    return " · ".join(teile) or "–"
+
+
 def alter(zeitpunkt: str | None, wort: str = "gelesen") -> str:
     """Wie alt die Zahlen sind. Ohne das wird aus einem fünf Minuten alten
     Bestand eine Behauptung über jetzt."""

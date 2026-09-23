@@ -217,3 +217,36 @@ def test_ein_abgestuerzter_zustand_nennt_den_fehler(tmp_path: Path, capsys,
                         lambda *a, **k: {"verfuegbar": False, "fehler": "PermissionError: x"})
     assert cli.main(["--save-dir", str(tmp_path), "--sofort"]) == 1
     assert "PermissionError" in capsys.readouterr().out
+
+
+def test_form_werte_zeigt_zahlen_ohne_texte(tmp_path: Path, capsys) -> None:
+    ordner = _buendel_mit_fremdem_lager(tmp_path / "save")
+    pfad = ordner / "Save.save"
+    save = json.loads(pfad.read_text(encoding="utf-8"))
+    save["effects"] = {"constructionSpeed": 1.25, "hungerMultiplier": 1,
+                       "perks": {"X": {"name": "Geheimer Name", "stacks": 1}}}
+    pfad.write_text(json.dumps(save), encoding="utf-8")
+    assert cli.main(["form", "--pfad", "effects", "--werte", "--save-dir", str(ordner),
+                     "--sofort"]) == 0
+    ausgabe = capsys.readouterr().out
+    assert "constructionSpeed: 1.25" in ausgabe and "perks.X.stacks: 1" in ausgabe
+    assert "Geheimer Name" not in ausgabe
+
+
+def test_lage_zeigt_statistik_und_effekte(tmp_path: Path, capsys) -> None:
+    ordner = tmp_path / "save"
+    ordner.mkdir()
+    (ordner / "Save.save").write_text(json.dumps({
+        "time": 600.0, "year": 1,
+        "stats": {"hungerGained": 3, "leftVillagers": 2, "deadVillagers": 0,
+                  "gladesDiscovered": [{"level": 0}]},
+        "effects": {"perks": {"Frog Newcomer Bonus": {"name": "Frog Newcomer Bonus",
+                                                      "stacks": 1, "hidden": False}},
+                    "hungerMultiplier": 1},
+    }), encoding="utf-8")
+    db = kleine_basis(tmp_path / "kb.sqlite")
+    cli.main(["--save-dir", str(ordner), "--runs", str(tmp_path / "runs"),
+              "--db", str(db), "--sofort"])
+    ausgabe = capsys.readouterr().out
+    assert "Hunger 3× · 2 gegangen · 0 tot · 1 Lichtungen" in ausgabe
+    assert "Frog Newcomer Bonus" in ausgabe and "Hungermultiplikator" in ausgabe

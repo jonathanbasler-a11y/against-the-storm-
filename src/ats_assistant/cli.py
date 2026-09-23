@@ -20,7 +20,7 @@ from pathlib import Path
 from . import tools_api
 from .mcp_server import aufloesen
 from .orte import finde_spielordner
-from .rechner import feindseligkeit
+from .rechner import feindseligkeit, statistik_satz
 
 
 def _minuten(sekunden: float | None) -> str:
@@ -52,6 +52,15 @@ def cmd_lage(args) -> int:
     if zustand.get("ruf_quellen"):
         print(_zeile("Ruf-Quellen", ", ".join(
             f"{name} {wert:.2f}" for name, wert in zustand["ruf_quellen"].items())))
+    if zustand.get("statistik") or zustand.get("lichtungen") is not None:
+        print(_zeile("Statistik", statistik_satz(zustand.get("statistik"),
+                                                 zustand.get("lichtungen"))))
+    effekte = zustand.get("effekte") or {}
+    if effekte.get("aktiv"):
+        print(_zeile("Aktive Effekte", ", ".join(
+            e.get("name") or e["modell"] for e in effekte["aktiv"])))
+    if effekte.get("hunger_multiplikator") is not None:
+        print(_zeile("Hungermultiplikator", effekte["hunger_multiplikator"]))
     # Ein leeres Lager und ein nicht gelesenes sehen sonst gleich aus.
     if zustand.get("nicht_gefunden"):
         print(_zeile("Im Spielstand nicht gefunden",
@@ -117,7 +126,8 @@ def cmd_form(args) -> int:
     from .save_reader import formbericht
     zeilen = formbericht(Path(args.save_dir), wait=not args.sofort,
                          stichworte=tuple(args.stichworte), pfad=args.pfad,
-                         grenze=None if args.alle else 30)
+                         grenze=None if args.alle else 30,
+                         werte=getattr(args, "werte", False))
     for zeile in zeilen:
         print(zeile)
     return 1 if zeilen[0].startswith("Kein Spielstand") else 0
@@ -184,6 +194,9 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--pfad", default=None,
                    help="einen Knoten ganz zeigen, z. B. content oder "
                         "goods.goods -- ohne $ vorn, das stört PowerShell")
+    s.add_argument("--werte", action="store_true",
+                   help="mit --pfad: Zahlen und Wahrheitswerte zeigen (keine Texte), "
+                        "z. B. --pfad effects --werte")
     s.set_defaults(func=cmd_form)
 
     args = ap.parse_args(argv)

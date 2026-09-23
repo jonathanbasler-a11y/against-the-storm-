@@ -20,6 +20,7 @@ from typing import Any
 from . import analysis, forecast, kb, nahrung, namen_match, save_reader, screen, watcher
 from .forecast import food_forecast as _food_forecast
 from .forecast import impatience_forecast as _impatience_forecast
+from .paths import strip_prefixes
 from .save_reader import GameState, read_state
 
 log = logging.getLogger(__name__)
@@ -158,6 +159,9 @@ def _zustand_als_dict(state: GameState) -> dict:
         "auftraege": _auftraege(state.orders),
         **({"bauplan_wahl": state.blueprint_pick} if state.blueprint_pick else {}),
         "lichtungen": state.glades,
+        **({"lichtungen_nach_stufe": state.glades_by_level} if state.glades_by_level else {}),
+        **({"statistik": state.stats} if state.stats else {}),
+        **({"effekte": state.effects} if state.effects else {}),
         "vorkommen": state.deposits,
         "grundsteine": state.cornerstones,
         "gewonnen": state.won,
@@ -526,8 +530,21 @@ def lage_wissen(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
                                    key=lambda t: t["rate_je_minute"])[:5]
         trends["steigend"] = sorted((t for t in alle if t["rate_je_minute"] > 0),
                                     key=lambda t: -t["rate_je_minute"])[:3]
+    # Deutsche Namen fuer Bauplanangebot und aktive Effekte -- sonst kaemen
+    # sie als Modellkennung beim Rat an. Was die Wissensbasis nicht kennt,
+    # fehlt hier und bleibt englisch.
+    gesucht = list((aktuell.get("blueprint_pick") or {}).get("angebot") or [])
+    gesucht += [e.get("modell") for e in ((aktuell.get("effects") or {}).get("aktiv") or [])
+                if isinstance(e, dict)]
+    namen_de = {}
+    for name in gesucht:
+        if not isinstance(name, str):
+            continue
+        de = namen.get(name) or namen.get(strip_prefixes(name)[0])
+        if de and de != name:
+            namen_de[name] = de
     return {"verfuegbar": True, "quelle": quelle, "waren": waren,
-            "gebaeude": gebaeude, "trends": trends}
+            "gebaeude": gebaeude, "trends": trends, "namen_de": namen_de}
 
 
 @_wall

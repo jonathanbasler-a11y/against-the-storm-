@@ -46,6 +46,7 @@ MAX_ZEICHEN = 40_000
 # lag mit 60 Waren und 63 Bauplaenen schon bei 16 700 Zeichen.
 LISTENGRENZE = 80
 GEBAEUDE_GRENZE = 40
+STATISTIK_WAREN = 15        # je Summe (produziert, verbraucht) die groessten
 
 SKILL = Path(__file__).resolve().parents[2] / ".claude" / "skills" / "ats-advisor" / "SKILL.md"
 
@@ -152,7 +153,7 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             "reputation_ziel", "lager", "gebaeude", "gebaeude_liste", "lichtungen",
             "bauplaene_ungebaut", "bauplaene_ungebaut_weggelassen",
             "gebaeude_liste_weggelassen", "ruf_quellen", "ruf_je_volk", "auftraege",
-            "bauplan_wahl",
+            "bauplan_wahl", "statistik", "effekte", "lichtungen_nach_stufe",
             "grundsteine", "spielzeit",
             # Was nicht gelesen werden konnte, geht mit. Sonst sieht ein
             # nicht gefundenes Lager aus wie ein leeres -- und das ist der
@@ -192,6 +193,9 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
         if wissen.get("trends") and (wissen["trends"].get("fallend")
                                      or wissen["trends"].get("steigend")):
             auszug["trends"] = wissen["trends"]
+        if wissen.get("namen_de"):
+            # Bauplanangebot und aktive Effekte: Modellkennung → deutscher Name.
+            auszug["namen_de"] = wissen["namen_de"]
     if ungeduld:
         auszug["ungeduld"] = sauber(ungeduld, (
             "jetzt", "schwelle", "je_spielzeitsekunde", "sekunden_bis_verlust"))
@@ -217,6 +221,22 @@ def _gekappt(zustand: dict) -> dict:
     out = dict(zustand)
     if isinstance(out.get("lager"), dict):
         out["lager"] = {k: v for k, v in out["lager"].items() if v}
+    if isinstance(out.get("statistik"), dict):
+        # Summen je Ware seit Siedlungsbeginn: die groessten zaehlen.
+        statistik = dict(out["statistik"])
+        for feld in ("produziert", "verbraucht"):
+            waren = statistik.get(feld)
+            if isinstance(waren, dict) and len(waren) > STATISTIK_WAREN:
+                statistik[f"{feld}_weggelassen"] = len(waren) - STATISTIK_WAREN
+                statistik[feld] = dict(sorted(waren.items(), key=lambda kv: -abs(kv[1]))
+                                       [:STATISTIK_WAREN])
+        out["statistik"] = statistik
+    if isinstance(out.get("effekte"), dict) and isinstance(out["effekte"].get("aktiv"), list):
+        effekte = dict(out["effekte"])
+        if len(effekte["aktiv"]) > LISTENGRENZE:
+            effekte["aktiv_weggelassen"] = len(effekte["aktiv"]) - LISTENGRENZE
+            effekte["aktiv"] = effekte["aktiv"][:LISTENGRENZE]
+        out["effekte"] = effekte
     for feld in ("bauplaene_ungebaut", "gebaeude_liste"):
         if isinstance(out.get(feld), list) and len(out[feld]) > LISTENGRENZE:
             # Gekappt, aber gesagt: sonst haelt das Modell die Liste fuer vollstaendig.

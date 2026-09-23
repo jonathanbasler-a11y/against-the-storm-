@@ -575,3 +575,31 @@ def test_das_gelernte_geht_mit() -> None:
 def test_der_systemtext_stellt_korrekturen_vor_das_gedaechtnis() -> None:
     text = " ".join(berater.systemtext().split())
     assert "lernen.korrekturen" in text and "lernen.lehren" in text
+
+
+# --------------------------------------------------------------------------
+# Runde 8: Stadtstatistik und Allgemeine Effekte
+# --------------------------------------------------------------------------
+
+
+def test_statistik_und_effekte_gehen_mit_und_werden_gekappt() -> None:
+    zustand = {"jahr": 2,
+               "statistik": {"hunger": 3, "gegangen": 2,
+                             "produziert": {f"Ware {i}": i for i in range(40)}},
+               "effekte": {"aktiv": [{"modell": f"Perk {i}"} for i in range(200)],
+                           "hunger_multiplikator": 1}}
+    auszug = berater.kontext(zustand=zustand, wissen={"namen_de": {"Perk 1": "Vorteil 1"}})
+    statistik = auszug["siedlung"]["statistik"]
+    assert statistik["hunger"] == 3 and len(statistik["produziert"]) == berater.STATISTIK_WAREN
+    assert statistik["produziert_weggelassen"] == 40 - berater.STATISTIK_WAREN
+    assert "Ware 39" in statistik["produziert"]            # die größten bleiben
+    assert auszug["siedlung"]["effekte"]["aktiv_weggelassen"] == 200 - berater.LISTENGRENZE
+    assert auszug["namen_de"] == {"Perk 1": "Vorteil 1"}
+    # Der Zustand selbst bleibt unverändert.
+    assert len(zustand["statistik"]["produziert"]) == 40
+    berater.pruefe_auszug(auszug)
+
+
+def test_der_systemtext_kennt_statistik_und_effekte() -> None:
+    text = " ".join(berater.systemtext().split())
+    assert "effekte.aktiv" in text and "statistik" in text

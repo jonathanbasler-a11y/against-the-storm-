@@ -775,3 +775,36 @@ def test_log_event_nimmt_art_und_spielzeit(tmp_path: Path) -> None:
     out = tools_api.log_event("Rat: Sammlerlager", tmp_path / "runs", run_id="lauf",
                               art="rat", spielzeit=600.0, jahr=1)
     assert out["eintrag"]["art"] == "rat" and out["eintrag"]["spielzeit"] == 600.0
+
+
+def test_get_state_liefert_statistik_und_effekte(tmp_path: Path) -> None:
+    save_dir = _mit(buendel(tmp_path / "save"),
+                    stats={"hungerGained": 3, "leftVillagers": 1,
+                           "gladesDiscovered": [{"level": 0}, {"level": 2}]},
+                    effects={"perks": {"Frog Newcomer Bonus": {"name": "Frog Newcomer Bonus",
+                                                               "stacks": 1, "hidden": False}}})
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    assert out["statistik"]["hunger"] == 3 and out["lichtungen"] == 2
+    assert out["lichtungen_nach_stufe"] == {"0": 1, "2": 1}
+    assert out["effekte"]["aktiv"][0]["modell"] == "Frog Newcomer Bonus"
+
+
+def test_lage_wissen_nennt_deutsche_namen_fuer_bauplan_und_effekte(tmp_path: Path) -> None:
+    save_dir = _mit(buendel(tmp_path / "save"),
+                    reputationRewards={"currentPick": {"options": [
+                        {"building": "Smokehouse", "set": "S"}]}},
+                    effects={"perks": {"[Biome] Wood in Woodlands": {
+                        "name": "[Biome] Wood in Woodlands", "stacks": 1, "hidden": False}}})
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    conn.execute("INSERT INTO name_map (en, de, kind, confidence) "
+                 "VALUES ('Smokehouse', 'Räucherei', 'building', 'localization')")
+    conn.execute("INSERT INTO name_map (en, de, kind, confidence) "
+                 "VALUES ('Wood in Woodlands', 'Holz im Königswald', 'effect', 'localization')")
+    conn.commit()
+    conn.close()
+    namen = tools_api.lage_wissen(runs, db, run_id="lauf")["namen_de"]
+    assert namen == {"Smokehouse": "Räucherei",
+                     "[Biome] Wood in Woodlands": "Holz im Königswald"}

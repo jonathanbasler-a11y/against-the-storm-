@@ -37,6 +37,9 @@ log = logging.getLogger(__name__)
 # (103 Spielzeitsekunden), bevor jemand gegensteuerte.
 KNAPP_SEKUNDEN = 120.0
 LEHREN_HOECHSTENS = 5
+# Aendert sich, was ein Bericht enthaelt, wird der Zwischenspeicher neu
+# gerechnet -- sonst fehlten den alten Berichten die neuen Felder.
+BERICHT_FASSUNG = 2
 
 
 def wissensordner(runs_dir: Path | str) -> Path:
@@ -134,7 +137,36 @@ def laufbericht(zustaende: list[dict], kennung: str,
     bericht["empfehlungen"] = [
         {"spielzeit": n.get("spielzeit"), "jahr": n.get("jahr"), "text": n.get("text")}
         for n in notizen or [] if n.get("art") == "rat" and n.get("text")]
+
+    # Aus `stats` (gemessen am 23.09.2026): Summen seit Siedlungsbeginn, also
+    # zaehlt der letzte Stand -- in Jahr 1 der letzte Stand von Jahr 1.
+    mit_statistik = [z for z in zustaende if isinstance(z.get("stats"), dict) and z["stats"]]
+    if mit_statistik:
+        statistik = mit_statistik[-1]["stats"]
+        for feld in ("hunger", "tot", "gegangen"):
+            if _zahl(statistik.get(feld)) is not None:
+                bericht[feld] = statistik[feld]
+        jahr1 = [z["stats"].get("hunger") for z in mit_statistik
+                 if z.get("year") == 1 and _zahl(z["stats"].get("hunger")) is not None]
+        if jahr1:
+            bericht["hunger_jahr1"] = max(jahr1)
+    bericht["ungeduld_ende"] = _zahl(letzter.get("impatience"))
+    bericht["ungeduld_schwelle"] = _zahl(letzter.get("impatience_to_lose"))
+    bericht["ursache"] = ursache(bericht)
     return bericht
+
+
+def ursache(bericht: dict) -> str | None:
+    """Woran ein verlorener Lauf gescheitert ist -- eine Regel ueber
+    gemessene Felder, keine Deutung. Nur bei `verloren`."""
+    if bericht.get("ausgang") != "verloren":
+        return None
+    ende, schwelle = bericht.get("ungeduld_ende"), bericht.get("ungeduld_schwelle")
+    if ende is not None and schwelle and ende >= schwelle:
+        return "Ungeduld"
+    if (bericht.get("hunger") or 0) > 0 or (bericht.get("gegangen") or 0) > 0:
+        return "Hunger/Abwanderung"
+    return "unklar"
 
 
 # --------------------------------------------------------------------------
@@ -176,20 +208,22 @@ def berichte(runs_dir: Path | str, historie: list[dict] | None = None) -> list[d
         st = datei.stat()
         marke = [st.st_size, st.st_mtime_ns]
         alt = speicher.get(datei.name)
-        if isinstance(alt, dict) and alt.get("marke") == marke:
+        if (isinstance(alt, dict) and alt.get("marke") == marke
+                and alt.get("fassung") == BERICHT_FASSUNG):
             bericht = alt["bericht"]
         else:
             eintraege = analysis.read_run_log(datei)
             zustaende = [e for e in eintraege if e.get("typ") != "notiz"]
             notizen = [e for e in eintraege if e.get("typ") == "notiz"]
             bericht = laufbericht(zustaende, datei.stem, notizen)
-        neu[datei.name] = {"marke": marke, "bericht": bericht}
+        neu[datei.name] = {"marke": marke, "fassung": BERICHT_FASSUNG, "bericht": bericht}
         bericht = dict(bericht)
         if bericht.get("ausgang") == "offen" and historie:
             aus_historie = _aus_historie(bericht, historie)
             if aus_historie:
                 bericht["ausgang"] = aus_historie
                 bericht["ausgang_quelle"] = "Spielhistorie"
+                bericht["ursache"] = ursache(bericht)
         out.append(bericht)
     try:
         speicher_pfad.parent.mkdir(parents=True, exist_ok=True)
@@ -227,7 +261,11 @@ def lehren(berichte_: list[dict]) -> list[str]:
         def median(gruppe: list[dict], wert) -> float | None:
             return analysis._median([v for v in (wert(b) for b in gruppe) if v is not None])
 
+        # Hunger und Abwanderung zuerst: das ist das Kernproblem, und es sind
+        # hoechstens fuenf Saetze.
         for titel, wert, einheit in (
+                ("Hungerereignisse", lambda b: _zahl(b.get("hunger")), ""),
+                ("Gegangene Bewohner", lambda b: _zahl(b.get("gegangen")), ""),
                 ("Ruf nach Jahr 1", lambda b: _zahl((b.get("ruf_nach_jahr") or {}).get("1")), ""),
                 ("Gebäude nach Jahr 1",
                  lambda b: _zahl((b.get("gebaeude_nach_jahr") or {}).get("1")), ""),
