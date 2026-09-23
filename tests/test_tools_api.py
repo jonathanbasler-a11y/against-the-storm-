@@ -293,7 +293,9 @@ def test_food_advice_rechnet_gegen_den_lagerbestand(tmp_path: Path) -> None:
     assert out["verfuegbar"] is True
     kette = out["ketten"][0]
     assert kette["gebaeude"] == "Smokehouse"
-    assert kette["durchlaeufe"] == 8.4             # 42 Fleisch, 5 je Durchlauf
+    # 42 Fleisch, 5 je Durchlauf: acht ganze. Hier stand 8,4 -- das war der
+    # Fehler, den QA-Runde 1 fand, als Erwartung festgeschrieben.
+    assert kette["durchlaeufe"] == 8
     assert kette["faktor"] == 4.0
     assert "Smokehouse" in out["empfehlung"]
     # Ein Zustand reicht fuer den Rat, aber nicht fuer den Verbrauch.

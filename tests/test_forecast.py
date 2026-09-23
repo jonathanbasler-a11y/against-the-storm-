@@ -170,3 +170,20 @@ def test_nahrungsvorhersage_ohne_zweiten_spielstand() -> None:
     f = food_forecast(aktuell, None)
     assert f.rate_per_second is None
     assert "zweiter Spielstand" in f.warning
+
+
+def test_ein_ganz_erneuerter_ringpuffer_ergibt_keine_falsche_rate() -> None:
+    """Liegen 1800 Spielzeitsekunden oder mehr zwischen zwei Ständen, ist
+    jede Stützstelle neu -- und ohne Schreibzeiger ist die Reihenfolge nicht
+    mehr herzustellen. Vorher kam hier ein steigender Bestand heraus, wo er
+    fiel, und keine Warnung."""
+    n, zeiger = 180, 120
+    wahr = [2000.0 - 0.1 * SAMPLE_SECONDS * i for i in range(200)]   # fällt stetig
+    ring = [0.0] * n
+    for i, wert in enumerate(wahr):
+        ring[(zeiger - len(wahr) + 1 + i) % n] = wert
+    vorher = FakeState(category_trends={"Food": [1.0] * n}, game_time=600.0)
+    aktuell = FakeState(category_trends={"Food": ring}, game_time=2600.0)
+    f = food_forecast(aktuell, vorher)
+    assert f.rate_per_second is None
+    assert "Spielzeit" in f.warning
