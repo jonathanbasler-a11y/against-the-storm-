@@ -268,3 +268,17 @@ def test_die_lage_liefert_auch_das_wissen(tmp_path: Path) -> None:
                         tmp_path / "kb.sqlite", ausgang)
     r._ausfuehren(rechner.Auftrag("lage"))
     assert "wissen" in [a for a, _ in list(ausgang.queue)]
+
+
+def test_der_rat_bekommt_das_nachschlagen(tmp_path: Path, monkeypatch) -> None:
+    gesehen = {}
+
+    def frage(auszug, modell=None, wahl_steht_an=False, nachschlagen=None, **kw):
+        gesehen["nachschlagen"] = nachschlagen
+        raise rechner.berater.KeinZugang("x")
+
+    monkeypatch.setattr(rechner.berater, "frage", frage)
+    r = rechner.Rechner(tmp_path, tmp_path / "runs", tmp_path / "kb.sqlite", queue.Queue())
+    r._rat({"zustand": {"jahr": 1}})
+    assert callable(gesehen["nachschlagen"])
+    assert "hinweis" in gesehen["nachschlagen"]("Gibtsnicht")

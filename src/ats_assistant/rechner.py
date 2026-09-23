@@ -187,6 +187,8 @@ class Rechner(threading.Thread):
         try:
             antwort = berater.frage(
                 auszug, modell=daten.get("modell", berater.MODELL),
+                # Selbst nachsehen statt raten -- lokal, nur Namen und Zahlen.
+                nachschlagen=lambda name: tools_api.query_kb(name, db=self.db),
                 # Eine offene Bauplanwahl aus dem Spielstand ist eine Wahl,
                 # auch ohne Bildschirmlesung.
                 wahl_steht_an=bool((daten.get("auswahl") or {}).get("angebot")
@@ -199,6 +201,8 @@ class Rechner(threading.Thread):
         fuss = f"{antwort.modell}"
         if kosten is not None:
             fuss += f", rund {kosten:.1f} Cent"
+        if antwort.runden > 1:
+            fuss += f", {antwort.runden - 1}× nachgeschlagen"
         if antwort.zwischenspeicher_gelesen:
             fuss += f", {antwort.zwischenspeicher_gelesen} Token aus dem Zwischenspeicher"
         return {"ok": True, "text": antwort.text, "fuss": fuss, "auszug": auszug}

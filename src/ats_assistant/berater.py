@@ -92,6 +92,7 @@ class Antwort:
     ausgabe_token: int | None = None
     zwischenspeicher_gelesen: int | None = None
     zwischenspeicher_geschrieben: int | None = None
+    runden: int = 1
 
     @property
     def kosten_cent(self) -> float | None:
@@ -310,9 +311,49 @@ def _client():
         raise KeinZugang(HINWEIS_ANMELDUNG) from exc
 
 
+NACHSCHLAG_RUNDEN = 4
+
+NACHSCHLAG_WERKZEUG = {
+    "name": "nachschlagen",
+    "description": (
+        "Schlägt einen Namen (deutsch oder englisch) in der lokalen Wissensbasis "
+        "aus den Spieldaten nach: bei einer Ware Kategorie, essbar, Sättigung, "
+        "brennbar, Handelswerte; bei einem Gebäude Kosten und Arbeitsplätze. "
+        "Vor jeder Aussage über eine Mechanik nutzen, die nicht im Auszug steht."),
+    "input_schema": {
+        "type": "object",
+        "properties": {"name": {"type": "string",
+                                "description": "Name einer Ware oder eines Gebäudes"}},
+        "required": ["name"],
+    },
+}
+
+
+def _werkzeug_ergebnis(block, nachschlagen) -> dict:
+    """Ein Nachschlag -- geprueft wie der Auszug, bevor er hinausgeht."""
+    name = (getattr(block, "input", None) or {}).get("name")
+    antwort = {"type": "tool_result", "tool_use_id": block.id}
+    if getattr(block, "name", None) != "nachschlagen" or not isinstance(name, str):
+        return {**antwort, "content": "Unbekanntes Werkzeug oder kein Name.", "is_error": True}
+    try:
+        ergebnis = nachschlagen(name)
+        pruefe_auszug(ergebnis if isinstance(ergebnis, dict) else {"ergebnis": ergebnis})
+    except Exception as exc:
+        log.warning("Nachschlag %r gescheitert: %s", name, type(exc).__name__)
+        return {**antwort, "content": "Nachschlag nicht möglich.", "is_error": True}
+    text = json.dumps(ergebnis, ensure_ascii=False, default=str)
+    return {**antwort, "content": text[:4000]}
+
+
 def frage(auszug: dict, modell: str = MODELL, wahl_steht_an: bool = False,
-          client=None, regeln: str | None = None) -> Antwort:
-    """Die Lage vorlegen und drei Sätze zurückbekommen."""
+          client=None, regeln: str | None = None, nachschlagen=None) -> Antwort:
+    """Die Lage vorlegen und drei Sätze zurückbekommen.
+
+    Mit `nachschlagen` darf das Modell selbst in der Wissensbasis nachsehen,
+    bevor es etwas ueber Mechanik sagt -- hoechstens `NACHSCHLAG_RUNDEN` Mal,
+    danach muss es antworten. Anlass: "Pakete oeffnen im Hauptlager", eine
+    Mechanik, die es nicht gibt.
+    """
     pruefe_auszug(auszug)
 
     if client is None:
@@ -326,32 +367,57 @@ def frage(auszug: dict, modell: str = MODELL, wahl_steht_an: bool = False,
         "cache_control": {"type": "ephemeral"},
     }]
     aufwand = AUFWAND_WAHL if wahl_steht_an else AUFWAND_LAGE
+    nachrichten: list[dict] = [{"role": "user", "content": json.dumps(
+        auszug, ensure_ascii=False, indent=1, default=str)}]
+    summe = {"input_tokens": 0, "output_tokens": 0,
+             "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}
 
-    try:
-        antwort = client.messages.create(
-            model=modell,
-            max_tokens=MAX_TOKENS,
-            system=system,
-            thinking={"type": "adaptive"},
-            output_config={"effort": aufwand},
-            messages=[{"role": "user", "content": json.dumps(
-                auszug, ensure_ascii=False, indent=1, default=str)}],
-        )
-    except Anmeldung as exc:
-        raise KeinZugang(HINWEIS_ANMELDUNG) from exc
-    except TypeError as exc:
-        if not _ist_anmeldefehler(exc):
-            raise
-        raise KeinZugang(HINWEIS_ANMELDUNG) from exc
-    except ZuViel as exc:
-        wartezeit = getattr(getattr(exc, "response", None), "headers", {})
-        sekunden = (wartezeit or {}).get("retry-after", "60")
-        raise RuntimeError(f"Zu viele Anfragen. In {sekunden} Sekunden nochmal.") from exc
-    except KeinNetz as exc:
-        raise RuntimeError(
-            "Keine Verbindung. Der Rest des Fensters arbeitet ohne Netz weiter.") from exc
-    except Status as exc:
-        raise RuntimeError(f"Die API antwortet mit {exc.status_code}: {exc.message}") from exc
+    runde = 0
+    while True:
+        argumente = dict(model=modell, max_tokens=MAX_TOKENS, system=system,
+                         thinking={"type": "adaptive"},
+                         output_config={"effort": aufwand}, messages=nachrichten)
+        if nachschlagen is not None:
+            argumente["tools"] = [NACHSCHLAG_WERKZEUG]
+            if runde >= NACHSCHLAG_RUNDEN:
+                # Genug nachgeschlagen -- jetzt antworten.
+                argumente["tool_choice"] = {"type": "none"}
+        try:
+            antwort = client.messages.create(**argumente)
+        except Anmeldung as exc:
+            raise KeinZugang(HINWEIS_ANMELDUNG) from exc
+        except TypeError as exc:
+            if not _ist_anmeldefehler(exc):
+                raise
+            raise KeinZugang(HINWEIS_ANMELDUNG) from exc
+        except ZuViel as exc:
+            wartezeit = getattr(getattr(exc, "response", None), "headers", {})
+            sekunden = (wartezeit or {}).get("retry-after", "60")
+            raise RuntimeError(f"Zu viele Anfragen. In {sekunden} Sekunden nochmal.") from exc
+        except KeinNetz as exc:
+            raise RuntimeError(
+                "Keine Verbindung. Der Rest des Fensters arbeitet ohne Netz weiter.") from exc
+        except Status as exc:
+            raise RuntimeError(f"Die API antwortet mit {exc.status_code}: {exc.message}") from exc
+
+        nutzung = getattr(antwort, "usage", None)
+        for feld in summe:
+            wert = getattr(nutzung, feld, None)
+            if isinstance(wert, int):
+                summe[feld] += wert
+
+        if (nachschlagen is None or getattr(antwort, "stop_reason", None) != "tool_use"
+                or runde >= NACHSCHLAG_RUNDEN):
+            break
+        aufrufe = [b for b in antwort.content if getattr(b, "type", None) == "tool_use"]
+        if not aufrufe:
+            break
+        # Die ganze Antwort zurueck (samt Nachdenken), dann alle Ergebnisse
+        # in einer Nachricht.
+        nachrichten = [*nachrichten, {"role": "assistant", "content": antwort.content},
+                       {"role": "user",
+                        "content": [_werkzeug_ergebnis(b, nachschlagen) for b in aufrufe]}]
+        runde += 1
 
     text = "\n".join(b.text for b in antwort.content
                      if getattr(b, "type", None) == "text").strip()
@@ -366,12 +432,14 @@ def frage(auszug: dict, modell: str = MODELL, wahl_steht_an: bool = False,
         text = ((text + " …\n\n") if text else "") + (
             "(Die Antwort wurde abgeschnitten – die Grenze war erreicht. "
             "Nochmal fragen, gern mit einer engeren Frage.)")
-    nutzung = getattr(antwort, "usage", None)
+    # Ueber alle Runden summiert: jedes Nachschlagen ist eine Anfrage.
+    gezaehlt = getattr(antwort, "usage", None) is not None
     return Antwort(
         text=text or "Keine Antwort erhalten.",
         modell=getattr(antwort, "model", modell),
-        eingabe_token=getattr(nutzung, "input_tokens", None),
-        ausgabe_token=getattr(nutzung, "output_tokens", None),
-        zwischenspeicher_gelesen=getattr(nutzung, "cache_read_input_tokens", None),
-        zwischenspeicher_geschrieben=getattr(nutzung, "cache_creation_input_tokens", None),
+        eingabe_token=summe["input_tokens"] if gezaehlt else None,
+        ausgabe_token=summe["output_tokens"] if gezaehlt else None,
+        zwischenspeicher_gelesen=summe["cache_read_input_tokens"] if gezaehlt else None,
+        zwischenspeicher_geschrieben=summe["cache_creation_input_tokens"] if gezaehlt else None,
+        runden=runde + 1,
     )
