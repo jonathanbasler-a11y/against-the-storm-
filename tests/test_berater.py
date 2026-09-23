@@ -303,3 +303,10 @@ def test_unlesbare_felder_gehen_mit_ihrer_form_mit() -> None:
     form = {"storage": "{[Food Raw] Meat: {amount: int}}"}
     auszug = berater.kontext(zustand={"jahr": 1, "lager": {}, "form_unbekannt": form})
     assert auszug["siedlung"]["form_unbekannt"] == form
+
+
+def test_vorkommen_der_ganzen_karte_gehen_nicht_mit() -> None:
+    """5760 `naturalResources` nach 600 Sekunden sind jeder Baum der Karte.
+    Dem Modell diese Zahl als Vorkommen zu geben, wäre eine falsche Angabe."""
+    auszug = berater.kontext(zustand={"jahr": 1, "vorkommen": 5760})
+    assert "vorkommen" not in auszug["siedlung"]

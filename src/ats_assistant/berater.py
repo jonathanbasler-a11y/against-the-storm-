@@ -128,7 +128,9 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
         auszug["siedlung"] = sauber(zustand, (
             "jahr", "jahreszeit", "biom", "prestige", "bevoelkerung", "spezies",
             "feindseligkeit", "ungeduld", "ungeduld_schwelle", "reputation",
-            "reputation_ziel", "lager", "gebaeude", "lichtungen", "vorkommen",
+            # Ohne "vorkommen": gemessen sind das alle Rohstoffknoten der
+            # Karte (5760 nach 600 Sekunden), nicht die erreichbaren.
+            "reputation_ziel", "lager", "gebaeude", "lichtungen",
             "grundsteine", "spielzeit",
             # Was nicht gelesen werden konnte, geht mit. Sonst sieht ein
             # nicht gefundenes Lager aus wie ein leeres -- und das ist der
