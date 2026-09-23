@@ -178,3 +178,12 @@ def test_form_nimmt_stichworte(tmp_path: Path, capsys) -> None:
     assert cli.main(["form", "order", "--save-dir", str(ordner), "--sofort"]) == 0
     ausgabe = capsys.readouterr().out
     assert "$.orders" in ausgabe and "storedGoods" not in ausgabe
+
+
+def test_form_kennt_alle_und_pfad(tmp_path: Path, capsys) -> None:
+    ordner = _buendel_mit_fremdem_lager(tmp_path / "save")
+    assert cli.main(["form", "goods", "--alle", "--save-dir", str(ordner), "--sofort"]) == 0
+    assert "weitere" not in capsys.readouterr().out
+    assert cli.main(["form", "--pfad", "mainStorage", "--save-dir", str(ordner),
+                     "--sofort"]) == 0
+    assert "storedGoods" in capsys.readouterr().out

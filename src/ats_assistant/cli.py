@@ -110,7 +110,8 @@ def cmd_nahrung(args) -> int:
 def cmd_form(args) -> int:
     from .save_reader import formbericht
     zeilen = formbericht(Path(args.save_dir), wait=not args.sofort,
-                         stichworte=tuple(args.stichworte))
+                         stichworte=tuple(args.stichworte), pfad=args.pfad,
+                         grenze=None if args.alle else 30)
     for zeile in zeilen:
         print(zeile)
     return 1 if zeilen[0].startswith("Kein Spielstand") else 0
@@ -169,6 +170,11 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("stichworte", nargs="*",
                    help="statt Lager und Gebäuden: Schlüssel suchen, die eines "
                         "dieser Wörter enthalten, z. B. order reputation blueprint")
+    s.add_argument("--alle", action="store_true",
+                   help="keine Grenze von 30 Zeilen je Datei")
+    s.add_argument("--pfad", default=None,
+                   help="einen Knoten ganz zeigen, z. B. content oder "
+                        "goods.goods -- ohne $ vorn, das stört PowerShell")
     s.set_defaults(func=cmd_form)
 
     args = ap.parse_args(argv)

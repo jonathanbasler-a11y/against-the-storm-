@@ -356,7 +356,7 @@ def _buildings(raw: Any) -> list[Building]:
     return out
 
 
-def form_skizze(wert: Any, tiefe: int = 3, breite: int = 6) -> str:
+def form_skizze(wert: Any, tiefe: int = 3, breite: int | None = 6) -> str:
     """Schluessel und Typen, nie Werte: {goods: [12x {Key: str, Value: int}]}."""
     if isinstance(wert, dict):
         if not wert:
@@ -365,7 +365,7 @@ def form_skizze(wert: Any, tiefe: int = 3, breite: int = 6) -> str:
             return f"{{{len(wert)} Schlüssel}}"
         teile = [f"{k}: {form_skizze(v, tiefe - 1, breite)}"
                  for k, v in list(wert.items())[:breite]]
-        if len(wert) > breite:
+        if breite is not None and len(wert) > breite:
             teile.append(f"… +{len(wert) - breite}")
         return "{" + ", ".join(teile) + "}"
     if isinstance(wert, list):
@@ -393,8 +393,8 @@ FORM_FELDER = ("storage", "buildings", "glades", "deposits")
 FORM_STICHWORTE = ("goods", "storage", "building", "glade", "resource", "deposit")
 
 
-def formbericht(directory: Path, wait: bool = True, grenze: int = 30,
-                stichworte: tuple[str, ...] = ()) -> list[str]:
+def formbericht(directory: Path, wait: bool = True, grenze: int | None = 30,
+                stichworte: tuple[str, ...] = (), pfad: str | None = None) -> list[str]:
     """Wie das Spiel die fraglichen Felder wirklich ablegt -- zum Einfuegen
     in den Chat. Nur Pfade, Schluessel und Typen; keine Werte.
 
@@ -405,6 +405,8 @@ def formbericht(directory: Path, wait: bool = True, grenze: int = 30,
     directory = Path(directory)
     if not (directory / "Save.save").exists():
         return [f"Kein Spielstand unter {directory}."]
+    if pfad:
+        return _knoten_zeigen(directory, pfad)
     if stichworte:
         return _stichwortsuche(directory, tuple(w.lower() for w in stichworte), grenze)
     _, notes = read_state(directory, wait=wait)
@@ -428,12 +430,49 @@ def formbericht(directory: Path, wait: bool = True, grenze: int = 30,
     for pfad, name, anzahl, wert in kandidaten[:grenze]:
         mal = f" ({anzahl}x)" if anzahl > 1 else ""
         zeilen.append(f"  {pfad}{mal}: {form_skizze(wert, tiefe=2)}")
-    if len(kandidaten) > grenze:
+    if grenze is not None and len(kandidaten) > grenze:
         zeilen.append(f"  … und {len(kandidaten) - grenze} weitere")
     return zeilen
 
 
-def _stichwortsuche(directory: Path, woerter: tuple[str, ...], grenze: int) -> list[str]:
+def _knoten_zeigen(directory: Path, pfad: str) -> list[str]:
+    """Einen Knoten ganz: jeder Schluessel eine Zeile, ohne Breitengrenze.
+
+    `$` vorn ist freiwillig -- in PowerShell ist es der Beginn einer
+    Variablen, und `$.content` ohne Anfuehrungszeichen waere eine Falle.
+    """
+    if not pfad.startswith("$"):
+        pfad = "$." + pfad.lstrip(".")
+    for datei in ("Save.save", "WorldSave.save", "MetaSave.save"):
+        data = _load(directory / datei)
+        if data is None:
+            continue
+        gefunden, wert = _an_pfad_gefunden(data, pfad)
+        if not gefunden:
+            continue
+        zeilen = [f"{datei} {pfad}: {form_skizze(wert, tiefe=0)}"]
+        if isinstance(wert, dict):
+            for k, v in wert.items():
+                zeilen.append(f"  {k}: {form_skizze(v, tiefe=2)}")
+        else:
+            zeilen.append(f"  {form_skizze(wert, tiefe=3, breite=None)}")
+        return zeilen
+    return [f"{pfad} nicht gefunden, in keiner der drei Dateien."]
+
+
+def _an_pfad_gefunden(data: Any, pfad: str) -> tuple[bool, Any]:
+    cur = data
+    for schluessel, stelle in re.findall(r"\.([^.\[]+)|\[(\d+)\]", pfad):
+        if schluessel and isinstance(cur, dict) and schluessel in cur:
+            cur = cur[schluessel]
+        elif stelle and isinstance(cur, list) and int(stelle) < len(cur):
+            cur = cur[int(stelle)]
+        else:
+            return False, None
+    return True, cur
+
+
+def _stichwortsuche(directory: Path, woerter: tuple[str, ...], grenze: int | None) -> list[str]:
     zeilen: list[str] = []
     for datei in ("Save.save", "WorldSave.save", "MetaSave.save"):
         data = _load(directory / datei)
@@ -448,23 +487,14 @@ def _stichwortsuche(directory: Path, woerter: tuple[str, ...], grenze: int) -> l
         for pfad, name, anzahl, wert in kandidaten[:grenze]:
             mal = f" ({anzahl}x)" if anzahl > 1 else ""
             zeilen.append(f"  {pfad}{mal}: {form_skizze(wert, tiefe=3)}")
-        if len(kandidaten) > grenze:
+        if grenze is not None and len(kandidaten) > grenze:
             zeilen.append(f"  … und {len(kandidaten) - grenze} weitere")
     return zeilen
 
 
 def _an_pfad(data: Any, pfad: str) -> Any:
     """'$.a.b[3].c' zurueck zum Wert -- die Pfade aus `index_keys`."""
-    cur = data
-    for teil in re.findall(r"\.([^.\[]+)|\[(\d+)\]", pfad):
-        schluessel, stelle = teil
-        if schluessel and isinstance(cur, dict):
-            cur = cur.get(schluessel)
-        elif stelle and isinstance(cur, list) and int(stelle) < len(cur):
-            cur = cur[int(stelle)]
-        else:
-            return None
-    return cur
+    return _an_pfad_gefunden(data, pfad)[1]
 
 
 def append_run_log(state: GameState, run_id: str, runs_dir: Path = Path("runs")) -> Path:
