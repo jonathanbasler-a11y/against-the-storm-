@@ -155,6 +155,8 @@ def _normalise_goods(raw: Any) -> dict[str, float]:
             if isinstance(entry, dict):
                 key = entry.get("Key") or entry.get("name") or entry.get("model")
                 val = entry.get("Value") if "Value" in entry else entry.get("amount")
+                if not isinstance(key, str) or val is None:
+                    key, val = _name_und_zahl(entry)
                 if isinstance(key, str):
                     items.append((key, val))
     else:
@@ -165,6 +167,27 @@ def _normalise_goods(raw: Any) -> dict[str, float]:
         name, _prefixes = strip_prefixes(key)
         out[name] = out.get(name, 0) + float(val)
     return out
+
+
+def _name_und_zahl(entry: dict) -> tuple[str | None, Any]:
+    """Zwei Schluessel, einer ein Name, einer eine Zahl -- so sah eine Ware
+    im Lager aus; welche Schluessel es genau sind, zeigte die Messung nicht."""
+    namen = [v for v in entry.values() if isinstance(v, str)]
+    zahlen = [v for v in entry.values()
+              if isinstance(v, (int, float)) and not isinstance(v, bool)]
+    if len(namen) == 1 and len(zahlen) == 1:
+        return namen[0], zahlen[0]
+    return None, None
+
+
+def _entdeckte(glades: Any) -> int | None:
+    """Gemessen: `world.glades` ist die ganze Karte (42 nach 600 Sekunden).
+    Wo `wasDiscovered` steht, zaehlen nur die entdeckten."""
+    if not isinstance(glades, list):
+        return None
+    if any(isinstance(g, dict) and "wasDiscovered" in g for g in glades):
+        return sum(1 for g in glades if isinstance(g, dict) and g.get("wasDiscovered") is True)
+    return len(glades)
 
 
 def _series(raw: Any) -> dict[str, list[float]]:
@@ -214,8 +237,10 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
         state.reputation = pick(save, idx, "reputation", (), ("reputation",), (int, float))
         state.reputation_to_win = pick(save, idx, "reputation_to_win", (),
                                        ("reputationToWin",), (int, float))
-        raw_storage = pick(save, idx, "storage", ("storage.goods",),
-                           ("goods", "storage", "resources"))
+        # Gemessen am 23.09.2026 (1.10.4): `goods.goods.goods`. Kein
+        # Namensrueckfall -- jedes Gebaeude hat ein eigenes `storage.goods`,
+        # und der flachste Treffer war nicht das Hauptlager.
+        raw_storage = pick(save, idx, "storage", ("goods.goods.goods", "storage.goods"))
         state.storage = _normalise_goods(raw_storage)
         _form_pruefen(notes[-1], raw_storage, state.storage)
         state.goods_trends = _series(
@@ -228,12 +253,12 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
             if isinstance(c, str)
         ]
         glades = pick(save, idx, "glades", ("world.glades",), ("glades",), list)
-        state.glades = len(glades) if isinstance(glades, list) else None
+        state.glades = _entdeckte(glades)
         deposits = pick(save, idx, "deposits", ("world.naturalResources",),
                         ("naturalResources", "deposits"), list)
         state.deposits = len(deposits) if isinstance(deposits, list) else None
 
-        raw_buildings = pick(save, idx, "buildings", ("buildings.buildings",), ("buildings",))
+        raw_buildings = pick(save, idx, "buildings", ("buildings.buildings", "buildings"))
         state.buildings = _buildings(raw_buildings)
         _form_pruefen(notes[-1], raw_buildings, state.buildings)
 
@@ -298,6 +323,9 @@ def parse_prestige(raw: Any) -> int | None:
     return int(m.group()) if m else None
 
 
+GEBAEUDE_OHNE = frozenset({"roads"})
+
+
 def _buildings(raw: Any) -> list[Building]:
     out: list[Building] = []
     # Ein Dictionary nach Kennung ist die naheliegende zweite Form -- aber
@@ -305,6 +333,13 @@ def _buildings(raw: Any) -> list[Building]:
     # zu zaehlen ergaebe eine falsche Zahl statt einer Meldung.
     if isinstance(raw, dict) and raw and all(isinstance(v, dict) for v in raw.values()):
         raw = list(raw.values())
+    elif isinstance(raw, dict):
+        # Gemessen am 23.09.2026 (1.10.4): nach Art sortiert -- houses,
+        # workshops, camps, storages, roads ... Strassen sind keine Gebaeude
+        # im Sinne der Frage "was steht"; 38 Stueck wuerden die Zahl fluten.
+        raw = [e for art, liste in raw.items()
+               if art not in GEBAEUDE_OHNE and isinstance(liste, list)
+               for e in liste if isinstance(e, dict)]
     if not isinstance(raw, list):
         return out
     for entry in raw:

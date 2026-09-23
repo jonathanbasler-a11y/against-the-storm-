@@ -5,6 +5,12 @@ Spieluhr `time`, Ungeduld `reputationPenalty`, `hostility` als Dictionary
 (am 22.09.2026 im laufenden Spiel gesehen: level, points, sources),
 `difficulty` als String, gestapelte Kategoriepraefixe, Zeitreihen unter
 `trends`. Die Zahlen sind erfunden, die Form nicht.
+
+Lager, Gebaeude und Lichtungen am 23.09.2026 mit `lage.py form` am
+Spielrechner gemessen (1.10.4): das Lager unter `goods.goods.goods`, die
+Gebaeude nach Art sortiert unter `buildings`, die Lichtungen mit
+`wasDiscovered`. Vorher stand hier eine erfundene Form, und der Leser las
+aus einem vollen Lagerhaus `lager: {}`.
 """
 
 from __future__ import annotations
@@ -34,17 +40,26 @@ def schreibe_buendel(tmp_path: Path, **abweichungen) -> Path:
         "reputationPenalty": 6.636307,
         "reputationPenaltyToLoose": 14,
         "reputationPenaltyPerSec": 0.00425,
-        "storage": {"goods": [
-            {"Key": "[Food Raw] Meat", "Value": 42},
-            {"Key": "[Mat Processed] Planks", "Value": 14},
-            {"Key": "[SSE] [BIOME] Storm Penalty", "Value": 1},
-        ]},
-        "buildings": {"buildings": [
-            {"model": "Smokehouse", "workers": 2, "finished": True},
-            {"model": "Bakery", "workers": 0, "finished": False},
-        ]},
+        # Zwei Schluessel je Ware; welche, zeigte die Messung nicht --
+        # `name`/`amount` wie bei `conditions.embarkGoods` im selben Save.
+        "goods": {"goods": {"locks": [], "goods": [
+            {"name": "[Food Raw] Meat", "amount": 42},
+            {"name": "[Mat Processed] Planks", "amount": 14},
+            {"name": "[SSE] [BIOME] Storm Penalty", "amount": 1},
+        ]}},
+        "buildings": {
+            "houses": [{"model": "Beaver House", "residents": [1, 2, 3]}],
+            "workshops": [
+                {"model": "Smokehouse", "workers": [4, 5], "finished": True},
+                {"model": "Bakery", "workers": [0, 0], "finished": False},
+            ],
+            "farms": [],
+            "roads": [{"id": i, "model": "Road"} for i in range(38)],
+            "goodsToBuildingsMap": {},
+            "workplacesPerks": {"Main Storage (not-buildable)": []},
+        },
         "world": {
-            "glades": [{"id": i} for i in range(9)],
+            "glades": [{"model": "Glade", "wasDiscovered": i < 4} for i in range(9)],
             "naturalResources": [{"Key": {"x": i}, "Value": {"isActive": True}} for i in range(120)],
         },
         "trends": {
@@ -191,8 +206,8 @@ def _note(notes, feld):
 
 
 def test_lager_in_fremder_form_wird_gemeldet_statt_geleert(tmp_path: Path) -> None:
-    ordner = schreibe_buendel(tmp_path, save={
-        "storage": {"goods": {"[Food Raw] Meat": {"amount": 42}}}})
+    ordner = schreibe_buendel(tmp_path, save={"goods": {"goods": {
+        "locks": [], "goods": {"[Food Raw] Meat": {"amount": 42}}}}})
     state, notes = read_state(ordner, wait=False)
     assert state.storage == {}
     note = _note(notes, "storage")
@@ -202,7 +217,7 @@ def test_lager_in_fremder_form_wird_gemeldet_statt_geleert(tmp_path: Path) -> No
 
 
 def test_ein_wirklich_leeres_lager_ist_kein_formfehler(tmp_path: Path) -> None:
-    ordner = schreibe_buendel(tmp_path, save={"storage": {"goods": []}})
+    ordner = schreibe_buendel(tmp_path, save={"goods": {"goods": {"locks": [], "goods": []}}})
     _, notes = read_state(ordner, wait=False)
     assert _note(notes, "storage").how == "pfad"
 
@@ -217,8 +232,8 @@ def test_gebaeude_als_dictionary_nach_kennung(tmp_path: Path) -> None:
 
 
 def test_gebaeude_in_fremder_form_werden_gemeldet(tmp_path: Path) -> None:
-    ordner = schreibe_buendel(tmp_path, save={"buildings": {"buildings": {
-        "houses": [{"model": "Shelter"}], "workshops": [{"model": "Smokehouse"}]}}})
+    ordner = schreibe_buendel(tmp_path, save={"buildings": {
+        "houses": 6, "workshops": "zwei"}})
     state, notes = read_state(ordner, wait=False)
     assert state.buildings == []
     note = _note(notes, "buildings")
@@ -249,10 +264,68 @@ def test_formskizze_bleibt_kurz() -> None:
 def test_formbericht_nennt_pfad_und_kandidaten(tmp_path: Path) -> None:
     from ats_assistant.save_reader import formbericht
     ordner = schreibe_buendel(tmp_path, save={
-        "storage": {"goods": {"[Food Raw] Meat": {"amount": 42}}},
+        "goods": {"goods": {"goods": {"[Food Raw] Meat": {"amount": 42}}}},
         "mainStorage": {"storedGoods": [{"name": "[Food Raw] Meat", "amount": 42}]}})
     text = "\n".join(formbericht(ordner, wait=False))
     assert "storage" in text and "form_unbekannt" in text
-    assert "$.storage.goods" in text
+    assert "$.goods.goods.goods" in text
     assert "storedGoods" in text                      # der Kandidat, den es wohl ist
     assert "42" not in text
+
+
+# --------------------------------------------------------------------------
+# Die gemessene Form (23.09.2026, `lage.py form` am Spielrechner)
+# --------------------------------------------------------------------------
+
+
+def test_das_lager_liegt_unter_goods_goods_goods(tmp_path: Path) -> None:
+    state, notes = read_state(schreibe_buendel(tmp_path), wait=False)
+    assert state.storage["Meat"] == 42 and state.storage["Planks"] == 14
+    assert _note(notes, "storage").path == "$.goods.goods.goods"
+
+
+def test_das_lager_greift_nicht_zum_lager_eines_sammlerlagers(tmp_path: Path) -> None:
+    """Der Namensrueckfall nahm den flachsten Schluessel `goods` -- und im
+    Save hat jedes Gebaeude sein eigenes `storage.goods`. Ein Sammlerlager
+    mit vier Beeren ist nicht das Hauptlager."""
+    ordner = schreibe_buendel(tmp_path, save={
+        "goods": None,
+        "camps": [{"storage": {"goods": [{"name": "[Food Raw] Berries", "amount": 4}]}}]})
+    state, notes = read_state(ordner, wait=False)
+    assert state.storage == {}
+    assert _note(notes, "storage").how == "fehlt"
+
+
+@pytest.mark.parametrize("eintrag", [
+    {"name": "[Food Raw] Meat", "amount": 42},
+    {"Key": "[Food Raw] Meat", "Value": 42},
+    {"good": "[Food Raw] Meat", "count": 42},       # zwei Schluessel, andere Namen
+])
+def test_eine_ware_mit_zwei_schluesseln_wird_gelesen(tmp_path: Path, eintrag) -> None:
+    """Die Messung zeigte je Ware zwei Schluessel, aber nicht welche. Ein
+    Name und eine Zahl -- mehr braucht es nicht."""
+    ordner = schreibe_buendel(tmp_path, save={"goods": {"goods": {"goods": [eintrag]}}})
+    state, _ = read_state(ordner, wait=False)
+    assert state.storage == {"Meat": 42}
+
+
+def test_gebaeude_nach_art_ohne_strassen(tmp_path: Path) -> None:
+    """38 Strassen sind keine 38 Gebaeude."""
+    state, notes = read_state(schreibe_buendel(tmp_path), wait=False)
+    assert sorted(b.model for b in state.buildings) == [
+        "Bakery", "Beaver House", "Smokehouse"]
+    assert _note(notes, "buildings").how == "pfad"
+    smokehouse = next(b for b in state.buildings if b.model == "Smokehouse")
+    assert smokehouse.workers == 2
+
+
+def test_lichtungen_zaehlen_nur_entdeckte(tmp_path: Path) -> None:
+    """42 Lichtungen nach 600 Sekunden waren die ganze Karte."""
+    state, _ = read_state(schreibe_buendel(tmp_path), wait=False)
+    assert state.glades == 4
+
+
+def test_lichtungen_ohne_entdeckt_feld_zaehlen_alle(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"world": {"glades": [{"id": 1}, {"id": 2}]}})
+    state, _ = read_state(ordner, wait=False)
+    assert state.glades == 2
