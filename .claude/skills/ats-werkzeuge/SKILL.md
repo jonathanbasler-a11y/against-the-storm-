@@ -79,6 +79,7 @@ python tools/lage.py                      # Zustand, Nahrung, Ungeduld, Rat
 python tools/lage.py nahrung              # alle Ketten mit Engpass
 python tools/lage.py nachschlag Imbiss    # ein Name, deutsch oder englisch
 python tools/lage.py form                 # Aufbau von Lager/Gebäuden, ohne Mengen
+python tools/lage.py form order relic     # Schlüssel mit diesen Wörtern suchen
 python ats-gui.pyw                        # dasselbe als Fenster
 ```
 

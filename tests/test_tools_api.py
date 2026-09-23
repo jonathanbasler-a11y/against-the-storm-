@@ -212,6 +212,26 @@ def test_read_choice_bildet_gelesene_titel_auf_belegte_namen_ab(tmp_path: Path) 
     assert out["angebot"][0]["seltenheit"] == "Epic"
 
 
+def test_read_choice_findet_auftraege(tmp_path: Path) -> None:
+    """Die drei Namen standen am 23.09.2026 auf „Wähle einen Auftrag aus"."""
+    from ats_assistant import localization
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Order_BeaverInflux_Name", "Beaver Influx",
+                             "Biber-Zustrom", "order"),
+        localization.Eintrag("Order_AncientArtifacts_Name", "Ancient Artifacts",
+                             "Uralte Artefakte", "order"),
+        localization.Eintrag("Building_Smokehouse_Name", "Smokehouse",
+                             "Räucherei", "building"),
+    ])
+    conn.close()
+    out = tools_api.read_choice(text=["BIBER-ZUSTROM", "URALTE ARTEFAKTE", "Räucherei"],
+                                db=db, arten=("order",))
+    assert [a["de"] for a in out["angebot"]] == ["Biber-Zustrom", "Uralte Artefakte"]
+
+
 def test_read_choice_raet_nicht_bei_unlesbarem(tmp_path: Path) -> None:
     """Von Hand getippt und nichts getroffen -- dann sagt das auch der Grund.
 
@@ -458,3 +478,21 @@ def test_die_lesereihenfolge_bleibt_erhalten(tmp_path: Path) -> None:
     andersherum = tools_api.read_choice(text=["HANDELSPOSTEN", "KRISTALLKATHODE"],
                                         db=db, arten=("effect",))
     assert [a["de"] for a in andersherum["angebot"]] == ["Handelsposten", "Kristallkathode"]
+
+
+def test_get_state_nennt_die_gebaeude_nicht_nur_ihre_zahl(tmp_path: Path) -> None:
+    """„Weiß der Rat nicht, welche Gebäude ich habe?" -- er wusste nur,
+    wie viele."""
+    save_dir = buendel(tmp_path / "save")
+    pfad = save_dir / "Save.save"
+    save = json.loads(pfad.read_text(encoding="utf-8"))
+    save["buildings"] = {
+        "houses": [{"model": "Beaver House"}, {"model": "Beaver House"}],
+        "camps": [{"model": "Foragers' Camp", "workers": [7, 0]}],
+        "roads": [{"model": "Road"}]}
+    pfad.write_text(json.dumps(save), encoding="utf-8")
+    out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    assert out["gebaeude"] == 3
+    assert out["gebaeude_liste"] == [
+        {"gebaeude": "Beaver House", "anzahl": 2, "arbeiter": 0},
+        {"gebaeude": "Foragers' Camp", "anzahl": 1, "arbeiter": 1}]

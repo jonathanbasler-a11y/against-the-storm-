@@ -49,6 +49,19 @@ def _wall(fn):
     return gehuellt
 
 
+def _gebaeude_liste(gebaeude) -> list[dict]:
+    """Welche Gebaeude, wie viele, wie viele Arbeiter -- die Zahl allein
+    liess den Rat raten, was schon steht."""
+    je: dict[str, dict] = {}
+    for b in gebaeude:
+        if not b.model:
+            continue
+        eintrag = je.setdefault(b.model, {"gebaeude": b.model, "anzahl": 0, "arbeiter": 0})
+        eintrag["anzahl"] += 1
+        eintrag["arbeiter"] += b.workers or 0
+    return sorted(je.values(), key=lambda e: -e["anzahl"])
+
+
 def _zustand_als_dict(state: GameState) -> dict:
     """Der Zustand fuer das Modell: Zahlen und Namen, keine Zeitreihen.
 
@@ -73,6 +86,7 @@ def _zustand_als_dict(state: GameState) -> dict:
         "reputation_ziel": state.reputation_to_win,
         "lager": state.storage,
         "gebaeude": len(state.buildings),
+        "gebaeude_liste": _gebaeude_liste(state.buildings),
         "lichtungen": state.glades,
         "vorkommen": state.deposits,
         "grundsteine": state.cornerstones,

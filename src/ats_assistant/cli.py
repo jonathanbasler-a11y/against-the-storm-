@@ -8,6 +8,7 @@ und was zu bauen waere, soll dafuer keinen Server starten muessen.
     ats-lage nahrung              nur die Ketten, ausfuehrlich
     ats-lage nachschlag Imbiss    ein Name, deutsch oder englisch
     ats-lage form                 wie Lager und Gebaeude im Spielstand liegen
+    ats-lage form order relic     Schluessel mit diesen Woertern, in allen Dateien
 """
 
 from __future__ import annotations
@@ -108,7 +109,8 @@ def cmd_nahrung(args) -> int:
 
 def cmd_form(args) -> int:
     from .save_reader import formbericht
-    zeilen = formbericht(Path(args.save_dir), wait=not args.sofort)
+    zeilen = formbericht(Path(args.save_dir), wait=not args.sofort,
+                         stichworte=tuple(args.stichworte))
     for zeile in zeilen:
         print(zeile)
     return 1 if zeilen[0].startswith("Kein Spielstand") else 0
@@ -164,6 +166,9 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("form", parents=[gemeinsam],
                        help="Aufbau von Lager und Gebäuden im Spielstand, "
                             "ohne Werte -- zum Einfügen in den Chat")
+    s.add_argument("stichworte", nargs="*",
+                   help="statt Lager und Gebäuden: Schlüssel suchen, die eines "
+                        "dieser Wörter enthalten, z. B. order reputation blueprint")
     s.set_defaults(func=cmd_form)
 
     args = ap.parse_args(argv)

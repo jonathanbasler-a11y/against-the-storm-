@@ -121,6 +121,7 @@ python tools\lage.py                      Zustand, Nahrung, Ungeduld, Rat
 python tools\lage.py nahrung              alle Ketten mit Engpass und Dauer
 python tools\lage.py nachschlag Imbiss    ein Name, deutsch oder englisch
 python tools\lage.py form                 Aufbau von Lager und Gebäuden im Spielstand
+python tools\lage.py form order relic     Schlüssel mit diesen Wörtern, in allen drei Dateien
 ```
 
 `python -m ats_assistant.cli` tut es **nicht**: das Paket liegt unter `src/`

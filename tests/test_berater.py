@@ -310,3 +310,9 @@ def test_vorkommen_der_ganzen_karte_gehen_nicht_mit() -> None:
     Dem Modell diese Zahl als Vorkommen zu geben, wäre eine falsche Angabe."""
     auszug = berater.kontext(zustand={"jahr": 1, "vorkommen": 5760})
     assert "vorkommen" not in auszug["siedlung"]
+
+
+def test_die_gebaeudeliste_geht_an_den_rat() -> None:
+    liste = [{"gebaeude": "Foragers' Camp", "anzahl": 1, "arbeiter": 1}]
+    auszug = berater.kontext(zustand={"jahr": 1, "gebaeude": 1, "gebaeude_liste": liste})
+    assert auszug["siedlung"]["gebaeude_liste"] == liste

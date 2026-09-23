@@ -130,7 +130,7 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             "feindseligkeit", "ungeduld", "ungeduld_schwelle", "reputation",
             # Ohne "vorkommen": gemessen sind das alle Rohstoffknoten der
             # Karte (5760 nach 600 Sekunden), nicht die erreichbaren.
-            "reputation_ziel", "lager", "gebaeude", "lichtungen",
+            "reputation_ziel", "lager", "gebaeude", "gebaeude_liste", "lichtungen",
             "grundsteine", "spielzeit",
             # Was nicht gelesen werden konnte, geht mit. Sonst sieht ein
             # nicht gefundenes Lager aus wie ein leeres -- und das ist der
