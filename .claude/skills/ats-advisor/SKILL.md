@@ -84,6 +84,11 @@ ist nicht belegt.
 | Ruf-Quelle „Zufriedenheit“ entspricht dem Zufriedenheitsgewinn der Völker | gemessen, 23.09.2026 |
 | Bauplanwahl und Auftragswahl stehen im Spielstand, Grundsteinwahl nicht | gemessen |
 
+**Nachschlagen statt raten.** Das Werkzeug `nachschlagen(name)` sieht in der
+Wissensbasis aus den Spieldaten nach — Ware oder Gebäude, deutsch oder
+englisch. Vor jeder Aussage über eine Mechanik, die nicht im Auszug steht,
+nachschlagen; findet sich nichts, das sagen statt ergänzen.
+
 **Keine erfundenen Bedienschritte oder Mechaniken.** Empfohlen wird, was sich
 aus dem Auszug ergibt: bauen, Arbeiter zuweisen, handeln, wählen. Wie etwas im
 Spiel bedient wird oder eine Mechanik, die nicht im Auszug steht, wird nicht

@@ -469,3 +469,97 @@ def test_eine_grosse_siedlung_mit_wissen_passt_in_den_auszug() -> None:
     auszug = berater.kontext(zustand={"jahr": 1}, wissen=wissen)
     berater.pruefe_auszug(auszug)
     assert len(auszug["gebaeude_wissen"]) <= berater.GEBAEUDE_GRENZE
+
+
+# --------------------------------------------------------------------------
+# Runde 7b: Der Rat schlägt nach, statt zu raten
+# --------------------------------------------------------------------------
+
+
+class Block:
+    def __init__(self, **felder):
+        self.__dict__.update(felder)
+
+
+class NachschlagClient:
+    """Erst eine Nachschlag-Anfrage, dann eine Antwort -- oder immer wieder
+    Nachschlagen, um die Grenze zu prüfen."""
+
+    def __init__(self, immer: bool = False):
+        self.immer = immer
+        self.aufrufe: list[dict] = []
+        self.messages = self
+
+    def create(self, **kwargs):
+        self.aufrufe.append(kwargs)
+        nachschlagen = (self.immer or len(self.aufrufe) == 1) \
+            and kwargs.get("tool_choice", {}).get("type") != "none"
+
+        class Nutzung:
+            input_tokens = 1000
+            output_tokens = 100
+            cache_read_input_tokens = 0
+            cache_creation_input_tokens = 0
+
+        class Antwort:
+            model = kwargs["model"]
+            usage = Nutzung()
+
+        antwort = Antwort()
+        if nachschlagen:
+            antwort.stop_reason = "tool_use"
+            antwort.content = [Block(type="tool_use", id=f"t{len(self.aufrufe)}",
+                                     name="nachschlagen", input={"name": "Proviantpaket"})]
+        else:
+            antwort.stop_reason = "end_turn"
+            antwort.content = [Block(type="text", text="Pakete sind Handelsware.")]
+        return antwort
+
+
+def test_der_rat_schlaegt_nach_und_bekommt_das_ergebnis() -> None:
+    client = NachschlagClient()
+    gefragt: list[str] = []
+
+    def nachschlagen(name):
+        gefragt.append(name)
+        return {"ware": {"en": "Pack of Provisions", "eatable": 0, "category": "Packs"}}
+
+    antwort = berater.frage({"siedlung": {}}, client=client, regeln="x",
+                            nachschlagen=nachschlagen)
+    assert gefragt == ["Proviantpaket"]
+    assert antwort.text == "Pakete sind Handelsware."
+    assert client.aufrufe[0]["tools"][0]["name"] == "nachschlagen"
+    zweite = client.aufrufe[1]["messages"]
+    ergebnis = zweite[-1]["content"][0]
+    assert ergebnis["type"] == "tool_result" and ergebnis["tool_use_id"] == "t1"
+    assert "Packs" in ergebnis["content"]
+    # Kosten über beide Runden
+    assert antwort.eingabe_token == 2000 and antwort.ausgabe_token == 200
+
+
+def test_das_nachschlagen_hat_eine_grenze() -> None:
+    client = NachschlagClient(immer=True)
+    antwort = berater.frage({"siedlung": {}}, client=client, regeln="x",
+                            nachschlagen=lambda name: {"hinweis": "nichts"})
+    assert len(client.aufrufe) <= berater.NACHSCHLAG_RUNDEN + 1
+    assert client.aufrufe[-1]["tool_choice"] == {"type": "none"}
+    assert antwort.text == "Pakete sind Handelsware."
+
+
+def test_ohne_nachschlagen_kein_werkzeug() -> None:
+    client = FalscherClient()
+    berater.frage({"siedlung": {}}, client=client, regeln="x")
+    assert "tools" not in client.gesehen
+
+
+def test_ein_werkzeugergebnis_wird_wie_der_auszug_geprueft() -> None:
+    """Auch was nachgeschlagen wird, darf kein Bild und keinen Pfad tragen."""
+    client = NachschlagClient()
+    berater.frage({"siedlung": {}}, client=client, regeln="x",
+                  nachschlagen=lambda name: {"bild": "C:/x.png"})
+    ergebnis = client.aufrufe[1]["messages"][-1]["content"][0]
+    assert ergebnis.get("is_error") is True and "C:/x.png" not in ergebnis["content"]
+
+
+def test_der_systemtext_nennt_das_nachschlagen() -> None:
+    assert "nachschlagen(name)" in berater.systemtext()
