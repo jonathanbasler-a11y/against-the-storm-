@@ -297,3 +297,9 @@ def test_nicht_gefundene_felder_gehen_mit(tmp_path: Path) -> None:
         "jahr": 1, "biom": "Royal Woodlands", "lager": {}, "gebaeude": 0,
         "nicht_gefunden": ["storage", "buildings"]})
     assert auszug["siedlung"]["nicht_gefunden"] == ["storage", "buildings"]
+
+
+def test_unlesbare_felder_gehen_mit_ihrer_form_mit() -> None:
+    form = {"storage": "{[Food Raw] Meat: {amount: int}}"}
+    auszug = berater.kontext(zustand={"jahr": 1, "lager": {}, "form_unbekannt": form})
+    assert auszug["siedlung"]["form_unbekannt"] == form

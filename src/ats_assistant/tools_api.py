@@ -115,6 +115,8 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
         # braucht, bleibt stumm. Genau das war auf dem Spielrechner der Fall.
         kennung, _ = watcher.mitschreiben(state, Path(runs_dir), run_id)
     fehlend = [n.field for n in notes if n.how == "fehlt"]
+    # Gefunden, aber in fremder Form -- sieht sonst aus wie ein leeres Lager.
+    unlesbar = {n.field: n.form for n in notes if n.how == "form_unbekannt"}
     out = _zustand_als_dict(state)
     if kennung:
         out["mitschrift"] = kennung
@@ -123,6 +125,8 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
         out["fehlende_dateien"] = fehlende_dateien
     if fehlend:
         out["nicht_gefunden"] = fehlend
+    if unlesbar:
+        out["form_unbekannt"] = unlesbar
     if not out["verfuegbar"]:
         out["grund"] = ("Der Spielstand liess sich lesen, enthaelt aber keine "
                         "Spielzeit. Laeuft gerade eine Siedlung?")

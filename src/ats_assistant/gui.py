@@ -364,10 +364,18 @@ class App:
         # Ein stiller Ausfall ist schlimmer als ein lauter: `lager: {}` sah
         # aus wie ein leeres Lager und war ein nicht gefundenes Feld.
         fehlend = z.get("nicht_gefunden") or []
+        unlesbar = list(z.get("form_unbekannt") or {})
+        saetze = []
         if fehlend:
+            saetze.append("Im Spielstand nicht gefunden: " + ", ".join(fehlend[:6]) + ".")
+        if unlesbar:
+            # Etwas anderes als „fehlt": das Feld ist da, nur in einer Form,
+            # die der Leser nicht kennt. `tools\lage.py form` zeigt sie.
+            saetze.append("Gefunden, aber nicht lesbar: " + ", ".join(unlesbar[:6])
+                          + " (python tools\\lage.py form zeigt den Aufbau).")
+        if saetze:
             self.warnung.configure(
-                text="Im Spielstand nicht gefunden: " + ", ".join(fehlend[:6])
-                     + " – was darauf rechnet, rechnet auf nichts.")
+                text=" ".join(saetze) + " Was darauf rechnet, rechnet auf nichts.")
         self.felder["bevoelkerung"].configure(text=str(z.get("bevoelkerung") or "–"))
         self.felder["feindseligkeit"].configure(
             text=_feindseligkeit(z.get("feindseligkeit")))

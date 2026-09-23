@@ -189,6 +189,7 @@ jedem Lesen, ist der Stand älter als der 22.09.2026 — dann auffrischen.
 | „Spielordner nicht gefunden" | `--save-dir` mitgeben, siehe Schritt 5 |
 | „Kein Verarbeitungsschritt lohnt sich" | Es fehlt die genannte Zutat — oder Rezepte fehlen in `kb.sqlite`, dann `html --write` nachholen |
 | Das Fenster geht nicht auf | `python ats-gui.pyw` in PowerShell starten; meist fehlt tkinter, also Python ohne tcl/tk installiert |
+| „Gefunden, aber nicht lesbar: storage" oder Lager leer, obwohl voll | Das Spiel legt das Feld anders ab als erwartet. `python tools\lage.py form` zeigt den Aufbau (Schlüssel und Typen, keine Mengen) — die Ausgabe in den Chat einfügen |
 | `&&` wird nicht angenommen | Windows PowerShell 5.1 kennt das nicht. Befehle einzeln in je eine Zeile |
 
 ## Prüfen, dass alles steht

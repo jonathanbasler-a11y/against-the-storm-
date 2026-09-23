@@ -92,3 +92,40 @@ def test_nahrung_zeigt_die_ketten(tmp_path: Path, capsys) -> None:
     ausgabe = capsys.readouterr().out
     assert "Smokehouse" in ausgabe
     assert "Meat" in ausgabe
+
+
+def _buendel_mit_fremdem_lager(ordner: Path) -> Path:
+    ordner.mkdir(parents=True, exist_ok=True)
+    (ordner / "Save.save").write_text(json.dumps({
+        "time": 600.0, "year": 1, "season": 2,
+        "storage": {"goods": {"[Food Raw] Berries": {"amount": 16}}},
+        "mainStorage": {"storedGoods": [{"name": "[Food Raw] Berries", "amount": 16}]},
+    }), encoding="utf-8")
+    return ordner
+
+
+def test_lage_sagt_was_nicht_gelesen_wurde(tmp_path: Path, capsys) -> None:
+    """Ich hatte am Spielrechner gesagt, `lage.py` zeige die nicht gefundenen
+    Felder. Es zeigte sie nicht."""
+    db = kleine_basis(tmp_path / "kb.sqlite")
+    ordner = _buendel_mit_fremdem_lager(tmp_path / "save")
+    cli.main(["--save-dir", str(ordner), "--runs", str(tmp_path / "runs"),
+              "--db", str(db), "--sofort"])
+    ausgabe = capsys.readouterr().out
+    assert "nicht gefunden" in ausgabe                 # MetaSave fehlt: biome u. a.
+    assert "nicht lesbar" in ausgabe and "storage" in ausgabe
+
+
+def test_form_zeigt_den_aufbau_ohne_werte(tmp_path: Path, capsys) -> None:
+    ordner = _buendel_mit_fremdem_lager(tmp_path / "save")
+    assert cli.main(["form", "--save-dir", str(ordner), "--sofort"]) == 0
+    ausgabe = capsys.readouterr().out
+    assert "$.storage.goods" in ausgabe and "storedGoods" in ausgabe
+    # Schluesselnamen bleiben -- ob das Spiel nach Warennamen ablegt, ist
+    # genau die Frage. Die Mengen gehen nicht mit.
+    assert "16" not in ausgabe
+
+
+def test_form_ohne_spielstand_kommt_ein_satz(tmp_path: Path, capsys) -> None:
+    assert cli.main(["form", "--save-dir", str(tmp_path / "weg"), "--sofort"]) == 1
+    assert "kein spielstand" in capsys.readouterr().out.lower()

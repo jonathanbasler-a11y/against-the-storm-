@@ -214,8 +214,10 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
         state.reputation = pick(save, idx, "reputation", (), ("reputation",), (int, float))
         state.reputation_to_win = pick(save, idx, "reputation_to_win", (),
                                        ("reputationToWin",), (int, float))
-        state.storage = _normalise_goods(
-            pick(save, idx, "storage", ("storage.goods",), ("goods", "storage", "resources")))
+        raw_storage = pick(save, idx, "storage", ("storage.goods",),
+                           ("goods", "storage", "resources"))
+        state.storage = _normalise_goods(raw_storage)
+        _form_pruefen(notes[-1], raw_storage, state.storage)
         state.goods_trends = _series(
             pick(save, idx, "goods_trends", ("trends.goodsTrends",), ("goodsTrends",), dict))
         state.category_trends = _series(
@@ -233,6 +235,7 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
 
         raw_buildings = pick(save, idx, "buildings", ("buildings.buildings",), ("buildings",))
         state.buildings = _buildings(raw_buildings)
+        _form_pruefen(notes[-1], raw_buildings, state.buildings)
 
     if meta is not None:
         midx = index_keys(meta)
@@ -297,6 +300,11 @@ def parse_prestige(raw: Any) -> int | None:
 
 def _buildings(raw: Any) -> list[Building]:
     out: list[Building] = []
+    # Ein Dictionary nach Kennung ist die naheliegende zweite Form -- aber
+    # nur, wenn jeder Wert ein Eintrag ist. Sonst waeren es Gruppen, und die
+    # zu zaehlen ergaebe eine falsche Zahl statt einer Meldung.
+    if isinstance(raw, dict) and raw and all(isinstance(v, dict) for v in raw.values()):
+        raw = list(raw.values())
     if not isinstance(raw, list):
         return out
     for entry in raw:
@@ -311,6 +319,89 @@ def _buildings(raw: Any) -> list[Building]:
             finished=entry.get("finished") if isinstance(entry.get("finished"), bool) else None,
         ))
     return out
+
+
+def form_skizze(wert: Any, tiefe: int = 3, breite: int = 6) -> str:
+    """Schluessel und Typen, nie Werte: {goods: [12x {Key: str, Value: int}]}."""
+    if isinstance(wert, dict):
+        if not wert:
+            return "{}"
+        if tiefe <= 0:
+            return f"{{{len(wert)} Schlüssel}}"
+        teile = [f"{k}: {form_skizze(v, tiefe - 1, breite)}"
+                 for k, v in list(wert.items())[:breite]]
+        if len(wert) > breite:
+            teile.append(f"… +{len(wert) - breite}")
+        return "{" + ", ".join(teile) + "}"
+    if isinstance(wert, list):
+        if not wert:
+            return "[]"
+        if tiefe <= 0:
+            return f"[{len(wert)}x]"
+        return f"[{len(wert)}x {form_skizze(wert[0], tiefe - 1, breite)}]"
+    return "null" if wert is None else type(wert).__name__
+
+
+def _form_pruefen(note: Resolution, roh: Any, gelesen: Any) -> None:
+    """Gefunden, aber leer gelesen, obwohl etwas da war: das ist eine
+    unbekannte Form, kein leeres Lager. Am 22.09.2026 sah genau das am
+    Spielrechner aus wie `lager: {}` -- ohne jede Meldung."""
+    if gelesen or not roh or note.how == "fehlt":
+        return
+    note.how = "form_unbekannt"
+    note.form = form_skizze(roh)
+
+
+# Die Felder, deren Form am ersten echten Lauf nicht stimmte oder
+# zweifelhaft ist (42 Lichtungen und 5760 Vorkommen nach 600 Sekunden).
+FORM_FELDER = ("storage", "buildings", "glades", "deposits")
+FORM_STICHWORTE = ("goods", "storage", "building", "glade", "resource", "deposit")
+
+
+def formbericht(directory: Path, wait: bool = True, grenze: int = 30) -> list[str]:
+    """Wie das Spiel die fraglichen Felder wirklich ablegt -- zum Einfuegen
+    in den Chat. Nur Pfade, Schluessel und Typen; keine Werte."""
+    directory = Path(directory)
+    if not (directory / "Save.save").exists():
+        return [f"Kein Spielstand unter {directory}."]
+    _, notes = read_state(directory, wait=wait)
+    save = _load(directory / "Save.save")
+    zeilen = ["Gelesen:"]
+    for note in notes:
+        if note.field not in FORM_FELDER:
+            continue
+        zeilen.append(f"  {note.field}: {note.path or '-'} ({note.how})")
+        if note.path and save is not None:
+            wert = _an_pfad(save, note.path)
+            zeilen.append(f"    {form_skizze(wert)}")
+    if save is None:
+        return zeilen
+    idx = index_keys(save)
+    kandidaten = sorted(
+        (pfad, name, idx.counts.get(name, 0), wert)
+        for name, (pfad, wert, _tiefe) in idx.by_name.items()
+        if any(w in name.lower() for w in FORM_STICHWORTE))
+    zeilen.append(f"Kandidaten im Save.save ({len(kandidaten)}):")
+    for pfad, name, anzahl, wert in kandidaten[:grenze]:
+        mal = f" ({anzahl}x)" if anzahl > 1 else ""
+        zeilen.append(f"  {pfad}{mal}: {form_skizze(wert, tiefe=2)}")
+    if len(kandidaten) > grenze:
+        zeilen.append(f"  … und {len(kandidaten) - grenze} weitere")
+    return zeilen
+
+
+def _an_pfad(data: Any, pfad: str) -> Any:
+    """'$.a.b[3].c' zurueck zum Wert -- die Pfade aus `index_keys`."""
+    cur = data
+    for teil in re.findall(r"\.([^.\[]+)|\[(\d+)\]", pfad):
+        schluessel, stelle = teil
+        if schluessel and isinstance(cur, dict):
+            cur = cur.get(schluessel)
+        elif stelle and isinstance(cur, list) and int(stelle) < len(cur):
+            cur = cur[int(stelle)]
+        else:
+            return None
+    return cur
 
 
 def append_run_log(state: GameState, run_id: str, runs_dir: Path = Path("runs")) -> Path:

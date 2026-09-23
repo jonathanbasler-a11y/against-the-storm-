@@ -173,3 +173,86 @@ def test_flachster_fund_gewinnt() -> None:
 def test_praefixe_stapeln_sich() -> None:
     assert strip_prefixes("[SSE] [BIOME] Storm Penalty") == ("Storm Penalty", ["SSE", "BIOME"])
     assert strip_prefixes("Hearth Parts") == ("Hearth Parts", [])
+
+
+# --------------------------------------------------------------------------
+# Gefunden, aber nicht lesbar
+#
+# Am 22.09.2026 kam aus einem Spielstand mit vollem Lagerhaus `lager: {}`
+# und `gebaeude: 0` -- ohne dass `nicht_gefunden` etwas meldete. Die Form
+# `storage.goods` als Liste von Key/Value stammt aus einer Hypothese im
+# Recherchedokument, gemessen wurde sie nie. Findet der Leser das Feld,
+# kennt aber die Form nicht, darf er es nicht still leeren.
+# --------------------------------------------------------------------------
+
+
+def _note(notes, feld):
+    return next(n for n in notes if n.field == feld)
+
+
+def test_lager_in_fremder_form_wird_gemeldet_statt_geleert(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={
+        "storage": {"goods": {"[Food Raw] Meat": {"amount": 42}}}})
+    state, notes = read_state(ordner, wait=False)
+    assert state.storage == {}
+    note = _note(notes, "storage")
+    assert note.how == "form_unbekannt"
+    assert "amount" in note.form                      # die Form steht da ...
+    assert "42" not in note.form                      # ... die Werte nicht
+
+
+def test_ein_wirklich_leeres_lager_ist_kein_formfehler(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"storage": {"goods": []}})
+    _, notes = read_state(ordner, wait=False)
+    assert _note(notes, "storage").how == "pfad"
+
+
+def test_gebaeude_als_dictionary_nach_kennung(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"buildings": {"buildings": {
+        "17": {"model": "Smokehouse", "workers": 2, "finished": True},
+        "18": {"model": "Bakery", "workers": 0, "finished": False}}}})
+    state, notes = read_state(ordner, wait=False)
+    assert [b.model for b in state.buildings] == ["Smokehouse", "Bakery"]
+    assert _note(notes, "buildings").how == "pfad"
+
+
+def test_gebaeude_in_fremder_form_werden_gemeldet(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"buildings": {"buildings": {
+        "houses": [{"model": "Shelter"}], "workshops": [{"model": "Smokehouse"}]}}})
+    state, notes = read_state(ordner, wait=False)
+    assert state.buildings == []
+    note = _note(notes, "buildings")
+    assert note.how == "form_unbekannt" and "houses" in note.form
+
+
+def test_die_gemessene_form_meldet_nichts(tmp_path: Path) -> None:
+    _, notes = read_state(schreibe_buendel(tmp_path), wait=False)
+    assert not [n for n in notes if n.how == "form_unbekannt"]
+
+
+def test_formskizze_zeigt_schluessel_und_typen_aber_keine_werte() -> None:
+    from ats_assistant.save_reader import form_skizze
+    skizze = form_skizze({"goods": [{"Key": "[Food Raw] Meat", "Value": 42}],
+                          "slots": 7, "name": "Hauptlager"})
+    assert "goods" in skizze and "Key" in skizze and "Value" in skizze
+    assert "int" in skizze and "str" in skizze
+    for wert in ("42", "7", "Hauptlager", "Meat"):
+        assert wert not in skizze
+
+
+def test_formskizze_bleibt_kurz() -> None:
+    from ats_assistant.save_reader import form_skizze
+    riesig = {f"feld{i}": {"a": {"b": {"c": {"d": 1}}}} for i in range(500)}
+    assert len(form_skizze(riesig)) < 400
+
+
+def test_formbericht_nennt_pfad_und_kandidaten(tmp_path: Path) -> None:
+    from ats_assistant.save_reader import formbericht
+    ordner = schreibe_buendel(tmp_path, save={
+        "storage": {"goods": {"[Food Raw] Meat": {"amount": 42}}},
+        "mainStorage": {"storedGoods": [{"name": "[Food Raw] Meat", "amount": 42}]}})
+    text = "\n".join(formbericht(ordner, wait=False))
+    assert "storage" in text and "form_unbekannt" in text
+    assert "$.storage.goods" in text
+    assert "storedGoods" in text                      # der Kandidat, den es wohl ist
+    assert "42" not in text
