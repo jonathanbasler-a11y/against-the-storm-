@@ -31,6 +31,14 @@ verknüpft ist.
 Wenn das Fenster kommentarlos nicht aufgeht: `python ats-gui.pyw` einmal in
 PowerShell starten — dort steht der Grund.
 
+## Aktualisieren
+
+Der Knopf „Aktualisieren“ unten rechts holt die neue Version
+(`git pull --ff-only`) und fragt, ob das Fenster neu starten soll — ohne
+Konsole. Ist lokal etwas geändert, bricht git ab und der Grund steht in der
+Statuszeile. Neue Python-Pakete holt der Knopf nicht; dafür bleibt
+`pip install` in PowerShell.
+
 ## Was drin ist
 
 | Reiter | |

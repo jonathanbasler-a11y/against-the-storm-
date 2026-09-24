@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from . import berater, lernen, save_reader, tools_api
+from . import aktualisieren, berater, lernen, save_reader, tools_api
 from .mcp_server import lage as umgebungslage
 from .watcher import _signatur
 
@@ -206,6 +206,10 @@ class Rechner(threading.Thread):
             self.ausgang.put(("korrektur", lernen.korrektur_merken(
                 self._korrekturpfad(), auftrag.daten.get("aussage") or "",
                 auftrag.daten.get("korrektur") or "")))
+        elif auftrag.art == "aktualisieren":
+            # Im Arbeits-Thread: git spricht mit dem Netz, das Fenster soll
+            # dabei nicht einfrieren.
+            self.ausgang.put(("aktualisiert", aktualisieren.aktualisieren()))
         elif auftrag.art == "laeufe":
             berichte = lernen.berichte(self.runs_dir, self._historie())
             self.ausgang.put(("laeufe", {"berichte": berichte,

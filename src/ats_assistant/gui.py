@@ -26,7 +26,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
 
-from . import berater, screen
+from . import aktualisieren, berater, screen
 from .mcp_server import aufloesen
 from .orte import finde_spielordner
 from .rechner import (ABHOLEN_MS, Rechner, alter as _alter,
@@ -203,6 +203,8 @@ class App:
         self.status_alles = ""
         # Was nicht in die Zeile passt, steht im Kurzhinweis.
         self.status.bind("<Enter>", self._status_hinweis)
+        ttk.Button(leiste, text="Aktualisieren",
+                   command=self._aktualisieren).pack(side="right", padx=(6, 0))
         ttk.Button(leiste, text="Neu lesen",
                    command=lambda: self.rechner.bitte("lage")).pack(side="right")
         self.suche = ttk.Entry(leiste, width=22)
@@ -480,6 +482,25 @@ class App:
                            korrektur=korrektur)
         self.korrektur.set("")
 
+    def _aktualisieren(self) -> None:
+        self.status.configure(text="wird aktualisiert …")
+        self.rechner.bitte("aktualisieren")
+
+    def _neustart_fragen(self, text: str) -> bool:
+        from tkinter import messagebox
+        return messagebox.askyesno("Against the Storm – Assistent",
+                                   f"{text}\n\nJetzt neu starten?")
+
+    def _nach_aktualisieren(self, wert: dict) -> None:
+        text = wert.get("text") or ""
+        self.status.configure(text=text[:150])
+        self.status_alles = text
+        # Ohne Rueckfrage kein Neustart: eine laufende Frage an den Rat soll
+        # nicht abbrechen.
+        if wert.get("ok") and wert.get("neu") and self._neustart_fragen(text):
+            aktualisieren.neu_starten()
+            self._schliessen()
+
     def _schliessen(self) -> None:
         self.rechner.stoppen()
         self.root.destroy()
@@ -570,6 +591,8 @@ class App:
             else:
                 fuss = ""
             self.rat_fuss.configure(text=fuss)
+        elif art == "aktualisiert":
+            self._nach_aktualisieren(wert or {})
         elif art == "korrektur":
             self.rat_fuss.configure(
                 text=f"Gemerkt, gilt ab der nächsten Frage: {wert.get('korrektur', '')}")

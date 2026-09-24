@@ -743,3 +743,51 @@ def test_ist_die_wahl_vorbei_verschwindet_der_hinweis(gui, tmp_path: Path) -> No
     app.zustand = {"mitschrift": "lauf"}
     app._anzeigen("anmeldung", False)
     assert app._warn_bauplan == ""
+
+
+# --------------------------------------------------------------------------
+# Runde 13: Knopf „Aktualisieren“
+# --------------------------------------------------------------------------
+
+
+def _neustart_beobachten(app, monkeypatch, antwort: bool):
+    passiert = []
+    app._neustart_fragen = lambda text: passiert.append(("gefragt", text)) or antwort
+    monkeypatch.setattr(gui_modul(app).aktualisieren, "neu_starten",
+                        lambda: passiert.append(("neu_gestartet",)))
+    app._schliessen = lambda: passiert.append(("geschlossen",))
+    return passiert
+
+
+def gui_modul(app):
+    return sys.modules[type(app).__module__]
+
+
+def test_der_knopf_bittet_um_aktualisieren(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app._aktualisieren()
+    assert app.rechner.gebeten[-1][0] == "aktualisieren"
+
+
+def test_neue_version_mit_ja_startet_neu(gui, tmp_path: Path, monkeypatch) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    passiert = _neustart_beobachten(app, monkeypatch, antwort=True)
+    app._anzeigen("aktualisiert", {"ok": True, "neu": True, "text": "Neue Version geladen (abc1234)."})
+    assert [p[0] for p in passiert] == ["gefragt", "neu_gestartet", "geschlossen"]
+
+
+def test_neue_version_mit_nein_bleibt(gui, tmp_path: Path, monkeypatch) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    passiert = _neustart_beobachten(app, monkeypatch, antwort=False)
+    app._anzeigen("aktualisiert", {"ok": True, "neu": True, "text": "Neue Version geladen."})
+    assert [p[0] for p in passiert] == ["gefragt"]
+
+
+def test_ohne_neue_version_oder_mit_fehler_keine_frage(gui, tmp_path: Path, monkeypatch) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    passiert = _neustart_beobachten(app, monkeypatch, antwort=True)
+    app._anzeigen("aktualisiert", {"ok": True, "neu": False, "text": "Schon aktuell (abc1234)."})
+    app._anzeigen("aktualisiert", {"ok": False, "neu": False,
+                                   "text": "git pull ging nicht: local changes"})
+    assert passiert == []
+    assert "local changes" in app.status_alles

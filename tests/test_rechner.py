@@ -348,3 +348,13 @@ def test_die_laeufe_werden_ausgewertet(tmp_path: Path) -> None:
     art, wert = ausgang.get_nowait()
     assert art == "laeufe" and wert["berichte"][0]["kennung"] == "lauf"
     assert wert["lehren"]
+
+
+def test_aktualisieren_laeuft_im_arbeits_thread(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(rechner.aktualisieren, "aktualisieren",
+                        lambda: {"ok": True, "neu": False, "text": "Schon aktuell (abc1234)."})
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(tmp_path, tmp_path / "runs", tmp_path / "kb.sqlite", ausgang)
+    r._ausfuehren(rechner.Auftrag("aktualisieren"))
+    art, wert = ausgang.get_nowait()
+    assert art == "aktualisiert" and wert["ok"] is True
