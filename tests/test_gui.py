@@ -62,9 +62,10 @@ def gui(monkeypatch):
     for name in ("Tk", "Text", "Toplevel", "Frame", "Label", "Button", "Entry"):
         setattr(tk, name, Egal)
     tk.StringVar = Variable
+    tk.BooleanVar = Variable
     tk.ttk = ttk
     for name in ("Notebook", "Frame", "Label", "Button", "Entry", "Progressbar",
-                 "Treeview", "Radiobutton", "Combobox"):
+                 "Treeview", "Radiobutton", "Combobox", "Checkbutton"):
         setattr(ttk, name, Egal)
 
     monkeypatch.setitem(sys.modules, "tkinter", tk)
@@ -680,3 +681,65 @@ def test_statistik_steht_in_der_lage(gui, tmp_path: Path) -> None:
     app._zeige_zustand({"jahr": 1, "statistik": {"hunger": 2, "gegangen": 0, "tot": 0},
                         "lichtungen": 3})
     assert gesetzt["text"] == "Hunger 2× · 0 gegangen · 0 tot · 3 Lichtungen"
+
+
+# --------------------------------------------------------------------------
+# Runde 11: Bauplanwahl automatisch
+# --------------------------------------------------------------------------
+
+VERGLEICH = [{"gebaeude": "Stamping Mill", "gebaeude_de": "Pochwerk", "besser_oder_neu": 1,
+              "nahrung": 0, "zutaten_im_lager": True, "waren": [
+                  {"ware": "Bricks", "ware_de": "Ziegel", "sterne": 2, "besser": False,
+                   "bisher": {"sterne": 2, "gebaeude": "Workshop", "gebaeude_de": "Werkstatt",
+                              "status": "baubar"},
+                   "zutaten": [{"ware": "Clay", "ware_de": "Lehm", "im_lager": 58}]},
+                  {"ware": "Copper Bar", "ware_de": "Kupferbarren", "sterne": 2,
+                   "besser": True, "bisher": None}]}]
+
+
+def _mit_wahl(app, angebot=("Stamping Mill", "Rain Mill"), wahl_id=7):
+    app.zustand = {"mitschrift": "lauf", "bauplan_wahl": {"angebot": list(angebot),
+                                                          "id": wahl_id}}
+    app.wissen = {"bauplan_vergleich": VERGLEICH}
+    geschrieben: list[str] = []
+    app._schreiben = lambda feld, text: geschrieben.append(text)
+    return geschrieben
+
+
+def test_eine_neue_bauplanwahl_fragt_genau_einmal(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    geschrieben = _mit_wahl(app)
+    app._anzeigen("anmeldung", True)
+    app._anzeigen("anmeldung", True)                 # derselbe Durchgang noch einmal
+    gefragt = [d for art, d in app.rechner.gebeten if art == "rat"]
+    assert len(gefragt) == 1 and gefragt[0]["automatisch"] is True
+    assert "Baupläne" in gefragt[0]["frage"]
+    tabelle = next(t for t in geschrieben if t.startswith("Bauplanwahl"))
+    assert "Ziegel ★★ – bisher ★★ (Werkstatt, freigeschaltet)" in tabelle
+    assert "↑ Kupferbarren ★★ – neu" in tabelle
+    assert "Pochwerk" in app._warn_bauplan
+    # Neu gewürfelt: anderes Angebot, neue Wahl.
+    app.zustand["bauplan_wahl"]["angebot"] = ["Kiln", "Workshop"]
+    app._anzeigen("anmeldung", True)
+    assert len([1 for art, _ in app.rechner.gebeten if art == "rat"]) == 2
+
+
+def test_ohne_anmeldung_oder_haekchen_nur_die_tabelle(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    geschrieben = _mit_wahl(app)
+    app._anzeigen("anmeldung", False)
+    app.bauplan_auto = Variable(value=False)
+    _mit_wahl(app, wahl_id=8)
+    app._anzeigen("anmeldung", True)
+    assert not [1 for art, _ in app.rechner.gebeten if art == "rat"]
+    assert any(t.startswith("Bauplanwahl") for t in geschrieben)
+
+
+def test_ist_die_wahl_vorbei_verschwindet_der_hinweis(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    _mit_wahl(app)
+    app._anzeigen("anmeldung", False)
+    assert app._warn_bauplan
+    app.zustand = {"mitschrift": "lauf"}
+    app._anzeigen("anmeldung", False)
+    assert app._warn_bauplan == ""

@@ -252,3 +252,15 @@ def test_der_auswahlreiter_kennt_auftraege(app) -> None:
     werte = {str(w.cget("value")) for w in _alle_widgets(app.root)
              if w.winfo_class() == "TRadiobutton"}
     assert {"effect", "building", "order"} <= werte
+
+
+def test_bauplanwahl_mit_echtem_tk(app) -> None:
+    app.rechner.bitte = lambda art, **d: None
+    assert app.bauplan_auto.get() is True
+    app.zustand = {"mitschrift": "x", "bauplan_wahl": {"angebot": ["Kiln"], "id": 1}}
+    app.wissen = {"bauplan_vergleich": [{"gebaeude": "Kiln", "gebaeude_de": "Brennofen",
+                                         "besser_oder_neu": 1, "nahrung": 0, "waren": [
+                                             {"ware": "Coal", "ware_de": "Kohle", "sterne": 3,
+                                              "besser": True, "bisher": None}]}]}
+    app._anzeigen("anmeldung", False)
+    assert "Kohle ★★★ – neu" in app.auswahl_text.get("1.0", "end")

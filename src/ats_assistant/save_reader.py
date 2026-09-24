@@ -240,6 +240,8 @@ def _bauplanwahl(wahl: Any, belohnung: dict) -> dict[str, Any]:
     out = {"angebot": namen,
            "neu_wuerfeln": belohnung.get("currentRerolls"),
            "joker": wahl.get("isWild")}
+    if _zahl(wahl.get("id")) is not None:
+        out["id"] = wahl["id"]                # gemessen: `id: int` -- erkennt eine neue Wahl
     if saetze:
         out["satz"] = sorted(set(saetze))
     return out

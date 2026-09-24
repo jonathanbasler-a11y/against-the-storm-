@@ -635,3 +635,11 @@ def test_ohne_abweichung_gibt_es_keinen_eintrag(tmp_path: Path) -> None:
                                                           "hungerMultiplier": 1}})
     state, _ = read_state(ordner, wait=False)
     assert "abweichungen" not in state.effects
+
+
+
+def test_die_bauplanwahl_traegt_ihre_id(tmp_path: Path) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"reputationRewards": {"currentPick": {
+        "isWild": False, "id": 42, "options": [{"building": "Kiln", "set": "S"}]}}})
+    state, _ = read_state(ordner, wait=False)
+    assert state.blueprint_pick["id"] == 42

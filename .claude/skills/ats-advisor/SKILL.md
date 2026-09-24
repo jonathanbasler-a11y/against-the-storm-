@@ -59,6 +59,11 @@ Bonus überhaupt greift.
   dem Spielstand (je Option das Gebäude; `satz` ist ein ungedeuteter
   Rohwert). Es gilt vor einer Bildschirmlesung unter `auswahl`. Deutsche
   Namen stehen unter `namen_de`.
+- **`bauplan_vergleich`** stellt je angebotenem Bauplan jede Ware mit ihren
+  Sternen gegen `bisher`: die besten Sterne eines Gebäudes, das steht **oder
+  schon freigeschaltet ist**. Eine Ware mit `besser: false` kann die Siedlung
+  schon gleich gut herstellen — sie ist kein Grund für diesen Bauplan. Bei den
+  Zutaten steht, wie viel im Lager ist; `nahrung` ist die Sättigung.
 - **`statistik`** sind Summen seit Siedlungsbeginn aus dem Reiter
   „Stadtstatistiken" im Hauptlager: produziert und verbraucht je Ware,
   `hunger` (Hungerereignisse), `gegangen`, `tot`, Zysten. Steigt `hunger`

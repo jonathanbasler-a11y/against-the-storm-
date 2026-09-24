@@ -248,7 +248,9 @@ class Rechner(threading.Thread):
         if not lauf or not text:
             return
         satz = erster_satz(text)
-        if daten.get("frage"):
+        if daten.get("automatisch"):
+            satz += " (automatisch zur Bauplanwahl)"
+        elif daten.get("frage"):
             satz += f" (Frage: {str(daten['frage'])[:200]})"
         try:
             tools_api.log_event(satz, self.runs_dir, run_id=lauf, art="rat",
@@ -278,6 +280,8 @@ class Rechner(threading.Thread):
         self._merken(daten, antwort.text)
         kosten = antwort.kosten_cent
         fuss = f"{antwort.modell}"
+        if daten.get("automatisch"):
+            fuss = f"automatisch zur Bauplanwahl · {fuss}"
         if kosten is not None:
             fuss += f", rund {kosten:.1f} Cent"
         if antwort.runden > 1:
