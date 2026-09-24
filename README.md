@@ -43,6 +43,7 @@ mit `git pull`, die Arbeit kommt per Squash-Merge herein.
 
 ```powershell
 python ats-gui.pyw   # das Fenster neben dem Spiel
+python tools\verknuepfung.py   # einmalig: Verknüpfung auf Desktop und Startmenü
 ats-watch            # läuft mit und schreibt jeden Zustand mit
 ats-mcp              # MCP-Server für Claude Code
 ```
