@@ -104,8 +104,8 @@ python ats-gui.pyw
 ```
 
 Die Endung ist der Punkt: Windows startet `.pyw` mit `pythonw.exe`, also
-**ohne Konsolenfenster daneben**. Auf den Desktop legen: Rechtsklick auf
-`ats-gui.pyw` → *Senden an* → *Desktop (Verknüpfung erstellen)*.
+**ohne Konsolenfenster daneben**. Auf den Desktop und ins Startmenü legen:
+`python tools\verknuepfung.py` (siehe [APP.md](APP.md)).
 
 Fehlt tkinter, sagt der Starter das in einem eigenen kleinen Fenster — ohne
 Konsole sähe sonst niemand den Grund. Bleibt es aus anderen Gründen zu, einmal

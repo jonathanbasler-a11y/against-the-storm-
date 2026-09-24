@@ -13,8 +13,20 @@ Die Endung ist der Punkt: Windows startet `.pyw` mit `pythonw.exe`, also
 
 ## Auf den Desktop legen
 
-Rechtsklick auf `ats-gui.pyw` → *Senden an* → *Desktop (Verknüpfung erstellen)*.
-Danach genügt ein Doppelklick.
+```powershell
+python tools\verknuepfung.py
+```
+
+Legt „ATS Assistent“ auf den Desktop und ins Startmenü. Die Verknüpfung
+zeigt auf `pythonw.exe` neben genau dem Python, das den Befehl ausführt —
+nicht auf den Platzhalter aus dem Microsoft Store (`…\WindowsApps\python.exe`),
+den `Get-Command python` oft findet. Mit `--nur-desktop` nur auf den Desktop,
+mit `--testen` startet das Fenster gleich einmal. Danach: Rechtsklick auf die
+Verknüpfung → *An Taskleiste anheften*.
+
+Ohne Skript: Rechtsklick auf `ats-gui.pyw` → *Senden an* → *Desktop
+(Verknüpfung erstellen)*. Das geht nur, wenn `.pyw` bei dir mit Python
+verknüpft ist.
 
 Wenn das Fenster kommentarlos nicht aufgeht: `python ats-gui.pyw` einmal in
 PowerShell starten — dort steht der Grund.
