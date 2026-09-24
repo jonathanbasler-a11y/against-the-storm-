@@ -110,6 +110,42 @@ def _laeufe_text(wert: dict) -> str:
     return "\n".join(zeilen)
 
 
+def _sterne(n) -> str:
+    return "★" * n if isinstance(n, int) and n > 0 else "☆0"
+
+
+def _bauplan_text(wahl: dict, vergleich: list[dict], gespeichert: str = "") -> str:
+    """Die Vergleichstabelle zur Bauplanwahl -- Fakten, kein Urteil."""
+    kopf = "Bauplanwahl aus dem Spielstand" + (f" ({gespeichert})" if gespeichert else "")
+    zeilen = [kopf, ""]
+    if not vergleich:
+        zeilen.append("Angeboten: " + ", ".join(wahl.get("angebot") or []))
+        zeilen.append("Zu diesen Gebäuden kennt die Wissensbasis keine Rezepte.")
+    for g in vergleich:
+        teile = [f"{g['besser_oder_neu']} besser/neu"]
+        if g.get("nahrung"):
+            teile.append(f"{g['nahrung']} Nahrung")
+        if g.get("zutaten_im_lager") is False:
+            teile.append("nicht alle Zutaten im Lager")
+        zeilen.append(f"{g.get('gebaeude_de') or g['gebaeude']} – " + ", ".join(teile))
+        for w in g.get("waren") or []:
+            b = w.get("bisher")
+            if b:
+                wo = b.get("gebaeude_de") or b.get("gebaeude")
+                frei = ", freigeschaltet" if b.get("status") == "baubar" else ""
+                vorher = f"bisher {_sterne(b.get('sterne'))} ({wo}{frei})"
+            else:
+                vorher = "neu"
+            pfeil = "↑" if w.get("besser") else "="
+            zutaten = ", ".join(f"{z['ware_de']} {z['im_lager']:g}"
+                                for z in w.get("zutaten") or [])
+            essen = f" · Nahrung {w['nahrung']:g}" if w.get("nahrung") else ""
+            zeilen.append(f"  {pfeil} {w['ware_de']} {_sterne(w.get('sterne'))} – "
+                          f"{vorher}{essen}" + (f" · Lager: {zutaten}" if zutaten else ""))
+        zeilen.append("")
+    return "\n".join(zeilen).rstrip()
+
+
 def _herkunft(a: dict) -> str:
     """Welcher Weg diese Zeilen geliefert hat.
 
@@ -285,6 +321,10 @@ class App:
         ttk.Button(unten, text="Stimmt nicht",
                    command=self._korrektur_senden).pack(side="left")
         self.rat_letzte = ""
+        # Einmal je neuer Bauplanwahl im Spielstand von selbst fragen.
+        self.bauplan_auto = tk.BooleanVar(value=True)
+        ttk.Checkbutton(rahmen, text="Bauplanwahl automatisch fragen",
+                        variable=self.bauplan_auto).pack(anchor="w", pady=(4, 0))
 
     def _reiter_laeufe(self) -> None:
         rahmen = ttk.Frame(self.reiter, padding=12)
@@ -370,14 +410,47 @@ class App:
         if versteckt:
             self.root.deiconify()
 
-    def _rat_holen(self) -> None:
-        self._schreiben(self.rat_text, "wird gefragt …")
-        self.rechner.bitte("rat", zustand=self.zustand, nahrung=self.nahrung,
-                           ungeduld=self.ungeduld, auswahl=self.auswahl,
-                           ketten=getattr(self, "nahrungsrat", None),
-                           wissen=getattr(self, "wissen", None),
-                           frage=self.rat_frage.get().strip() or None,
-                           modell=self.modell.get())
+    def _rat_holen(self, frage: str | None = None, automatisch: bool = False) -> None:
+        self._schreiben(self.rat_text, "wird gefragt …" if not automatisch
+                        else "Neue Bauplanwahl – der Rat wird gefragt …")
+        daten = dict(zustand=self.zustand, nahrung=self.nahrung,
+                     ungeduld=self.ungeduld, auswahl=self.auswahl,
+                     ketten=getattr(self, "nahrungsrat", None),
+                     wissen=getattr(self, "wissen", None),
+                     frage=frage or self.rat_frage.get().strip() or None,
+                     modell=self.modell.get())
+        if automatisch:
+            daten["automatisch"] = True
+        self.rechner.bitte("rat", **daten)
+
+    def _bauplan_pruefen(self) -> None:
+        """Eine neue Bauplanwahl im Spielstand: Vergleich zeigen, einmal fragen.
+
+        Ausgeloest von `anmeldung`, der letzten Meldung eines Lage-Durchgangs
+        -- dann sind Zustand, Ketten und Wissen da, und es ist klar, ob der
+        Rat ueberhaupt fragen kann. Neu ist eine Wahl ueber Siedlung, id und
+        Angebot; ein Neuwuerfeln ist damit eine neue Wahl.
+        """
+        z = getattr(self, "zustand", None) or {}
+        wahl = z.get("bauplan_wahl") or {}
+        if not wahl.get("angebot"):
+            if getattr(self, "_warn_bauplan", ""):
+                self._warn_bauplan = ""
+                self._warnung_zeigen()
+            return
+        schluessel = (z.get("mitschrift"), wahl.get("id"), tuple(wahl["angebot"]))
+        if schluessel == getattr(self, "_bauplan_schluessel", None):
+            return
+        self._bauplan_schluessel = schluessel
+        vergleich = (getattr(self, "wissen", None) or {}).get("bauplan_vergleich") or []
+        gespeichert = _alter(z.get("gespeichert"), "gespeichert") if z.get("gespeichert") else ""
+        self._schreiben(self.auswahl_text, _bauplan_text(wahl, vergleich, gespeichert))
+        namen = [v.get("gebaeude_de") or v["gebaeude"] for v in vergleich] or wahl["angebot"]
+        self._warn_bauplan = f"Bauplanwahl offen: {' / '.join(namen)} – Vergleich unter „Auswahl“"
+        self._warnung_zeigen()
+        if self.bauplan_auto.get() and getattr(self, "_anmeldung", None) is True:
+            self._rat_holen(frage="Welchen der angebotenen Baupläne soll ich nehmen?",
+                            automatisch=True)
 
     def _lage_kopieren(self) -> None:
         import json
@@ -478,10 +551,12 @@ class App:
         elif art == "nachschlag":
             self._zeige_nachschlag(wert)
         elif art == "anmeldung":
+            self._anmeldung = wert
             # Nur solange noch nichts Besseres dasteht: nach einer Antwort
             # gehoert dort deren Fusszeile hin, nicht wieder ein Hinweis.
             if not getattr(self, "_rat_gefragt", False):
                 self.rat_fuss.configure(text=_anmeldehinweis(wert))
+            self._bauplan_pruefen()
         elif art == "rat":
             # Erst eine echte Antwort ersetzt den Anmeldehinweis; nach einer
             # gescheiterten darf ein spaeter gesetzter Schluessel ihn loeschen.
@@ -563,7 +638,8 @@ class App:
         ueberschrieb die Nahrung im selben Durchgang, was der Zustand sagte."""
         teile = [t for t in (getattr(self, "_warn_zustand", ""),
                              getattr(self, "_warn_nahrung", ""),
-                             getattr(self, "_warn_trends", "")) if t]
+                             getattr(self, "_warn_trends", ""),
+                             getattr(self, "_warn_bauplan", "")) if t]
         self.warnung.configure(text="  ·  ".join(teile))
 
     def _zeige_zustand(self, z: dict) -> None:

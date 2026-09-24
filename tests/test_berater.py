@@ -614,3 +614,12 @@ def test_abweichende_effekte_gehen_an_den_rat() -> None:
     assert len(auszug["siedlung"]["effekte"]["abweichungen"]) == len(alle)
     berater.pruefe_auszug(auszug)
     assert "effekte.abweichungen" in " ".join(berater.systemtext().split())
+
+
+
+def test_der_bauplanvergleich_geht_an_den_rat() -> None:
+    vergleich = [{"gebaeude": "Kiln", "besser_oder_neu": 1, "waren": [
+        {"ware": "Coal", "sterne": 3, "besser": True, "bisher": None}]}]
+    auszug = berater.kontext(zustand={"jahr": 1}, wissen={"bauplan_vergleich": vergleich})
+    assert auszug["bauplan_vergleich"] == vergleich
+    assert "bauplan_vergleich" in " ".join(berater.systemtext().split())

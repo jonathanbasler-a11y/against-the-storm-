@@ -705,8 +705,9 @@ def test_get_state_liest_die_bauplanwahl_aus_dem_spielstand(tmp_path: Path) -> N
             {"building": "Foragers' Camp", "cost": 0},
             {"building": "Smokehouse", "cost": 0}]}})
     out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
+    # `id` erkennt eine neue Wahl (Runde 11).
     assert out["bauplan_wahl"] == {"angebot": ["Foragers' Camp", "Smokehouse"],
-                                   "neu_wuerfeln": 1, "joker": False}
+                                   "neu_wuerfeln": 1, "joker": False, "id": 3}
 
 
 def test_ohne_offene_bauplanwahl_kein_feld(tmp_path: Path) -> None:
@@ -888,3 +889,48 @@ def test_angebotene_bauplaene_kommen_mit_rezepten_in_den_auszug(tmp_path: Path) 
                            "Kiln": ofen}}
     auszug = berater.kontext(zustand={"jahr": 1}, wissen=wissen)
     assert next(iter(auszug["gebaeude_wissen"])) == "Kiln"     # nicht weggekappt
+
+
+
+def test_der_bauplanvergleich_kennt_freigeschaltetes(tmp_path: Path) -> None:
+    """Am 23.09.2026: Pochwerk mit Ziegeln ★★ angeboten, die Werkstatt (Ziegel
+    ★★) war aus dem vorigen Pick schon freigeschaltet, aber nicht gebaut."""
+    save_dir = _mit(buendel(tmp_path / "save"),
+                    goods={"goods": {"goods": [{"name": "[Mat Raw] Clay", "amount": 58},
+                                               {"name": "[Food Raw] Insects", "amount": 3}]}},
+                    content={"buildings": ["Workshop"]},
+                    buildings={"workshops": [{"model": "Crude Workstation"}]},
+                    reputationRewards={"currentPick": {"id": 3, "options": [
+                        {"building": "Stamping Mill", "set": "S"},
+                        {"building": "Kiln", "set": "S"}]}})
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    for produkt, gebaeude, sterne in (("Bricks", "Crude Workstation", 0),
+                                      ("Bricks", "Workshop", 2),
+                                      ("Bricks", "Stamping Mill", 2),
+                                      ("Copper Bar", "Stamping Mill", 2),
+                                      ("Coal", "Kiln", 3), ("Jerky", "Kiln", 1)):
+        conn.execute("INSERT INTO production (product, building, stars) VALUES (?, ?, ?)",
+                     (produkt, gebaeude, sterne))
+    conn.execute("INSERT INTO recipes (building, inputs, stars, product) VALUES "
+                 "('Stamping Mill', ?, 2, 'Bricks')",
+                 (json.dumps([[{"menge": 2, "ware": "Stone"}, {"menge": 3, "ware": "Clay"}]]),))
+    conn.execute("INSERT INTO resources (en, save_id, eatable, eating_fullness) VALUES "
+                 "('Jerky', '[Food Processed] Jerky', 1, 2.0)")
+    conn.execute("INSERT INTO resources (en, save_id) VALUES ('Clay', '[Mat Raw] Clay')")
+    conn.commit()
+    conn.close()
+    vergleich = {v["gebaeude"]: v for v in
+                 tools_api.lage_wissen(runs, db, run_id="lauf")["bauplan_vergleich"]}
+    muehle = {w["ware"]: w for w in vergleich["Stamping Mill"]["waren"]}
+    assert muehle["Bricks"]["besser"] is False
+    assert muehle["Bricks"]["bisher"]["gebaeude"] == "Workshop"
+    assert muehle["Bricks"]["bisher"]["status"] == "baubar"
+    assert muehle["Bricks"]["zutaten"][0]["ware"] == "Clay"          # größter Bestand
+    assert muehle["Bricks"]["zutaten"][0]["im_lager"] == 58
+    assert muehle["Copper Bar"]["besser"] is True and muehle["Copper Bar"]["bisher"] is None
+    assert vergleich["Stamping Mill"]["besser_oder_neu"] == 1
+    ofen = {w["ware"]: w for w in vergleich["Kiln"]["waren"]}
+    assert ofen["Jerky"]["nahrung"] == 2.0 and vergleich["Kiln"]["nahrung"] == 1

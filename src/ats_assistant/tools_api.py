@@ -533,6 +533,70 @@ def query_kb(name: str, entity: str | None = None, db: str | Path = "kb.sqlite")
         conn.close()
 
 
+def _bauplan_vergleich(conn, aktuell: dict, verfuegbar: dict[str, str],
+                       namen: dict[str, str]) -> list[dict]:
+    """Je angebotenem Bauplan: was er herstellt, gegen das, was schon da ist.
+
+    Sehen, nicht urteilen: Sterne des Angebots gegen die besten Sterne eines
+    Gebaeudes, das steht *oder freigeschaltet ist* -- am 23.09.2026 bot das
+    Spiel ein Pochwerk mit Ziegeln ★★ an, waehrend die Werkstatt (Ziegel ★★)
+    aus dem vorigen Pick schon freigeschaltet war. Dazu je Zutatengruppe die
+    Alternative mit dem groessten Lagerbestand und ob die Ware essbar ist.
+    """
+    angebot = [n for n in (aktuell.get("blueprint_pick") or {}).get("angebot") or []
+               if isinstance(n, str)]
+    if not angebot:
+        return []
+    je_schluessel = {nahrung._schluessel(n): (n, st) for n, st in (verfuegbar or {}).items()}
+    bisher: dict[str, dict] = {}
+    for r in conn.execute("SELECT product, building, stars FROM production"):
+        treffer = je_schluessel.get(nahrung._schluessel(r["building"]))
+        if treffer is None:
+            continue
+        ware = str(r["product"]).casefold()
+        sterne = r["stars"] or 0
+        if ware not in bisher or sterne > bisher[ware]["sterne"]:
+            bisher[ware] = {"sterne": sterne, "gebaeude": treffer[0],
+                            "gebaeude_de": namen.get(treffer[0]), "status": treffer[1]}
+    lager = nahrung._bestand_auf_waren(conn, aktuell.get("storage") or {})
+    lager_klein = {k.casefold(): v for k, v in lager.items()}
+    essbar = {r["en"].casefold(): r["eating_fullness"] for r in conn.execute(
+        "SELECT en, eating_fullness FROM resources WHERE eatable = 1") if r["en"]}
+
+    out = []
+    for name in angebot:
+        waren = []
+        for rezept in _rezepte(conn, gebaeude=name):
+            ware = rezept["produkt"]
+            sterne = rezept.get("sterne") or 0
+            vorher = bisher.get(str(ware).casefold())
+            zeile: dict[str, Any] = {"ware": ware, "ware_de": namen.get(ware, ware),
+                                     "sterne": sterne,
+                                     "bisher": {k: v for k, v in (vorher or {}).items()
+                                                if v is not None} or None,
+                                     "besser": vorher is None or sterne > vorher["sterne"]}
+            zutaten = []
+            for gruppe in rezept.get("zutaten") or []:
+                beste = max(gruppe, key=lambda z: lager_klein.get(str(z["ware"]).casefold(), 0))
+                zutaten.append({"ware": beste["ware"],
+                                "ware_de": namen.get(beste["ware"], beste["ware"]),
+                                "je_durchlauf": beste.get("menge"),
+                                "im_lager": lager_klein.get(str(beste["ware"]).casefold(), 0)})
+            if zutaten:
+                zeile["zutaten"] = zutaten
+            if str(ware).casefold() in essbar:
+                zeile["nahrung"] = essbar[str(ware).casefold()]
+            waren.append(zeile)
+        out.append({
+            "gebaeude": name, "gebaeude_de": namen.get(name),
+            "besser_oder_neu": sum(1 for w in waren if w["besser"]),
+            "nahrung": sum(1 for w in waren if "nahrung" in w),
+            "zutaten_im_lager": all(z["im_lager"] > 0 for w in waren
+                                    for z in w.get("zutaten", [])) if waren else None,
+            "waren": waren})
+    return out
+
+
 @_wall
 def lage_wissen(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
                 run_id: str | None = None) -> dict:
@@ -621,6 +685,8 @@ def lage_wissen(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
                                       for r in rezepte]
             eintrag.pop("erzeugnisse", None)       # stehen in `rezepte`
             gebaeude[name] = {k: v for k, v in eintrag.items() if v is not None}
+
+        vergleich = _bauplan_vergleich(conn, aktuell, verfuegbar, namen)
     finally:
         conn.close()
 
@@ -649,8 +715,11 @@ def lage_wissen(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
         de = namen.get(name) or namen.get(strip_prefixes(name)[0])
         if de and de != name:
             namen_de[name] = de
-    return {"verfuegbar": True, "quelle": quelle, "waren": waren,
-            "gebaeude": gebaeude, "trends": trends, "namen_de": namen_de}
+    out = {"verfuegbar": True, "quelle": quelle, "waren": waren,
+           "gebaeude": gebaeude, "trends": trends, "namen_de": namen_de}
+    if vergleich:
+        out["bauplan_vergleich"] = vergleich
+    return out
 
 
 @_wall

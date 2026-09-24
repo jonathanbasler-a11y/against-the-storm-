@@ -195,6 +195,10 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
         if wissen.get("trends") and (wissen["trends"].get("fallend")
                                      or wissen["trends"].get("steigend")):
             auszug["trends"] = wissen["trends"]
+        if wissen.get("bauplan_vergleich"):
+            # Je angebotenem Bauplan: Sterne gegen das, was steht oder
+            # freigeschaltet ist, Zutaten im Lager, Nahrung.
+            auszug["bauplan_vergleich"] = wissen["bauplan_vergleich"]
         if wissen.get("namen_de"):
             # Bauplanangebot und aktive Effekte: Modellkennung → deutscher Name.
             auszug["namen_de"] = wissen["namen_de"]
