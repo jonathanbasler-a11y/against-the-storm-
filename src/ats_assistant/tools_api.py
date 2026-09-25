@@ -471,14 +471,17 @@ def _rezepte(conn, gebaeude: str | None = None, produkt: str | None = None) -> l
             "WHERE product = ? COLLATE NOCASE ORDER BY stars DESC, building", (produkt,))
     for r in zeilen:
         eintrag = {"produkt": r["product"], "gebaeude": r["building"], "sterne": r["stars"]}
-        zutaten = _zutaten(r["inputs"])
+        # Zuerst das Rezept von der Seite *dieses* Gebaeudes. `production.inputs`
+        # kommt aus der Warenuebersicht und gilt fuer die Ware, nicht fuer das
+        # Gebaeude; ein Rezept ohne Gebaeude kann jedem gehoeren. Am 25.09.2026
+        # zeigte die Kueferei dadurch falsche Zutaten.
+        rezept = conn.execute(
+            "SELECT inputs FROM recipes WHERE product = ? COLLATE NOCASE "
+            "AND building = ? COLLATE NOCASE LIMIT 1",
+            (r["product"], r["building"])).fetchone()
+        zutaten = _zutaten(rezept["inputs"]) if rezept else []
         if not zutaten:
-            rezept = conn.execute(
-                "SELECT inputs FROM recipes WHERE product = ? COLLATE NOCASE "
-                "AND (building = ? COLLATE NOCASE OR building IS NULL) "
-                "ORDER BY building IS NULL LIMIT 1",
-                (r["product"], r["building"])).fetchone()
-            zutaten = _zutaten(rezept["inputs"]) if rezept else []
+            zutaten = _zutaten(r["inputs"])
         if zutaten:
             eintrag["zutaten"] = zutaten
         gesehen.add((str(r["product"]).lower(), str(r["building"]).lower()))

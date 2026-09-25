@@ -956,8 +956,10 @@ def test_food_forecast_sagt_warum_es_keine_rate_gibt(tmp_path: Path) -> None:
 
 
 def test_bauplanvergleich_findet_das_lager_trotz_anderer_schreibweise(tmp_path: Path) -> None:
+    # Freigeschaltet ist nur die Feldküche -- sonst gälte die Wahl als getroffen.
     save_dir = _mit(buendel(tmp_path / "save"),
-                    content={"buildings": ["Trapper's Camp", "Field Kitchen"]},
+                    content={"buildings": ["Field Kitchen"]},
+                    buildings={"camps": [{"model": "Trapper's Camp"}]},
                     reputationRewards={"currentPick": {"id": 4310, "options": [
                         {"building": "Trapper's Camp", "set": "Food"},
                         {"building": "Kiln", "set": "Wildcard"}]}})
@@ -974,8 +976,32 @@ def test_bauplanvergleich_findet_das_lager_trotz_anderer_schreibweise(tmp_path: 
     wissen = tools_api.lage_wissen(runs, db, run_id="lauf")
     vergleich = {v["gebaeude"]: v for v in wissen["bauplan_vergleich"]}
     lager = vergleich["Trapper's Camp"]
-    assert lager["schon_freigeschaltet"] == "baubar"
+    assert lager["schon_freigeschaltet"] == "steht"
     assert lager["gebaeude_de"] == "Fallenstellerlager"
     assert lager["waren"][0]["ware"] == "Meat"
     assert "schon_freigeschaltet" not in vergleich["Kiln"]
     assert wissen["gebaeude"]["Trapper's Camp"]["rezepte"][0]["produkt"] == "Meat"
+
+
+
+def test_das_eigene_rezept_des_gebaeudes_geht_vor(tmp_path: Path) -> None:
+    """Kueferei, 25.09.2026: Zutaten kamen aus der Warenuebersicht oder dem
+    Rezept eines anderen Gebaeudes."""
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    conn.execute("INSERT INTO production (product, building, stars, inputs) VALUES "
+                 "('Barrels', 'Cooperage', 3, ?)", (json.dumps([[{"menge": 9, "ware": "Falsch"}]]),))
+    conn.execute("INSERT INTO recipes (building, inputs, stars, product) VALUES "
+                 "('Cooperage', ?, 3, 'Barrels')",
+                 (json.dumps([[{"menge": 3, "ware": "Planks"}], [{"menge": 1, "ware": "Copper Bar"}]]),))
+    conn.execute("INSERT INTO recipes (building, inputs, stars, product) VALUES "
+                 "(NULL, ?, 1, 'Pickled Goods')",
+                 (json.dumps([[{"menge": 5, "ware": "Fremd"}]]),))
+    conn.execute("INSERT INTO production (product, building, stars) VALUES "
+                 "('Pickled Goods', 'Cooperage', 1)")
+    conn.commit()
+    rezepte = {r["produkt"]: r for r in tools_api._rezepte(conn, gebaeude="Cooperage")}
+    conn.close()
+    assert rezepte["Barrels"]["zutaten"][0] == [{"menge": 3, "ware": "Planks"}]
+    # Ein Rezept ohne Gebäude ist kein Rezept dieses Gebäudes.
+    assert "zutaten" not in rezepte["Pickled Goods"]

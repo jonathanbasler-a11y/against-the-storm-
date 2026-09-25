@@ -247,6 +247,16 @@ def _bauplanwahl(wahl: Any, belohnung: dict) -> dict[str, Any]:
     return out
 
 
+def _namensschluessel(name: str) -> str:
+    return "".join(c for c in (name or "").casefold() if c.isalnum())
+
+
+def _schon_gewaehlt(angebot: list[str], freigeschaltet: list[str]) -> bool:
+    """Ist einer der angebotenen Bauplaene schon freigeschaltet?"""
+    frei = {_namensschluessel(n) for n in freigeschaltet}
+    return any(_namensschluessel(n) in frei for n in angebot)
+
+
 def _zahl(wert: Any) -> int | float | None:
     if isinstance(wert, (int, float)) and not isinstance(wert, bool):
         return wert
@@ -540,10 +550,18 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
         # in fremder Form.
         belohnung = _an_pfad(save, "$.reputationRewards")
         wahl = _an_pfad(save, "$.reputationRewards.currentPick")
-        state.blueprint_pick = _bauplanwahl(wahl, belohnung if isinstance(belohnung, dict) else {})
-        if isinstance(wahl, dict) and wahl.get("options") and not state.blueprint_pick:
+        gelesen = _bauplanwahl(wahl, belohnung if isinstance(belohnung, dict) else {})
+        if isinstance(wahl, dict) and wahl.get("options") and not gelesen:
             notes.append(Resolution("blueprint_pick", "$.reputationRewards.currentPick.options",
                                     "form_unbekannt", form=form_skizze(wahl["options"])))
+        # Gesehen am 25.09.2026: nach der Wahl bleibt das Angebot im Spielstand
+        # stehen. Das Fenster meldete dann bei jedem Lesen „Fallenstellerlager
+        # oder Brennofen“, obwohl das Lager laengst gewaehlt war. Ein Bauplan,
+        # der schon freigeschaltet ist, wird nicht angeboten -- steht einer der
+        # angebotenen schon unter `content.buildings`, ist die Wahl getroffen.
+        state.blueprint_pick = ({} if gelesen and _schon_gewaehlt(gelesen["angebot"],
+                                                                  state.blueprints)
+                                else gelesen)
 
         raw_buildings = pick(save, idx, "buildings", ("buildings.buildings", "buildings"))
         state.buildings = _buildings(raw_buildings)
