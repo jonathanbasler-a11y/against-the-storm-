@@ -576,10 +576,12 @@ def test_die_bauplanwahl_in_gemessener_form(tmp_path: Path) -> None:
     einzigen Text" und las bei zwei Texten gar nichts."""
     ordner = schreibe_buendel(tmp_path, save={"reputationRewards": {
         "currentRerolls": 2, "currentPick": {"isWild": False, "id": 3, "options": [
-            {"building": "Smokehouse", "set": "Food Set"},
+            # Nicht die Räucherei der Vorlage: die ist dort schon freigeschaltet,
+            # und eine Wahl mit Freigeschaltetem gilt als getroffen.
+            {"building": "Kiln", "set": "Food Set"},
             {"building": "Gatherers Hut", "set": "Food Set"}]}}})
     state, notes = read_state(ordner, wait=False)
-    assert state.blueprint_pick["angebot"] == ["Smokehouse", "Gatherers Hut"]
+    assert state.blueprint_pick["angebot"] == ["Kiln", "Gatherers Hut"]
     assert state.blueprint_pick["satz"] == ["Food Set"]
     assert state.blueprint_pick["neu_wuerfeln"] == 2
     assert "blueprint_pick" not in {n.field for n in notes}
@@ -652,3 +654,18 @@ def test_verdeckte_auftraege_zu_beginn_sind_keine_fremde_form(tmp_path: Path) ->
     state, notes = read_state(ordner, wait=False)
     assert state.orders == []
     assert _note(notes, "orders").how != "form_unbekannt"
+
+
+
+def test_eine_getroffene_bauplanwahl_ist_nicht_mehr_offen(tmp_path: Path) -> None:
+    """Gesehen am 25.09.2026: nach der Wahl stand das Angebot weiter im
+    Spielstand, und das Fenster meldete jedes Mal „Fallenstellerlager oder
+    Brennofen“ -- das Lager war längst gewählt."""
+    ordner = schreibe_buendel(tmp_path, save={
+        "content": {"buildings": ["Trapper's Camp", "Field Kitchen"]},
+        "reputationRewards": {"currentPick": {"id": 4310, "options": [
+            {"building": "Trappers' Camp", "set": "Food"},
+            {"building": "Kiln", "set": "Wildcard"}]}}})
+    state, notes = read_state(ordner, wait=False)
+    assert state.blueprint_pick == {}
+    assert "blueprint_pick" not in {n.field for n in notes}

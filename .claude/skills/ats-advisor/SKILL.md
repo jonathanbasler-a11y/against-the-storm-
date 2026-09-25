@@ -111,6 +111,7 @@ ist nicht belegt.
 | Je Auftragsziel ist `stand` der Fortschritt; Ziel und Menge stehen nicht im Spielstand | gemessen, 23.09.2026 |
 | Ruf-Quelle „Zufriedenheit“ entspricht dem Zufriedenheitsgewinn der Völker | gemessen, 23.09.2026 |
 | Bauplanwahl und Auftragswahl stehen im Spielstand, Grundsteinwahl nicht | gemessen |
+| Nach der Bauplanwahl bleibt das Angebot im Spielstand stehen; `bauplan_wahl` fehlt, sobald ein angebotener Bauplan freigeschaltet ist | gesehen 25.09.2026 |
 | Hunger, Tote, Gegangene und gewählte Grundsteine stehen unter `stats` | gemessen, 23.09.2026 |
 | Prestige 16: ein Startbauplan weniger („Einen anfänglichen Entwurf weniger“) | am Spielrechner gesehen, 25.09.2026 |
 | Hohes Prestige: Verkaufspreise ×0,5, je 2 Bauplan- und Grundsteinoptionen weniger, Ereignistempo ×0,67 | gemessen in `effects`, 23.09.2026 |
