@@ -735,7 +735,19 @@ def food_forecast(runs_dir: str | Path = "runs", run_id: str | None = None,
     vorher, aktuell = _als_zustand(zustaende[-2]), _als_zustand(zustaende[-1])
     f = _food_forecast(aktuell, vorher, category=kategorie,
                        season_seconds=jahreszeit_sekunden)
+    out: dict[str, Any] = {}
+    if f.rate_per_second is None:
+        # Sonst stand am Spielrechner nur „unbekannt" -- nach dem Sieg, als
+        # das Spiel nicht mehr lief und die Reihe sich nicht bewegte.
+        # Zwei Staende sind da; ohne frische Stuetzstellen hat sich die Reihe
+        # nicht bewegt. Die Warnung aus der Rechnung ("zweiter Spielstand
+        # noetig") fuehrte dann in die Irre.
+        out["grund"] = ("Zwischen den letzten beiden Spielständen hat sich die "
+                        "Nahrungsreihe nicht bewegt -- Spiel pausiert oder Lauf beendet."
+                        if not f.samples_used else
+                        (f.warning or "Aus den letzten Spielständen lässt sich keine Rate rechnen."))
     return {
+        **out,
         "verfuegbar": f.rate_per_second is not None,
         "quelle": quelle,
         "bestand": f.stock,

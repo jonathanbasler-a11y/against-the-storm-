@@ -269,6 +269,24 @@ def _deutsch(conn: sqlite3.Connection) -> dict[str, str]:
     }
 
 
+def _dauer_text(sekunden: float) -> str:
+    """„1 Minuten" stand am Spielrechner im Satz -- also richtig gezaehlt."""
+    if sekunden < 60:
+        return f"{sekunden:.0f} Sekunden"
+    minuten = round(sekunden / 60)
+    return "1 Minute" if minuten == 1 else f"{minuten} Minuten"
+
+
+def _bezeichnung(v: Vorschlag, anderer: Vorschlag) -> str:
+    """Das Gebaeude -- und bei gleichem Gebaeude das Rezept dazu. Am
+    Spielrechner stand „Kochhaus bringt 40 statt 60" neben „Kochhaus"."""
+    name = v.gebaeude_de or v.gebaeude or "?"
+    if v.gebaeude != anderer.gebaeude:
+        return name
+    einsatz = ", ".join(f"{z.menge:g} {z.name}" for z in v.zutaten)
+    return f"{name} mit {einsatz}" if einsatz else f"{name} (anderes Rezept)"
+
+
 def vorschlaege(conn: sqlite3.Connection, bestand: dict[str, float],
                 verbrauch_pro_sekunde: float | None = None,
                 mindestgewinn: float = 1.0,
@@ -526,13 +544,13 @@ def rat(conn: sqlite3.Connection, bestand: dict[str, float],
                        "diese ist ohne Alternative.")
     elif bester.dauer and zweiter.dauer and zweiter.dauer < bester.dauer:
         alternative = (
-            f"{zweiter.gebaeude_de or zweiter.gebaeude} bringt "
+            f"{_bezeichnung(zweiter, bester)} bringt "
             f"{zweiter.gewinn:.0f} statt {bester.gewinn:.0f} Sättigung, ist aber "
-            f"{(bester.dauer - zweiter.dauer) / 60:.0f} Minuten früher fertig — "
+            f"{_dauer_text(bester.dauer - zweiter.dauer)} früher fertig — "
             "besser, wenn der Bestand vor der Fertigstellung leer wäre.")
     else:
         alternative = (
-            f"{zweiter.gebaeude_de or zweiter.gebaeude} bringt "
+            f"{_bezeichnung(zweiter, bester)} bringt "
             f"{zweiter.gewinn:.0f} Sättigung — besser, wenn "
             f"{bester.engpass_de or bester.engpass} anderswo gebraucht wird.")
 

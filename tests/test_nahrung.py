@@ -528,3 +528,27 @@ def test_ohne_verfuegbarkeit_bleibt_alles_wie_bisher(tmp_path: Path) -> None:
     spiess = [v for v in nahrung.vorschlaege(conn, lager) if v.produkt == "Skewers"][0]
     assert spiess.gebaeude == "Grill" and spiess.status is None
     conn.close()
+
+
+# --------------------------------------------------------------------------
+# Nach dem P15-Sieg (25.09.2026): „Kochhaus bringt 40 statt 60 … 1 Minuten"
+# --------------------------------------------------------------------------
+
+
+def test_die_dauer_ist_richtig_gezaehlt() -> None:
+    from ats_assistant.nahrung import _dauer_text
+    assert _dauer_text(45) == "45 Sekunden"
+    assert _dauer_text(80) == "1 Minute"
+    assert _dauer_text(300) == "5 Minuten"
+
+
+def test_gleiches_gebaeude_nennt_das_rezept() -> None:
+    from ats_assistant.nahrung import Vorschlag, Zutat, _bezeichnung
+    a = Vorschlag("Cookhouse", "Porridge", [Zutat(12, "Herbs", 20, "Kräuter")], 1, 0, 60,
+                  None, None, "Herbs", gebaeude_de="Kochhaus")
+    b = Vorschlag("Cookhouse", "Porridge", [Zutat(8, "Grain", 20, "Getreide")], 1, 0, 40,
+                  None, None, "Grain", gebaeude_de="Kochhaus")
+    c = Vorschlag("Field Kitchen", "Skewers", [], 1, 0, 30, None, None, None,
+                  gebaeude_de="Feldküche")
+    assert _bezeichnung(b, a) == "Kochhaus mit 8 Getreide"
+    assert _bezeichnung(c, a) == "Feldküche"

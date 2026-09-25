@@ -934,3 +934,16 @@ def test_der_bauplanvergleich_kennt_freigeschaltetes(tmp_path: Path) -> None:
     assert vergleich["Stamping Mill"]["besser_oder_neu"] == 1
     ofen = {w["ware"]: w for w in vergleich["Kiln"]["waren"]}
     assert ofen["Jerky"]["nahrung"] == 2.0 and vergleich["Kiln"]["nahrung"] == 1
+
+
+def test_food_forecast_sagt_warum_es_keine_rate_gibt(tmp_path: Path) -> None:
+    """Nach dem Sieg bewegte sich die Reihe nicht mehr; im Fenster stand nur
+    „unbekannt"."""
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    with (runs / "lauf.jsonl").open("w", encoding="utf-8") as fh:
+        for zeit in (1000.0, 1300.0):
+            fh.write(json.dumps({"game_time": zeit,
+                                 "category_trends": {"Food": [50.0] * 180}}) + "\n")
+    out = tools_api.food_forecast(runs, run_id="lauf")
+    assert out["verfuegbar"] is False and "nicht bewegt" in out["grund"]
