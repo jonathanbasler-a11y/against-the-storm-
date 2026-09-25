@@ -791,3 +791,10 @@ def test_ohne_neue_version_oder_mit_fehler_keine_frage(gui, tmp_path: Path, monk
                                    "text": "git pull ging nicht: local changes"})
     assert passiert == []
     assert "local changes" in app.status_alles
+
+
+def test_schon_freigeschaltet_steht_in_der_tabelle(gui) -> None:
+    text = gui._bauplan_text({"angebot": ["Trapper's Camp"]}, [
+        {"gebaeude": "Trapper's Camp", "gebaeude_de": "Fallenstellerlager",
+         "schon_freigeschaltet": "baubar", "besser_oder_neu": 0, "nahrung": 0, "waren": []}])
+    assert "SCHON FREIGESCHALTET" in text

@@ -529,7 +529,11 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
         raw_orders = pick(save, idx, "orders", ("orders.currentOrders",), want=list)
         state.orders = [o for o in (raw_orders or [])
                         if isinstance(o, dict) and isinstance(o.get("model"), str)]
-        _form_pruefen(notes[-1], raw_orders, state.orders)
+        # Gemessen am 25.09.2026 zu Beginn einer Siedlung: neun Auftraege mit
+        # `model: null` -- noch nicht aufgedeckt, keine fremde Form.
+        if not (isinstance(raw_orders, list) and raw_orders
+                and all(isinstance(o, dict) and "model" in o for o in raw_orders)):
+            _form_pruefen(notes[-1], raw_orders, state.orders)
 
         # Ohne `pick`: ist keine Wahl offen, fehlt das Feld zu Recht und
         # gehoert nicht unter "nicht gefunden". Gemeldet wird nur eine Wahl

@@ -623,3 +623,10 @@ def test_der_bauplanvergleich_geht_an_den_rat() -> None:
     auszug = berater.kontext(zustand={"jahr": 1}, wissen={"bauplan_vergleich": vergleich})
     assert auszug["bauplan_vergleich"] == vergleich
     assert "bauplan_vergleich" in " ".join(berater.systemtext().split())
+
+
+def test_der_systemtext_kennt_voelker_und_biome() -> None:
+    text = " ".join(berater.systemtext().split())
+    for begriff in ("Echsen", "Fledermäuse", "Hungertoleranz", "Marshlands",
+                    "schon_freigeschaltet", "Startbauplan weniger"):
+        assert begriff in text, begriff
