@@ -69,8 +69,9 @@ Bonus überhaupt greift.
   Zutaten steht, wie viel im Lager ist; `nahrung` ist die Sättigung.
 - **`statistik`** sind Summen seit Siedlungsbeginn aus dem Reiter
   „Stadtstatistiken" im Hauptlager: produziert und verbraucht je Ware,
-  `hunger` (Hungerereignisse), `gegangen`, `tot`, Zysten. Steigt `hunger`
-  oder `gegangen`, ist das der Befund, nicht eine Vermutung.
+  `hunger` (Hungerereignisse), `gegangen`, `tot`, Zysten. Hunger allein ist
+  kein Alarm — er kostet Zufriedenheit; schlimm wird es, wenn deshalb Leute
+  gehen (`gegangen`, `tot`). Am Spielrechner so korrigiert, 25.09.2026.
 - **`effekte.aktiv`** ist, was gerade wirkt (Reiter „Allgemeine Effekte“),
   dazu `hunger_multiplikator` und `mehrverbrauch`. Ein Bonus, der dort nicht
   steht, wirkt nicht. **`effekte.abweichungen`** nennt jede Rate, die auf
