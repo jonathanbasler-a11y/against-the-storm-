@@ -247,6 +247,7 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
     zeilen: list[str] = []
     quelle = "hand"
     am_rand = 0
+    gelesen_anzahl: int | None = None
     if text:
         # Eine einzelne Zeichenkette ist ein Name, keine Liste von Buchstaben.
         # Das Fenster uebergibt eine Liste, die Kommandozeile nicht zwingend.
@@ -272,7 +273,9 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
         quelle = str(pfad)
         try:
             erkannt, am_rand = screen.nur_mitte(screen.erkenne(pfad), screen.bildbreite(pfad))
-            erkannt = screen.sortiere_nach_karten(erkannt)
+            gelesen_anzahl = len(erkannt)
+            erkannt = screen.sortiere_nach_karten(
+                erkannt + screen.titel_zusammensetzen(erkannt))
         except Exception as exc:
             return {"verfuegbar": False, "grund": str(exc),
                     "umgebung": screen.verfuegbar()}
@@ -320,7 +323,9 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
     # bleibt die Lesereihenfolge von links nach rechts stehen. Der Spieler
     # sagt "die linke", und die Auskunft muss dieselbe meinen.
     sicher.sort(key=lambda g: not g["belegt"])
-    unsicher = [g for g in getroffen if g["guete"] < SICHER]
+    # Was sicher gelesen ist -- etwa zusammengesetzt aus zwei Zeilen --, steht
+    # nicht noch einmal als „unsicher“ da.
+    unsicher = [g for g in getroffen if g["guete"] < SICHER and g["en"] not in gesehen]
     unklar = [g for g in gelesen if not g["eindeutig"] and g["kandidaten"]]
     return {
         "verfuegbar": bool(sicher),
@@ -330,7 +335,7 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
         "sonst_gesehen": [g for g in sicher if not g["belegt"]][:8],
         "unsicher": unsicher[:5],
         "unklar": unklar[:5],
-        "gelesene_zeilen": len(zeilen),
+        "gelesene_zeilen": gelesen_anzahl if gelesen_anzahl is not None else len(zeilen),
         # Zeilen aus den Randleisten (Voelker, Auftraege), nicht gelesen.
         "am_rand_verworfen": am_rand,
         "grund": None if sicher else _nichts_erkannt(quelle, [], unsicher),

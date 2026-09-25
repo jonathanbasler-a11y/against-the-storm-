@@ -125,3 +125,13 @@ def test_nur_die_mitte_zaehlt() -> None:
     assert weg == 2
     # Ohne Breite bleibt alles.
     assert screen.nur_mitte(zeilen, None) == (zeilen, 0)
+
+
+def test_zweizeilige_titel_werden_zusammengesetzt() -> None:
+    """„VERLORENE“ über „VORRÄTE“, Orte wie am 25.09.2026 (2000 px)."""
+    oben = screen.Zeile("VERLORENE", 945, 625, 110, 18)
+    unten = screen.Zeile("VORRÄTE", 956, 646, 88, 18)
+    text = screen.Zeile("Auf manchen Lichtungen kann", 909, 686, 182, 12)   # kleiner
+    daneben = screen.Zeile("DOPPELWAGENSYSTEM", 616, 636, 206, 18)          # andere Karte
+    neu = screen.titel_zusammensetzen([oben, unten, text, daneben])
+    assert [z.text for z in neu] == ["VERLORENE VORRÄTE"]

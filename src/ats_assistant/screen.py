@@ -361,6 +361,32 @@ def nur_mitte(zeilen: list[Zeile], breite: int | None) -> tuple[list[Zeile], int
     return behalten, len(zeilen) - len(behalten)
 
 
+def titel_zusammensetzen(zeilen: list[Zeile]) -> list[Zeile]:
+    """Zweizeilige Kartentitel zusaetzlich als eine Zeile.
+
+    Am 25.09.2026 stand „VERLORENE“ über „VORRÄTE“; die Texterkennung
+    lieferte zwei Zeilen, und „VERLORENE“ allein passte nur zu 0,72 -- die
+    Karte fiel unter „unsicher“. Zusammengesetzt wird, was untereinander
+    steht, auf derselben Mitte liegt und gleich hoch geschrieben ist. Die
+    einzelnen Zeilen bleiben; das Zusammengesetzte kommt dazu.
+    """
+    out: list[Zeile] = []
+    for a in zeilen:
+        for b in zeilen:
+            if a is b or not a.text.strip() or not b.text.strip():
+                continue
+            hoehe = max(a.hoehe, b.hoehe, 1.0)
+            abstand = b.y - (a.y + a.hoehe)
+            gleich_hoch = 0.7 <= (b.hoehe or 1.0) / (a.hoehe or 1.0) <= 1.4
+            mittig = abs(a.mitte_x - b.mitte_x) <= max(a.breite, b.breite) / 2
+            if b.y > a.y and -0.2 * hoehe <= abstand <= 1.2 * hoehe and gleich_hoch and mittig:
+                links = min(a.x, b.x)
+                rechts = max(a.x + a.breite, b.x + b.breite)
+                out.append(Zeile(f"{a.text} {b.text}", links, a.y, rechts - links,
+                                 b.y + b.hoehe - a.y))
+    return out
+
+
 def sortiere_nach_karten(zeilen: list[Zeile]) -> list[Zeile]:
     """Von links nach rechts, so wie die Karten stehen.
 

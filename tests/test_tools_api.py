@@ -1005,3 +1005,28 @@ def test_das_eigene_rezept_des_gebaeudes_geht_vor(tmp_path: Path) -> None:
     assert rezepte["Barrels"]["zutaten"][0] == [{"menge": 3, "ware": "Planks"}]
     # Ein Rezept ohne Gebäude ist kein Rezept dieses Gebäudes.
     assert "zutaten" not in rezepte["Pickled Goods"]
+
+
+def test_read_choice_liest_zweizeilige_titel(tmp_path: Path, monkeypatch) -> None:
+    from ats_assistant import localization
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Reward_LostSupplies_Name", "Lost Supplies",
+                             "Verlorene Vorräte", "effect"),
+        localization.Eintrag("Reward_DualCarriage_Name", "Dual Carriage System",
+                             "Doppelwagensystem", "effect")])
+    for en in ("Lost Supplies", "Dual Carriage System"):
+        conn.execute("INSERT INTO cornerstones (en, rarity) VALUES (?, 'Legendary')", (en,))
+    conn.commit()
+    conn.close()
+    bild = tmp_path / "schirm.png"
+    bild.write_bytes(b"\x89PNG\r\n\x1a\n" + (13).to_bytes(4, "big") + b"IHDR"
+                     + (2000).to_bytes(4, "big") + (1125).to_bytes(4, "big") + b"\x08\x02\0\0\0")
+    Z = tools_api.screen.Zeile
+    monkeypatch.setattr(tools_api.screen, "erkenne", lambda pfad, **kw: [
+        Z("DOPPELWAGENSYSTEM", 616, 636, 206, 18),
+        Z("VERLORENE", 945, 625, 110, 18), Z("VORRÄTE", 956, 646, 88, 18)])
+    out = tools_api.read_choice(bild=bild, db=db)
+    assert [a["en"] for a in out["angebot"]] == ["Dual Carriage System", "Lost Supplies"]
+    assert out["unsicher"] == [] and out["gelesene_zeilen"] == 3
