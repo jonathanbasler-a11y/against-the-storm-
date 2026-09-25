@@ -947,3 +947,35 @@ def test_food_forecast_sagt_warum_es_keine_rate_gibt(tmp_path: Path) -> None:
                                  "category_trends": {"Food": [50.0] * 180}}) + "\n")
     out = tools_api.food_forecast(runs, run_id="lauf")
     assert out["verfuegbar"] is False and "nicht bewegt" in out["grund"]
+
+
+# --------------------------------------------------------------------------
+# 25.09.2026, Sumpf P16: „Trapper's Camp“ gegen „Trappers' Camp“, schon
+# freigeschaltet und trotzdem angeboten
+# --------------------------------------------------------------------------
+
+
+def test_bauplanvergleich_findet_das_lager_trotz_anderer_schreibweise(tmp_path: Path) -> None:
+    save_dir = _mit(buendel(tmp_path / "save"),
+                    content={"buildings": ["Trapper's Camp", "Field Kitchen"]},
+                    reputationRewards={"currentPick": {"id": 4310, "options": [
+                        {"building": "Trapper's Camp", "set": "Food"},
+                        {"building": "Kiln", "set": "Wildcard"}]}})
+    runs = tmp_path / "runs"
+    tools_api.get_state(save_dir, runs, run_id="lauf", auf_ruhe_warten=False)
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    conn.execute("INSERT INTO production (product, building, stars) VALUES "
+                 "('Meat', 'Trappers'' Camp', 2)")
+    conn.execute("INSERT INTO name_map (en, de, kind, confidence) VALUES "
+                 "('Trappers'' Camp', 'Fallenstellerlager', 'building', 'localization')")
+    conn.commit()
+    conn.close()
+    wissen = tools_api.lage_wissen(runs, db, run_id="lauf")
+    vergleich = {v["gebaeude"]: v for v in wissen["bauplan_vergleich"]}
+    lager = vergleich["Trapper's Camp"]
+    assert lager["schon_freigeschaltet"] == "baubar"
+    assert lager["gebaeude_de"] == "Fallenstellerlager"
+    assert lager["waren"][0]["ware"] == "Meat"
+    assert "schon_freigeschaltet" not in vergleich["Kiln"]
+    assert wissen["gebaeude"]["Trapper's Camp"]["rezepte"][0]["produkt"] == "Meat"

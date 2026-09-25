@@ -127,6 +127,8 @@ def _bauplan_text(wahl: dict, vergleich: list[dict], gespeichert: str = "") -> s
             teile.append(f"{g['nahrung']} Nahrung")
         if g.get("zutaten_im_lager") is False:
             teile.append("nicht alle Zutaten im Lager")
+        if g.get("schon_freigeschaltet"):
+            teile.insert(0, "SCHON FREIGESCHALTET – bringt kein neues Gebäude")
         zeilen.append(f"{g.get('gebaeude_de') or g['gebaeude']} – " + ", ".join(teile))
         for w in g.get("waren") or []:
             b = w.get("bisher")

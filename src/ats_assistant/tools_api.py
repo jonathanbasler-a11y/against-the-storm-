@@ -426,6 +426,29 @@ def _zutaten(roh: Any) -> list[list[dict]]:
     return out
 
 
+def _kb_gebaeude(conn, name: str) -> str:
+    """Der Gebaeudename, wie die Wissensbasis ihn schreibt -- ueber
+    `nahrung._schluessel` (Gross-/Kleinschreibung, Apostroph, Leerzeichen)."""
+    schluessel = nahrung._schluessel(name)
+    for (kandidat,) in conn.execute(
+            "SELECT building FROM production UNION SELECT building FROM recipes "
+            "UNION SELECT en FROM buildings"):
+        if kandidat and nahrung._schluessel(kandidat) == schluessel:
+            return kandidat
+    return name
+
+
+def _deutsch_fuer(namen: dict[str, str], name: str) -> str | None:
+    """Deutscher Name, auch wenn Spielstand und Lokalisierung verschieden schreiben."""
+    if name in namen:
+        return namen[name]
+    schluessel = nahrung._schluessel(name)
+    for en, de in namen.items():
+        if nahrung._schluessel(en) == schluessel:
+            return de
+    return None
+
+
 def _rezepte(conn, gebaeude: str | None = None, produkt: str | None = None) -> list[dict]:
     """Rezepte eines Gebaeudes oder fuer eine Ware -- mit Sternen und Zutaten.
 
@@ -435,6 +458,10 @@ def _rezepte(conn, gebaeude: str | None = None, produkt: str | None = None) -> l
     out: list[dict] = []
     gesehen: set[tuple] = set()
     if gebaeude:
+        # Spielstand und Wiki schreiben verschieden: „Trapper's Camp“ gegen
+        # „Trappers' Camp“ -- am 25.09.2026 kam der Fallenstellerlager-Bauplan
+        # deshalb ohne ein einziges Rezept beim Rat an.
+        gebaeude = _kb_gebaeude(conn, gebaeude)
         zeilen = conn.execute(
             "SELECT product, building, stars, inputs FROM production "
             "WHERE building = ? COLLATE NOCASE ORDER BY stars DESC, product", (gebaeude,))
@@ -507,7 +534,7 @@ def query_kb(name: str, entity: str | None = None, db: str | Path = "kb.sqlite")
             for kandidat in kandidaten:
                 zeile = conn.execute(
                     "SELECT en, cost, worker_slots, source_page FROM buildings "
-                    "WHERE en = ? COLLATE NOCASE", (kandidat,)).fetchone()
+                    "WHERE en = ? COLLATE NOCASE", (_kb_gebaeude(conn, kandidat),)).fetchone()
                 if zeile:
                     treffer["gebaeude"] = dict(zeile)
                     break
@@ -587,8 +614,14 @@ def _bauplan_vergleich(conn, aktuell: dict, verfuegbar: dict[str, str],
             if str(ware).casefold() in essbar:
                 zeile["nahrung"] = essbar[str(ware).casefold()]
             waren.append(zeile)
+        schon = (verfuegbar or {}).get(name) or next(
+            (st for n, st in (verfuegbar or {}).items()
+             if nahrung._schluessel(n) == nahrung._schluessel(name)), None)
         out.append({
-            "gebaeude": name, "gebaeude_de": namen.get(name),
+            # Schon freigeschaltet (etwa beim Einbetten gewaehlt) und trotzdem
+            # angeboten: dann bringt die Wahl kein neues Gebaeude.
+            **({"schon_freigeschaltet": schon} if schon else {}),
+            "gebaeude": name, "gebaeude_de": _deutsch_fuer(namen, name),
             "besser_oder_neu": sum(1 for w in waren if w["besser"]),
             "nahrung": sum(1 for w in waren if "nahrung" in w),
             "zutaten_im_lager": all(z["im_lager"] > 0 for w in waren
@@ -649,7 +682,7 @@ def lage_wissen(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
             zeile = kb_gebaeude.get(s)
             if zeile is None and s not in erzeugt:
                 continue
-            eintrag = {"status": status, "gebaeude_de": namen.get(name)}
+            eintrag = {"status": status, "gebaeude_de": _deutsch_fuer(namen, name)}
             if zeile is not None:
                 try:
                     kosten = json.loads(zeile["cost"]) if zeile["cost"] else None
@@ -675,7 +708,8 @@ def lage_wissen(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
                 continue
             eintrag = dict(gebaeude.get(name) or {})
             eintrag["status"] = "angeboten"
-            eintrag.setdefault("gebaeude_de", namen.get(name))
+            if not eintrag.get("gebaeude_de"):
+                eintrag["gebaeude_de"] = _deutsch_fuer(namen, name)
             zeile = kb_gebaeude.get(nahrung._schluessel(name))
             if zeile is not None:
                 eintrag.setdefault("arbeitsplaetze", zeile["worker_slots"])
@@ -712,7 +746,7 @@ def lage_wissen(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
     for name in gesucht:
         if not isinstance(name, str):
             continue
-        de = namen.get(name) or namen.get(strip_prefixes(name)[0])
+        de = _deutsch_fuer(namen, name) or namen.get(strip_prefixes(name)[0])
         if de and de != name:
             namen_de[name] = de
     out = {"verfuegbar": True, "quelle": quelle, "waren": waren,

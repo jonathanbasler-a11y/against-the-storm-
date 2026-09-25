@@ -59,6 +59,9 @@ Bonus überhaupt greift.
   dem Spielstand (je Option das Gebäude; `satz` ist ein ungedeuteter
   Rohwert). Es gilt vor einer Bildschirmlesung unter `auswahl`. Deutsche
   Namen stehen unter `namen_de`.
+- **`bauplan_vergleich[].schon_freigeschaltet`**: Der angebotene Bauplan ist
+  schon freigeschaltet (etwa beim Einbetten gewählt) — diese Wahl bringt kein
+  neues Gebäude; dann die andere Option empfehlen.
 - **`bauplan_vergleich`** stellt je angebotenem Bauplan jede Ware mit ihren
   Sternen gegen `bisher`: die besten Sterne eines Gebäudes, das steht **oder
   schon freigeschaltet ist**. Eine Ware mit `besser: false` kann die Siedlung
@@ -109,6 +112,7 @@ ist nicht belegt.
 | Ruf-Quelle „Zufriedenheit“ entspricht dem Zufriedenheitsgewinn der Völker | gemessen, 23.09.2026 |
 | Bauplanwahl und Auftragswahl stehen im Spielstand, Grundsteinwahl nicht | gemessen |
 | Hunger, Tote, Gegangene und gewählte Grundsteine stehen unter `stats` | gemessen, 23.09.2026 |
+| Prestige 16: ein Startbauplan weniger („Einen anfänglichen Entwurf weniger“) | am Spielrechner gesehen, 25.09.2026 |
 | Hohes Prestige: Verkaufspreise ×0,5, je 2 Bauplan- und Grundsteinoptionen weniger, Ereignistempo ×0,67 | gemessen in `effects`, 23.09.2026 |
 
 **Nachschlagen statt raten.** Das Werkzeug `nachschlagen(name)` sieht in der
@@ -165,6 +169,46 @@ in Sekunden. Diese Zahl nicht schätzen — sie steht da.
 **Ein Produktionsbonus auf etwas, das nicht hergestellt wird, ist wertlos.**
 Immer gegen die tatsächlich gebauten Gebäude und die Vorkommen auf der Karte
 prüfen — beides steht in `get_state`.
+
+## Völker — aus Wiki und Anleitungen
+
+Herkunft: Suchergebnisse zu offiziellem Wiki, Fandom und Anleitungen
+(teils Stand v1.8), abgefragt am 25.09.2026 — **nicht** aus den Spieldaten.
+Im Zweifel gilt der Tooltip im Spiel. Welche Völker die Siedlung hat, steht
+unter `siedlung.spezies`.
+
+| Volk | Komplexe Nahrung | Stärke (Proficiency) | Hungertoleranz | Sonst |
+|---|---|---|---|---|
+| Menschen (Human) | Haferbrei, Kekse, Pastete | Landwirtschaft | 6 | Resilienz niedrig, hoher Anspruch (30) |
+| Biber (Beaver) | Kekse, Eingelegtes (dazu Wein) | Holzverarbeitung | – | brauchen am meisten Zufriedenheit für Ruf |
+| Echsen (Lizard) | Dörrfleisch, Fleischspieße, Pastete, Eingelegtes | Fleisch | 12 | Resilienz hoch, mögen Wärme |
+| Harpyien (Harpy) | Dörrfleisch, Paste | Alchemie | – | Komfort: Stoff; Resilienz niedrig |
+| Füchse (Fox) | Haferbrei, Fleischspieße, Eingelegtes | – | 3 | verhungern als Erste; Resilienz niedrig |
+| Frösche (Frog, DLC) | Paste, Kekse, Pastete | Steinmetz (Masonry) | 5 | Komfort: Regenwasser; lange Pausen |
+| Fledermäuse (Bat, DLC) | Paste, Kekse, Fleischspieße (alle aus der Feldküche) | – | 4 | +1 Zufriedenheit je 2 gegangene/tote Andere; als Feuerhüter 15 % Chance, dass keine Nahrung verbraucht wird |
+
+Die 15 % der Fledermaus-Feuerhüter stehen auch im Spielstand
+(`effekte.kein_verbrauch`, gemessen 25.09.2026) — das passt.
+
+## Biome
+
+Alle zehn (englisch; die deutschen Spielnamen stehen in der Wissensbasis,
+nicht hier): Royal Woodlands, Cursed Royal Woodlands, Coral Forest, Scarlet
+Orchard, The Marshlands, Coastal Grove, Ashen Thicket, Bamboo Flats, Rocky
+Ravine, Sealed Forest. Die Wirkungen des aktuellen
+Bioms stehen im Spielstand unter `effekte.aktiv` (Einträge mit „[BIOME]“).
+
+**The Marshlands (Sumpf)** — Wiki/Anleitungen, nicht Spieldaten:
+- Wenig fruchtbarer Boden (im Spiel gesehen: „Kleine Menge Nährboden“);
+  Farmen tragen wenig, Nahrung kommt aus Lagern und Vorkommen.
+- „Gathering Knowledge“: je zwei Arbeiter in einem Sammellager +10 %
+  Sammeltempo überall — stark mit Rohnahrungslagern.
+- Bäume ohne Bonusholz: mehr Holzfällerlager nötig, Holz ist knapp.
+- Keine Schilf-/Pflanzenfaserknoten; Stoff am besten aus Algen.
+- Pilze lassen sich statt Getreide zu Mehl mahlen (Rezept im Gebäude umstellen).
+- Riesige Organismen in verbotenen Lichtungen (999 Ladungen): Toter
+  Leviathan (Fleisch, Leder, Kohle, Dörrfleisch …), Proto-Pilz (Pilze,
+  Pigment, Eingelegtes …), Proto-Weizen (Getreide, Schilf, Kräuter, Öl, Bernstein).
 
 **Biomspezifika:** Korallenwald hat keine Getreideknoten; Bambusebene hat
 keinen natürlichen fruchtbaren Boden; Felsschlucht liefert kein Holz aus

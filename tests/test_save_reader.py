@@ -643,3 +643,12 @@ def test_die_bauplanwahl_traegt_ihre_id(tmp_path: Path) -> None:
         "isWild": False, "id": 42, "options": [{"building": "Kiln", "set": "S"}]}}})
     state, _ = read_state(ordner, wait=False)
     assert state.blueprint_pick["id"] == 42
+
+
+def test_verdeckte_auftraege_zu_beginn_sind_keine_fremde_form(tmp_path: Path) -> None:
+    """Gemessen am 25.09.2026, Jahr 1: neun Aufträge mit `model: null`."""
+    ordner = schreibe_buendel(tmp_path, save={"orders": {"currentOrders": [
+        {"model": None, "tierModel": "Tier 1", "setIndex": 0} for _ in range(9)]}})
+    state, notes = read_state(ordner, wait=False)
+    assert state.orders == []
+    assert _note(notes, "orders").how != "form_unbekannt"
