@@ -17,7 +17,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import analysis, forecast, kb, nahrung, namen_match, save_reader, screen, watcher
+from . import (analysis, forecast, kb, nahrung, namen_match, save_reader, screen,
+               tierlisten, watcher)
 from .forecast import food_forecast as _food_forecast
 from .forecast import impatience_forecast as _impatience_forecast
 from .paths import strip_prefixes
@@ -558,6 +559,17 @@ def query_kb(name: str, entity: str | None = None, db: str | Path = "kb.sqlite")
             rezepte = _rezepte(conn, produkt=treffer["ware"]["en"])
             if rezepte:
                 treffer["hergestellt_in"] = rezepte
+
+        # Community-Tierlisten -- Meinungen mit Quelle, keine Spieldaten.
+        stufen: dict[str, list[dict]] = {}
+        for art in tierlisten.KATEGORIEN:
+            for kandidat in kandidaten:
+                gefunden = tierlisten.nachsehen(art, kandidat)
+                if gefunden:
+                    stufen[art] = gefunden
+                    break
+        if stufen:
+            treffer["tier"] = stufen
 
         if not namen and "ware" not in treffer and "gebaeude" not in treffer:
             treffer["hinweis"] = (

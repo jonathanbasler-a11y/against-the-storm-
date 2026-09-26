@@ -21,6 +21,8 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import tierlisten
+
 log = logging.getLogger(__name__)
 
 MODELL = "claude-opus-5"
@@ -197,8 +199,15 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             auszug["trends"] = wissen["trends"]
         if wissen.get("bauplan_vergleich"):
             # Je angebotenem Bauplan: Sterne gegen das, was steht oder
-            # freigeschaltet ist, Zutaten im Lager, Nahrung.
-            auszug["bauplan_vergleich"] = wissen["bauplan_vergleich"]
+            # freigeschaltet ist, Zutaten im Lager, Nahrung -- und die Stufe
+            # aus den Tierlisten, falls eine Quelle sie nennt.
+            auszug["bauplan_vergleich"] = []
+            for g in wissen["bauplan_vergleich"]:
+                g = dict(g)
+                stufen = tierlisten.nachsehen("gebaeude", g.get("gebaeude"))
+                if stufen:
+                    g["tier"] = stufen
+                auszug["bauplan_vergleich"].append(g)
         if wissen.get("namen_de"):
             # Bauplanangebot und aktive Effekte: Modellkennung → deutscher Name.
             auszug["namen_de"] = wissen["namen_de"]
@@ -209,11 +218,27 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
         # Was die Wissensbasis als Angebot kennt, zuerst -- und die
         # Kennzeichnung geht mit. Eine Lesung, die nur auf dem Bildschirm
         # stand, darf nicht als Karte durchgehen.
-        auszug["auswahl"] = [
-            {k: v for k, v in eintrag.items()
-             if k in ("de", "en", "seltenheit", "wirkung", "zweck", "guete", "belegt")}
-            for eintrag in auswahl["angebot"]
-        ]
+        auszug["auswahl"] = []
+        for eintrag in auswahl["angebot"]:
+            karte = {k: v for k, v in eintrag.items()
+                     if k in ("de", "en", "seltenheit", "wirkung", "zweck", "guete", "belegt")}
+            art = {"effect": "grundstein", "building": "gebaeude"}.get(eintrag.get("kind"))
+            stufen = tierlisten.nachsehen(art, eintrag.get("en")) if art else []
+            if stufen:
+                karte["tier"] = stufen
+            auszug["auswahl"].append(karte)
+    if zustand:
+        # Tierlisten fuer Voelker und Biom der Siedlung -- Meinungen mit Quelle.
+        voelker = {v: t for v in (zustand.get("spezies") or [])
+                   if (t := tierlisten.nachsehen("volk", v))}
+        biom = tierlisten.nachsehen("biom", zustand.get("biom"))
+        if voelker or biom:
+            siedlung = auszug.get("siedlung") or {}
+            if voelker:
+                siedlung["voelker_tier"] = voelker
+            if biom:
+                siedlung["biom_tier"] = biom
+            auszug["siedlung"] = siedlung
     if lernen and any(lernen.values()):
         # Korrekturen des Spielers, Lehren aus frueheren Laeufen, Spielhistorie.
         auszug["lernen"] = lernen

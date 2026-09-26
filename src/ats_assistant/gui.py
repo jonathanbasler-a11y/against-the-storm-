@@ -26,7 +26,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
 
-from . import aktualisieren, berater, screen
+from . import aktualisieren, berater, screen, tierlisten
 from .mcp_server import aufloesen
 from .orte import finde_spielordner
 from .rechner import (ABHOLEN_MS, Rechner, alter as _alter,
@@ -129,6 +129,9 @@ def _bauplan_text(wahl: dict, vergleich: list[dict], gespeichert: str = "") -> s
             teile.append("nicht alle Zutaten im Lager")
         if g.get("schon_freigeschaltet"):
             teile.insert(0, "SCHON FREIGESCHALTET – bringt kein neues Gebäude")
+        stufen = tierlisten.nachsehen("gebaeude", g.get("gebaeude"))
+        if stufen:
+            teile.append("Tier " + tierlisten.kurz(stufen))
         zeilen.append(f"{g.get('gebaeude_de') or g['gebaeude']} – " + ", ".join(teile))
         for w in g.get("waren") or []:
             b = w.get("bisher")
@@ -776,6 +779,11 @@ class App:
             for feld in ("wirkung", "zweck"):
                 if eintrag.get(feld):
                     zeilen.append(f"    {eintrag[feld]}")
+            art = {"effect": "grundstein", "building": "gebaeude"}.get(eintrag.get("kind"))
+            if art:
+                stufen = tierlisten.nachsehen(art, eintrag.get("en"))
+                zeilen.append("    Tier: " + (tierlisten.kurz(stufen) if stufen
+                                              else "keine Tierliste"))
             zeilen.append("")
 
         # Die Aufnahme nimmt den ganzen Bildschirm. Was die Wissensbasis

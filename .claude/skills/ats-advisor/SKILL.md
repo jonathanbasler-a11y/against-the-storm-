@@ -59,6 +59,14 @@ Bonus überhaupt greift.
   dem Spielstand (je Option das Gebäude; `satz` ist ein ungedeuteter
   Rohwert). Es gilt vor einer Bildschirmlesung unter `auswahl`. Deutsche
   Namen stehen unter `namen_de`.
+- **`tier`** (an `auswahl[]`, `bauplan_vergleich[]`, `siedlung.voelker_tier`,
+  `siedlung.biom_tier`) sind Community-Tierlisten: Meinungen mit Quelle,
+  Stand und Kontext (oft Prestige 9, ältere Versionen) — keine Spieldaten.
+  **Zu jeder Option, die zur Wahl steht, die Stufe nennen**, kurz mit Quelle
+  („A bei ClashiVerse, P9“); steht keine da, nichts erfinden. **Rätst du gegen
+  die höhere Stufe, sag in einem Satz warum** — aus der Lage: gerechnete
+  Kette, `bauplan_vergleich`, Völker, Biom, `effekte.abweichungen`. Gemessenes
+  geht vor Meinung. (Wunsch des Spielers, 26.09.2026.)
 - **`bauplan_vergleich[].schon_freigeschaltet`**: Der angebotene Bauplan ist
   schon freigeschaltet (etwa beim Einbetten gewählt) — diese Wahl bringt kein
   neues Gebäude; dann die andere Option empfehlen.
