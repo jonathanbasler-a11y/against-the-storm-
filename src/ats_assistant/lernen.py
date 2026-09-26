@@ -29,7 +29,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from . import analysis, forecast
+from . import analysis, forecast, save_reader
 
 log = logging.getLogger(__name__)
 
@@ -213,7 +213,8 @@ def berichte(runs_dir: Path | str, historie: list[dict] | None = None) -> list[d
             bericht = alt["bericht"]
         else:
             eintraege = analysis.read_run_log(datei)
-            zustaende = [e for e in eintraege if e.get("typ") != "notiz"]
+            zustaende = [save_reader.zustand_bereinigen(e) for e in eintraege
+                         if e.get("typ") != "notiz"]
             notizen = [e for e in eintraege if e.get("typ") == "notiz"]
             bericht = laufbericht(zustaende, datei.stem, notizen)
         neu[datei.name] = {"marke": marke, "fassung": BERICHT_FASSUNG, "bericht": bericht}
@@ -304,7 +305,8 @@ def korrektur_merken(pfad: Path | str, aussage: str, korrektur: str) -> dict:
 def korrekturen(pfad: Path | str, hoechstens: int = 30) -> list[str]:
     """Die Korrekturen, neueste zuerst, jede einmal."""
     try:
-        zeilen = Path(pfad).read_text(encoding="utf-8", errors="replace").splitlines()
+        # Nur an "\n" trennen -- siehe `analysis.read_run_log`.
+        zeilen = Path(pfad).read_text(encoding="utf-8", errors="replace").split("\n")
     except OSError:
         return []
     out: list[str] = []

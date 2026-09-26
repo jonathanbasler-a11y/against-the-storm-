@@ -1037,3 +1037,42 @@ def test_nachschlagen_nennt_die_stufe(tmp_path: Path) -> None:
     stufen = {s["quelle"]: s["stufe"] for s in out["tier"]["volk"]}
     assert stufen == {"TheGamer": "C", "GameRant": "B"}
     assert out["tier"]["volk"][0]["quelle"] == "TheGamer"      # neuere Quelle zuerst
+
+
+def test_letzte_zustaende_liest_nur_das_ende(tmp_path: Path) -> None:
+    """Vom Dateiende her: Notizen und eine abgerissene letzte Zeile zählen nicht."""
+    zeilen = [json.dumps({"game_time": t, "storage": {"Meat": t}}) for t in range(1, 40)]
+    zeilen.insert(20, json.dumps({"typ": "notiz", "text": "x"}))
+    zeilen.append(json.dumps({"typ": "notiz", "text": "y"}))
+    (tmp_path / "lauf.jsonl").write_text("\n".join(zeilen) + '\n{"game_time": 99, "sto',
+                                         encoding="utf-8")
+    zustaende, quelle = tools_api._letzte_zustaende(tmp_path, "lauf")
+    assert quelle == "lauf" and [z["game_time"] for z in zustaende] == [38, 39]
+    einer, _ = tools_api._letzte_zustaende(tmp_path, "lauf", anzahl=1)
+    assert [z["game_time"] for z in einer] == [39]
+    assert tools_api._letzte_zustaende(tmp_path, "fehlt") == ([], "fehlt")
+
+
+def test_eine_mitschrift_in_fremder_form_bricht_keine_rechnung(tmp_path: Path) -> None:
+    """QA 26.09.2026: 31 Stellen brachen an einem Feld in fremder Art --
+    aus älteren Fassungen oder von Hand geändert. Geprüft wird jetzt einmal
+    beim Lesen; was nicht passt, gilt als fehlend."""
+    from ats_assistant import lernen
+    gut = {"game_time": 100.0, "year": 1, "impatience": 2.0, "impatience_to_lose": 14,
+           "impatience_per_second": 0.01, "storage": {"Meat": 5},
+           "category_trends": {"Food": [9.0, 8.0, 7.0]}}
+    kaputt = {"game_time": 400.0, "year": "zwei", "impatience": [], "impatience_to_lose": {},
+              "impatience_per_second": "", "storage": 3, "goods_trends": {"Meat": [1, None]},
+              "category_trends": {"Food": [6.0, 5.0], "Mat": "x"}, "blueprints": True,
+              "orders": 1.5, "blueprint_pick": {"angebot": 7}, "effects": {"aktiv": True}}
+    (tmp_path / "lauf.jsonl").write_text(
+        json.dumps(gut) + "\n" + json.dumps(kaputt) + "\n", encoding="utf-8")
+    for out in (tools_api.food_forecast(tmp_path, "lauf"),
+                tools_api.impatience_forecast(tmp_path, "lauf"),
+                tools_api.food_advice(tmp_path, tmp_path / "kb.sqlite", "lauf"),
+                tools_api.lage_wissen(tmp_path, tmp_path / "kb.sqlite", "lauf")):
+        assert "fehler" not in out, out
+    zustaende, _ = tools_api._letzte_zustaende(tmp_path, "lauf")
+    assert zustaende[-1]["category_trends"] == {"Food": [6.0, 5.0]}
+    assert "storage" not in zustaende[-1] and zustaende[-1]["blueprint_pick"] == {}
+    assert lernen.berichte(tmp_path)[0]["zustaende"] == 2

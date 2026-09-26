@@ -223,11 +223,7 @@ class Rechner(threading.Thread):
         pfad = Path(self.save_dir) / "MetaSave.save"
         if not pfad.exists():
             return []
-        meta = save_reader._load(pfad)
-        if not isinstance(meta, dict):
-            return []
-        records = (meta.get("gamesHistory") or {}).get("records")
-        return records if isinstance(records, list) else []
+        return save_reader.laufhistorie(save_reader._load(pfad))
 
     def _gelerntes(self) -> dict:
         """Was der Rat aus frueheren Laeufen und Korrekturen mitbekommt.
