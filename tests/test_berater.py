@@ -621,7 +621,10 @@ def test_der_bauplanvergleich_geht_an_den_rat() -> None:
     vergleich = [{"gebaeude": "Kiln", "besser_oder_neu": 1, "waren": [
         {"ware": "Coal", "sterne": 3, "besser": True, "bisher": None}]}]
     auszug = berater.kontext(zustand={"jahr": 1}, wissen={"bauplan_vergleich": vergleich})
-    assert auszug["bauplan_vergleich"] == vergleich
+    # Unverändert durchgereicht -- plus die Stufe aus den Tierlisten (Runde 18).
+    assert [{k: v for k, v in g.items() if k != "tier"}
+            for g in auszug["bauplan_vergleich"]] == vergleich
+    assert auszug["bauplan_vergleich"][0]["tier"][0]["quelle"] == "GameRant"
     assert "bauplan_vergleich" in " ".join(berater.systemtext().split())
 
 

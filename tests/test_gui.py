@@ -804,4 +804,4 @@ def test_bauplantabelle_nennt_die_stufe(gui) -> None:
     text = gui._bauplan_text({"angebot": ["Ranch"]}, [
         {"gebaeude": "Ranch", "gebaeude_de": "Ranch", "besser_oder_neu": 1, "nahrung": 0,
          "waren": []}])
-    assert "Tier A (Community)" in text
+    assert "Tier B (GameRant, 2023-05, Early Access)" in text

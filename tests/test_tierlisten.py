@@ -60,10 +60,10 @@ def test_der_rat_bekommt_die_stufen() -> None:
                              {"de": "Unbekannt", "en": "Nichts", "kind": "effect",
                               "guete": 1.0, "belegt": True}]},
         wissen={"bauplan_vergleich": [{"gebaeude": "Ranch", "waren": []}]})
-    assert auszug["auswahl"][0]["tier"][0]["stufe"] == "B"
+    assert auszug["auswahl"][0]["tier"][0]["stufe"] == "A"          # ClashiVerse 4/5
     assert "tier" not in auszug["auswahl"][1]
-    assert auszug["bauplan_vergleich"][0]["tier"][0]["stufe"] == "A"
-    assert list(auszug["siedlung"]["voelker_tier"]) == ["Harpy"]
+    assert auszug["bauplan_vergleich"][0]["tier"][0]["stufe"] == "B"  # GameRant
+    assert list(auszug["siedlung"]["voelker_tier"]) == ["Harpy", "Lizard"]
     assert auszug["siedlung"]["biom_tier"][0]["stufe"] == "B"
     berater.pruefe_auszug(auszug)
     text = " ".join(berater.systemtext().split())
