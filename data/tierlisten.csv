@@ -1,18 +1,100 @@
 kategorie,en,stufe,quelle,url,stand,kontext,notiz
-grundstein,Protected Trade,S,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2026-09,Prestige 9,"must-have (laut Suchergebnis)"
-grundstein,Exploration Expedition,S,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2026-09,Prestige 9,"must-have (laut Suchergebnis)"
-grundstein,Lost Supplies,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2026-09,Prestige 9,"situational gem (laut Suchergebnis)"
-grundstein,Rooty Ground,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2026-09,Prestige 9,"situational (laut Suchergebnis)"
-gebaeude,Plantation,S,Community,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,unbekannt,,"very overpowered: zwei nützliche Waren mit 2 Sternen"
-gebaeude,Lumber Mill,A,Community,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,unbekannt,,"Bretter überall gebraucht, schnell"
-gebaeude,Ranch,A,Community,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,unbekannt,,"extrem wertvoll mit Echsen und Füchsen"
-gebaeude,Bath House,D,Community,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,unbekannt,,"notorisch schwach: nur eine Dienstleistung"
-volk,Harpy,S,GameRant/TheGamer,https://gamerant.com/against-the-storm-every-species-race-best-worst-tier-beaver-human-harpy-fox-lizard/,unbekannt,,"bestes Volk unabhängig vom Biom (niedriger Anspruch und Dekadenz)"
-volk,Beaver,A,GameRant/TheGamer,https://gamerant.com/against-the-storm-every-species-race-best-worst-tier-beaver-human-harpy-fox-lizard/,unbekannt,,"MVP: Holzverarbeitung trägt die Grundversorgung"
-volk,Human,B,GameRant/TheGamer,https://gamerant.com/against-the-storm-every-species-race-best-worst-tier-beaver-human-harpy-fox-lizard/,unbekannt,,"starke Bauern bei fruchtbarem Boden, aber am anspruchsvollsten"
-volk,Fox,B,GameRant/TheGamer,https://gamerant.com/against-the-storm-every-species-race-best-worst-tier-beaver-human-harpy-fox-lizard/,unbekannt,,"für Erkundung: weniger Strafe beim Öffnen von Lichtungen"
-biom,Scarlet Orchard,A,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,Stufe = wie leicht,"am leichtesten: Archäologie-Boni, Kupfer, Seemark"
-biom,Royal Woodlands,A,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,Stufe = wie leicht,"leicht: Holz ohne Ende"
-biom,Coral Forest,B,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,Stufe = wie leicht,"Holzfällen liefert Faser, Stein und Tau"
-biom,The Marshlands,B,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,Stufe = wie leicht,"am berechenbarsten: Trapperlager einbetten, Brennstoff-/Holzrezept wählen"
-biom,Cursed Royal Woodlands,C,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,Stufe = wie leicht,"zusätzliche Herausforderung, zufälliger"
+grundstein,Exploration Expedition,S,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","5/5: öffnet Lichtungen kostenlos, bringt Ressourcen"
+grundstein,Protected Trade,S,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",5/5: verhindert hohe Feindseligkeit
+grundstein,Silent Looting,A,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","4/5: -30 Feindseligkeit je Jahr, Risiko Ressourcenverlust"
+grundstein,Baptism of Fire,A,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",4/5: langfristig bis -100 Feindseligkeit
+grundstein,Rooty Ground,A,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","4/5: +1 Holz je Ernte, Nachteil auf hohem Prestige tragbar"
+grundstein,Lost Supplies,A,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",4/5: 40 Fleisch und 40 Getreide je Ereignis
+grundstein,Smugglers Visit,A,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","4/5: seltene Waren, stärkt Handel"
+grundstein,Calming the Forest,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",3/5: -30 Feindseligkeit je Jahr ohne Nachteil
+grundstein,Mist Piercers,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","3/5: wie Ancient Pact, auf hohem Prestige teurer"
+grundstein,Prosperous Settlement,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","3/5: +10 Zufriedenheit, auf hohem Prestige schwächer"
+grundstein,Woodcutters Prayer,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",3/5: Holzfäller effizienter
+grundstein,Grain Delivery Line,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",3/5: halbe Plantage Getreide umsonst
+grundstein,Fiber Delivery Line,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","3/5: wie Grain Delivery Line, weniger Wirkung"
+grundstein,Clay Delivery Line,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",3/5: stetig Lehm
+grundstein,Bed and Breakfast,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",3/5: auf hohem Prestige wertvoller (Bernstein knapp)
+grundstein,Ancient Pact,B,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",3/5: Wissen spart Zeit und Ressourcen
+grundstein,Back to Nature,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","2/5: wie Grain Delivery Line, weniger Wirkung"
+grundstein,Crowded Houses,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","2/5: spart Baumaterial, kein großer Vorteil"
+grundstein,Cheap Construction,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","2/5: nützlich nach Lichtungen, vor Dienstgebäuden"
+grundstein,Firekeepers Prayer,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",2/5: auf hohem Prestige wertvoller
+grundstein,Frequent Caravans,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","2/5: Ruf über Zufriedenheit, Karawanen nicht immer genutzt"
+grundstein,Friendly Relations,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",2/5: etwas besser als Frequent Caravans
+grundstein,Burnt to a Crisp,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","2/5: doppelte Farmproduktion, viel Mikromanagement"
+grundstein,Chicken or Egg,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","2/5: stark in Kombination, Bevölkerung im Blick"
+grundstein,Copper Extractor,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",2/5: nur wenn Kupfer für Werkzeug gebraucht
+grundstein,Family Gratitude,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",2/5: für Wein-/Bier-Strategie
+grundstein,Flame Amulets,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5","2/5: flexibel, Ruf über Zufriedenheit leichter"
+grundstein,Improvised Tools,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",2/5: Bernstein gegen Biber-Zufriedenheit
+grundstein,Leather Gloves,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",2/5: nur wenn Leder gebraucht
+grundstein,Lost in the Wilds,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",2/5: ähnlich Baptism of Fire
+grundstein,Prayer Book,C,ClashiVerse,https://clashiverse.com/against-the-storm-cornerstone-tier-list/,2024-01,"Prestige 9, Skala 1–5",2/5: eher früh im Spiel
+gebaeude,Apothecary,S,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,einziger Weihrauch über ★
+gebaeude,Carpenter,S,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Kiln,S,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,"Holz zu Kohle, brennt länger"
+gebaeude,Lumber Mill,S,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,"Bretter ★★★, spart Holz für Brennstoff"
+gebaeude,Tinkerer,S,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,steht dort auch unter A
+gebaeude,Butcher,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Cookhouse,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Explorer's Lodge,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Guild House,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Herb Garden,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Forester's Hut,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,Harz und Kristalltau (Ersatz für Kupferbarren)
+gebaeude,Manufactory,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Market,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Monastery,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Provisioner,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Smithy,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Tavern,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Toolshop,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Weaver,A,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Alchemist's Hut,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Bakery,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Beanery,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Brickyard,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Clan Hall,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Cooperage,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Druid's Hut,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,je nach Völkern
+gebaeude,Forum,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Herbalists' Camp,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Leatherworker,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Plantation,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Ranch,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,"mit Echsen und Füchsen „unreal“ (S), sonst schwach"
+gebaeude,Scribe,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Small Farm,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Smelter,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,je nach Völkern
+gebaeude,Supplier,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Tea Doctor,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Trappers' Camp,B,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Artisan,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Cellar,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Clothier,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Distillery,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Furnace,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Granary,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Press,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Rain Collector,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Rain Mill,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Smokehouse,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Stamping Mill,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Teahouse,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Temple,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Tinctury,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,bei GameRant „Tinctuary“; nur Luxusgüter
+gebaeude,Workshop,C,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,"Bretter/Ziegel/Stoff ★★, aber nur 2 Arbeitsplätze"
+gebaeude,Bath House,D,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,nur eine Dienstleistung
+gebaeude,Brewery,D,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Brick Oven,D,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Clay Pit,D,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Greenhouse,D,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+gebaeude,Grill,D,GameRant,https://gamerant.com/against-the-storm-blueprint-building-tier-list-structures-best-worst-value/,2023-05,Early Access,
+volk,Beaver,S,GameRant,https://gamerant.com/against-the-storm-every-species-race-best-worst-tier-beaver-human-harpy-fox-lizard/,2023-05,"Early Access, nur die 5 Grundvölker",Platz 1 von 5 (Rangliste)
+volk,Lizard,A,GameRant,https://gamerant.com/against-the-storm-every-species-race-best-worst-tier-beaver-human-harpy-fox-lizard/,2023-05,"Early Access, nur die 5 Grundvölker","Platz 2 von 5: Unterstützer, +1 Zufriedenheit als Feuerhüter, Hungertoleranz 12"
+volk,Harpy,B,GameRant,https://gamerant.com/against-the-storm-every-species-race-best-worst-tier-beaver-human-harpy-fox-lizard/,2023-05,"Early Access, nur die 5 Grundvölker",Platz 3 von 5: bester Ruf über Zufriedenheit (niedriger Anspruch und Dekadenz)
+volk,Human,C,GameRant,https://gamerant.com/against-the-storm-every-species-race-best-worst-tier-beaver-human-harpy-fox-lizard/,2023-05,"Early Access, nur die 5 Grundvölker","Platz 4 von 5: starke Bauern, aber höchster Anspruch"
+volk,Fox,D,GameRant,https://gamerant.com/against-the-storm-every-species-race-best-worst-tier-beaver-human-harpy-fox-lizard/,2023-05,"Early Access, nur die 5 Grundvölker","Platz 5 von 5: verhungern schnell, spezielle Bedürfnisse"
+biom,Scarlet Orchard,A,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,"Stufe = wie leicht; einzelne Spielermeinung, Seite nicht gelesen","am leichtesten: Archäologie-Boni, Kupfer, Seemark"
+biom,Royal Woodlands,A,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,"Stufe = wie leicht; einzelne Spielermeinung, Seite nicht gelesen",leicht: Holz ohne Ende
+biom,Coral Forest,B,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,"Stufe = wie leicht; einzelne Spielermeinung, Seite nicht gelesen","Holzfällen liefert Faser, Stein und Tau"
+biom,The Marshlands,B,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,"Stufe = wie leicht; einzelne Spielermeinung, Seite nicht gelesen","am berechenbarsten: Trapperlager einbetten, Brennstoff-/Holzrezept wählen"
+biom,Cursed Royal Woodlands,C,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,"Stufe = wie leicht; einzelne Spielermeinung, Seite nicht gelesen","zusätzliche Herausforderung, zufälliger"
