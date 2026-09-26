@@ -633,3 +633,12 @@ def test_der_systemtext_kennt_voelker_und_biome() -> None:
     for begriff in ("Echsen", "Fledermäuse", "Hungertoleranz", "Marshlands",
                     "schon_freigeschaltet", "Startbauplan weniger"):
         assert begriff in text, begriff
+
+
+def test_kosten_auch_mit_datumsanhang_aber_nicht_fuer_fremde_modelle() -> None:
+    def kosten(modell):
+        return berater.Antwort(text="x", modell=modell, eingabe_token=1_000_000,
+                               ausgabe_token=0).kosten_cent
+    assert kosten("claude-opus-5") == kosten("claude-opus-5-20260401") == 500.0
+    assert kosten("claude-opus-5-5") is None          # anderes Modell, anderer Preis
+    assert kosten(None) is None
