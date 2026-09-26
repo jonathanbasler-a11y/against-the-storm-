@@ -69,10 +69,15 @@ def _merkmale(siege: list[dict], niederlagen: list[dict], feld: str,
     """Welche Eintraege im Feld kommen in Siegen anders oft vor als in Niederlagen?"""
     s_zaehler: Counter = Counter()
     n_zaehler: Counter = Counter()
+    def eintraege(lauf: dict) -> set[str]:
+        # Keine Liste (fremde Form): nichts zaehlen statt zu werfen.
+        werte = lauf.get(feld)
+        return {x for x in werte if isinstance(x, str)} if isinstance(werte, list) else set()
+
     for lauf in siege:
-        s_zaehler.update({x for x in lauf.get(feld) or [] if isinstance(x, str)})
+        s_zaehler.update(eintraege(lauf))
     for lauf in niederlagen:
-        n_zaehler.update({x for x in lauf.get(feld) or [] if isinstance(x, str)})
+        n_zaehler.update(eintraege(lauf))
 
     out: list[Merkmal] = []
     for name in set(s_zaehler) | set(n_zaehler):
@@ -155,8 +160,11 @@ def read_run_log(pfad: Path) -> list[dict]:
     if not Path(pfad).exists():
         return out
     # Eine beim Schreiben abgerissene Zeile kann mitten in einem Umlaut
-    # enden; streng gelesen fiel damit jede Vorhersage aus.
-    for zeile in Path(pfad).read_text(encoding="utf-8", errors="replace").splitlines():
+    # enden; streng gelesen fiel damit jede Vorhersage aus. Getrennt wird
+    # nur an "\n": `splitlines()` trennt auch an U+2028 und U+0085, die
+    # `ensure_ascii=False` roh in eine Notiz schreibt -- die Notiz ging
+    # dann in zwei unlesbaren Haelften verloren.
+    for zeile in Path(pfad).read_text(encoding="utf-8", errors="replace").split("\n"):
         zeile = zeile.strip()
         if not zeile:
             continue

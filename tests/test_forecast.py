@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 import pytest
 
+from ats_assistant import forecast
 from ats_assistant.forecast import (
     SAMPLE_SECONDS,
     fresh_samples,
@@ -214,3 +215,41 @@ def test_trends_je_ware_verweigern_einen_ganz_erneuerten_puffer() -> None:
     from ats_assistant.forecast import waren_trends
     assert waren_trends({"Wood": [float(i) for i in range(180)]}, {"Wood": [0.5] * 180},
                         t0=600.0, t1=3000.0) == []
+
+
+def _ring(werte_vorher: list[float], neu: list[float], zeiger: int) -> list[float]:
+    ring = list(werte_vorher)
+    for i, v in enumerate(neu):
+        ring[(zeiger + i) % len(ring)] = v
+    return ring
+
+
+def test_gleicher_neuester_wert_verschiebt_den_block_nicht() -> None:
+    """QA 26.09.2026: Gleicht der neueste Wert dem von vor einer halben Stunde,
+    rückte der Block um eins nach hinten -- ein alter Wert kam hinein, der
+    neueste fiel weg. Alle Reihen teilen den Schreibzeiger; zusammen sehen
+    sie den Block richtig."""
+    from types import SimpleNamespace
+    alt_food = [100.0] * 15 + [50.0] + [100.0] * 164        # Stelle 15: alt, vor dem Block
+    neu_food = [90.0, 80.0, 70.0, 60.0, 100.0]              # Stellen 16-20; 100 wie vorher
+    jetzt_food = _ring(alt_food, neu_food, 16)
+    alt_holz = [5.0] * 180
+    jetzt_holz = _ring(alt_holz, [6.0, 7.0, 8.0, 9.0, 10.0], 16)
+    vorher = SimpleNamespace(category_trends={"Food": alt_food}, goods_trends={"Wood": alt_holz},
+                             game_time=1000.0)
+    jetzt = SimpleNamespace(category_trends={"Food": jetzt_food}, goods_trends={"Wood": jetzt_holz},
+                            game_time=1050.0)
+    allein = forecast.frische_werte(alt_food, jetzt_food, 1000.0, 1050.0)
+    assert allein == [50.0, 90.0, 80.0, 70.0, 60.0]           # der alte Fehler
+    f = forecast.food_forecast(jetzt, vorher)
+    assert f.stock == 100.0 and f.samples_used == 5
+
+
+def test_eine_reihe_mit_eigenem_zeiger_verdirbt_den_block_nicht() -> None:
+    """Passt der gemeinsame Block nicht zur Spielzeit, gilt die Einzelreihe."""
+    alt = [float(i) for i in range(180)]
+    jetzt = _ring(alt, [500.0, 501.0, 502.0], 40)
+    fremd_alt = [0.0] * 180
+    fremd_jetzt = _ring(fremd_alt, [1.0, 2.0, 3.0], 120)       # anderer Zeiger
+    geaendert = forecast.geaenderte_stellen([(alt, jetzt), (fremd_alt, fremd_jetzt)])
+    assert forecast.frische_werte(alt, jetzt, 0.0, 30.0, geaendert) == [500.0, 501.0, 502.0]

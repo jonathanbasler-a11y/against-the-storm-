@@ -669,3 +669,38 @@ def test_eine_getroffene_bauplanwahl_ist_nicht_mehr_offen(tmp_path: Path) -> Non
     state, notes = read_state(ordner, wait=False)
     assert state.blueprint_pick == {}
     assert "blueprint_pick" not in {n.field for n in notes}
+
+
+# --------------------------------------------------------------------------
+# QA-Runde 26.09.2026: gefunden, indem jeder Knoten durch fremde Typen ersetzt wurde
+# --------------------------------------------------------------------------
+
+
+def test_nan_und_unendlich_werden_zu_none(tmp_path: Path) -> None:
+    """Sonst liefen sie bis in den Auszug für den Rat -- kein gültiges JSON mehr."""
+    ordner = schreibe_buendel(tmp_path)
+    pfad = ordner / "Save.save"
+    pfad.write_text(pfad.read_text(encoding="utf-8").replace(
+        '"reputation": 18.0', '"reputation": NaN, "extra": -Infinity'), encoding="utf-8")
+    state, _ = read_state(ordner, wait=False)
+    assert state.reputation is None
+    json.loads(state.to_json(), parse_constant=lambda c: pytest.fail(c))
+
+
+@pytest.mark.parametrize("optionen", [3, 1.5, True, "Kiln", {"a": 1}])
+def test_bauplanoptionen_ohne_liste_reissen_nichts_mit(tmp_path: Path, optionen) -> None:
+    ordner = schreibe_buendel(tmp_path, save={"reputationRewards": {
+        "currentPick": {"id": 1, "options": optionen}}})
+    state, notes = read_state(ordner, wait=False)
+    assert state.blueprint_pick == {} and state.game_time is not None
+    assert _note(notes, "blueprint_pick").how == "form_unbekannt"
+
+
+@pytest.mark.parametrize("meta", [None, 3, [], {"gamesHistory": 1},
+                                  {"gamesHistory": {"records": True}},
+                                  {"gamesHistory": {"records": [1, None, {"hasWon": True}]}}])
+def test_laufhistorie_in_fremder_form(meta) -> None:
+    from ats_assistant.save_reader import laufhistorie
+    erwartet = [{"hasWon": True}] if isinstance(meta, dict) and meta.get(
+        "gamesHistory", {}) == {"records": [1, None, {"hasWon": True}]} else []
+    assert laufhistorie(meta) == erwartet

@@ -113,8 +113,63 @@ def impatience_forecast(state, seconds_ahead: float = SAVE_INTERVAL_SECONDS) -> 
 # --------------------------------------------------------------------------
 
 
+def geaenderte_stellen(paare) -> set[int] | None:
+    """Die Stellen, an denen sich irgendeine Reihe geaendert hat.
+
+    Alle Zeitreihen eines Spielstands -- jede Ware, jede Kategorie -- teilen
+    denselben Schreibzeiger. Eine einzelne Reihe verraet den frischen Block
+    nicht, wenn ihr neuester Wert zufaellig dem von vor einer halben Stunde
+    gleicht: dann rueckte der Block um eine Stelle nach hinten, ein alter
+    Wert kam hinein und der neueste fiel weg. Gemessen an Zufallsreihen:
+    1,7 % der Vorhersagen falsch, Ratenfehler im Median 18 %, bis 300 %.
+    Ueber alle Reihen zusammen muesste der Zufall ueberall gleichzeitig
+    treffen.
+
+    `paare` sind (vorher, jetzt); gezaehlt wird nur die haeufigste Laenge.
+    None, wenn kein Paar vergleichbar ist.
+    """
+    laengen: dict[int, int] = {}
+    brauchbar = []
+    for vorher, jetzt in paare:
+        if isinstance(vorher, list) and isinstance(jetzt, list) and jetzt \
+                and len(vorher) == len(jetzt):
+            brauchbar.append((vorher, jetzt))
+            laengen[len(jetzt)] = laengen.get(len(jetzt), 0) + 1
+    if not brauchbar:
+        return None
+    n = max(laengen, key=laengen.get)
+    out: set[int] = set()
+    for vorher, jetzt in brauchbar:
+        if len(jetzt) == n:
+            out.update(i for i, (a, b) in enumerate(zip(vorher, jetzt, strict=True)) if a != b)
+    return out
+
+
+def _alle_paare(jetzt, vorher) -> list[tuple]:
+    """Je Reihe (vorher, jetzt) aus Waren- und Kategorienreihen zweier Staende."""
+    paare = []
+    for feld in ("category_trends", "goods_trends"):
+        alt = getattr(vorher, feld, None) or {}
+        for name, reihe in (getattr(jetzt, feld, None) or {}).items():
+            if name in alt:
+                paare.append((alt[name], reihe))
+    return paare
+
+
+def _block(changed: list[int], n: int) -> tuple[int, int, int]:
+    """Anfang, Ende und Laenge des Blocks, den die geaenderten Stellen im Ring
+    aufspannen: hinter der groessten Luecke faengt er an."""
+    luecken = [((changed[(k + 1) % len(changed)] - changed[k]) % n, k)
+               for k in range(len(changed))]
+    _, letzter = max(luecken)
+    start = changed[(letzter + 1) % len(changed)]
+    ende = changed[letzter]
+    return start, ende, (ende - start) % n + 1
+
+
 def fresh_samples(before: list[float], after: list[float],
-                  expected: int | None = None) -> list[float]:
+                  expected: int | None = None,
+                  geaendert: set[int] | None = None) -> list[float]:
     """Die Stuetzstellen, die zwischen zwei Spielstaenden neu geschrieben wurden.
 
     Der Ringpuffer laesst den Schreibzeiger wandern; frisch ist ein
@@ -133,24 +188,22 @@ def fresh_samples(before: list[float], after: list[float],
     Bleibt die Kollision genau am Rand des Blocks, hilft auch das nicht -- dann
     fehlt vorn oder hinten eine Stuetzstelle. Wer die vergangene Spielzeit
     kennt, kennt aber die erwartete Blocklaenge und kann den Block nach hinten
-    verlaengern: `expected`.
+    verlaengern: `expected`. Sicherer ist `geaendert`: die Stellen, an denen
+    sich irgendeine Reihe desselben Spielstands geaendert hat.
     """
     if len(before) != len(after) or not after:
         return list(after)
     n = len(after)
-    changed = [i for i, (a, b) in enumerate(zip(before, after)) if a != b]
+    if geaendert is not None:
+        changed = sorted(i for i in geaendert if 0 <= i < n)
+    else:
+        changed = [i for i, (a, b) in enumerate(zip(before, after)) if a != b]
     if not changed:
         return []
     if len(changed) == n:
         return list(after)
 
-    # Groesste Luecke im Ring suchen: direkt dahinter faengt der frische Block an.
-    luecken = [((changed[(k + 1) % len(changed)] - changed[k]) % n, k)
-               for k in range(len(changed))]
-    _, letzter = max(luecken)
-    start = changed[(letzter + 1) % len(changed)]
-    ende = changed[letzter]
-    laenge = (ende - start) % n + 1
+    start, ende, laenge = _block(changed, n)
     if expected is not None and 0 < laenge < expected <= n:
         # Der juengste Wert liegt am Blockende. Fehlt vorn etwas, nach hinten
         # verlaengern, statt die Reihe kuerzer zu nehmen als sie ist.
@@ -174,7 +227,8 @@ def slope_per_second(values: list[float], sample_seconds: float = SAMPLE_SECONDS
 
 
 def frische_werte(vorher: list[float], reihe: list[float],
-                  t0: float | None, t1: float | None) -> list[float] | None:
+                  t0: float | None, t1: float | None,
+                  geaendert: set[int] | None = None) -> list[float] | None:
     """Die neuen Stuetzstellen zwischen zwei Staenden -- oder None, wenn sich
     ihre Reihenfolge nicht mehr herstellen laesst.
 
@@ -186,11 +240,21 @@ def frische_werte(vorher: list[float], reihe: list[float],
     erwartet = None
     if isinstance(t0, (int, float)) and isinstance(t1, (int, float)) and t1 > t0:
         erwartet = max(round((t1 - t0) / SAMPLE_SECONDS), 0) or None
+    if geaendert is not None:
+        # Nur wenn der gemeinsame Block zur vergangenen Spielzeit passt. Dass
+        # alle Reihen einen Zeiger teilen, zeigen die Messungen (29-30 Stellen
+        # je Speichern), belegt ist es nicht fuer jede Reihe -- und eine Reihe
+        # mit eigenem Zeiger machte den gemeinsamen Block zu lang.
+        stellen = sorted(i for i in geaendert if 0 <= i < len(reihe))
+        if (erwartet is None or not stellen or len(stellen) >= len(reihe)
+                or abs(_block(stellen, len(reihe))[2] - erwartet) > 2):
+            geaendert = None
     if len(vorher) == len(reihe) and reihe and (
             (erwartet is not None and erwartet >= len(reihe))
-            or all(a != b for a, b in zip(vorher, reihe, strict=True))):
+            or (len(geaendert) >= len(reihe) if geaendert is not None
+                else all(a != b for a, b in zip(vorher, reihe, strict=True)))):
         return None
-    return fresh_samples(vorher, reihe, erwartet)
+    return fresh_samples(vorher, reihe, erwartet, geaendert)
 
 
 def waren_trends(aktuell: dict[str, list[float]], vorher: dict[str, list[float]],
@@ -198,11 +262,12 @@ def waren_trends(aktuell: dict[str, list[float]], vorher: dict[str, list[float]]
     """Je Ware Rate und, wenn sie faellt, Reichweite -- dieselben Reihen wie
     „Verlauf" im Spiel, dieselbe Rechnung wie bei der Nahrung."""
     out = []
+    geaendert = geaenderte_stellen((vorher[w], r) for w, r in aktuell.items() if w in vorher)
     for ware, reihe in aktuell.items():
         alt = vorher.get(ware)
         if not alt:
             continue
-        werte = frische_werte(alt, reihe, t0, t1)
+        werte = frische_werte(alt, reihe, t0, t1, geaendert)
         if not werte:
             continue
         rate = slope_per_second(werte)
@@ -231,7 +296,8 @@ def food_forecast(
     if previous is not None and previous.category_trends.get(category):
         values = frische_werte(previous.category_trends[category], series,
                                getattr(previous, "game_time", None),
-                               getattr(current, "game_time", None))
+                               getattr(current, "game_time", None),
+                               geaenderte_stellen(_alle_paare(current, previous)))
         if values is None:
             return FoodForecast(
                 None, None, None, 0,

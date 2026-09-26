@@ -90,3 +90,19 @@ def test_zerrissene_zeile_in_der_mitschrift(tmp_path) -> None:
     datei = tmp_path / "lauf.jsonl"
     datei.write_bytes(b'{"game_time": 1}\n{"biome": "K\xc3')
     assert read_run_log(datei) == [{"game_time": 1}]
+
+
+def test_zeilentrenner_im_text_zerreissen_die_notiz_nicht(tmp_path: Path) -> None:
+    """`ensure_ascii=False` schreibt U+2028 und U+0085 roh; `splitlines()`
+    trennte daran, und die Notiz ging in zwei unlesbaren Haelften verloren."""
+    from ats_assistant import tools_api
+    tools_api.log_event("Brennofen zweite Zeile\x85", tmp_path, run_id="lauf")
+    eintraege = analysis.read_run_log(tmp_path / "lauf.jsonl")
+    assert [e["text"] for e in eintraege] == ["Brennofen zweite Zeile\x85"]
+
+
+def test_merkmale_ohne_liste_werfen_nicht() -> None:
+    v = analysis.compare_runs([{"hasWon": True, "cornerstones": 3, "buildings": "Kiln"},
+                               {"hasWon": False, "cornerstones": ["A"]},
+                               {"hasWon": False, "cornerstones": ["A"]}], n=5)
+    assert [m.name for m in v.grundsteine] == ["A"]

@@ -85,8 +85,13 @@ def test_neu_gerechnet_wird_nur_wenn_das_spiel_geschrieben_hat(tmp_path: Path) -
     assert r.eingang.qsize() == 1
 
     (save_dir / "Save.save").write_text('{"time": 800.0}', encoding="utf-8")
+    r._nachsehen()                            # die erste wartet noch: keine zweite
+    assert r.eingang.qsize() == 1
+    r._ausfuehren = lambda auftrag: None
+    r._sicher(r.eingang.get_nowait())         # jetzt ist sie gelaufen
+    (save_dir / "Save.save").write_text('{"time": 900.0}', encoding="utf-8")
     r._nachsehen()
-    assert r.eingang.qsize() == 2
+    assert r.eingang.qsize() == 1
 
 
 def test_ein_fehlender_spielordner_laesst_den_takt_weiterlaufen(tmp_path: Path) -> None:
@@ -358,3 +363,39 @@ def test_aktualisieren_laeuft_im_arbeits_thread(tmp_path: Path, monkeypatch) -> 
     r._ausfuehren(rechner.Auftrag("aktualisieren"))
     art, wert = ausgang.get_nowait()
     assert art == "aktualisiert" and wert["ok"] is True
+
+
+def test_rat_und_aktualisieren_blockieren_die_lage_nicht(tmp_path: Path) -> None:
+    """Eine Rat-Frage dauert bis zu einer Minute. Vorher warteten Lage,
+    Texterkennung und Nachschlagen dahinter -- das Fenster stand still."""
+    import threading
+    ausgang: queue.Queue = queue.Queue()
+    r = rechner.Rechner(tmp_path, tmp_path / "runs", tmp_path / "kb.sqlite", ausgang)
+    freigabe = threading.Event()
+    erledigt = []
+
+    def ausfuehren(auftrag):
+        if auftrag.art == "rat":
+            freigabe.wait(5)                  # haengt wie eine lange Anfrage
+        erledigt.append(auftrag.art)
+        if auftrag.art == "nachschlag":
+            r.stoppen()
+
+    r._ausfuehren = ausfuehren
+    r._anfangen = lambda: None
+    r.bitte("rat")
+    r.bitte("nachschlag", name="Holz")
+    faden = threading.Thread(target=r.run, daemon=True)
+    faden.start()
+    faden.join(3)
+    assert erledigt == ["nachschlag"]         # vor dem Rat fertig
+    freigabe.set()
+
+
+def test_gleiche_lagen_stapeln_sich_nicht(tmp_path: Path) -> None:
+    r = rechner.Rechner(tmp_path, tmp_path / "runs", tmp_path / "kb.sqlite", queue.Queue())
+    for _ in range(5):
+        r.bitte("lage")
+    assert r.eingang.qsize() == 1
+    r.bitte("nachschlag", name="Holz")
+    assert r.eingang.qsize() == 2

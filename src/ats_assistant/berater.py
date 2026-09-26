@@ -17,6 +17,7 @@ Drei Zusagen:
 from __future__ import annotations
 
 import json
+import re
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -106,7 +107,11 @@ class Antwort:
         0,1-fache des Eingabepreises -- beides fehlte in der Schaetzung.
         """
         preise = {"claude-opus-5": (5.0, 25.0), "claude-sonnet-5": (2.0, 10.0)}
-        satz = preise.get(self.modell)
+        # Die Antwort nennt das Modell selbst; traegt die Kennung einen
+        # Datumsanhang ("-20260401"), fiel die Schaetzung sonst still weg.
+        # Nur ein Datum wird abgeschnitten -- "claude-opus-5-5" ist ein
+        # anderes Modell mit anderem Preis.
+        satz = preise.get(re.sub(r"-\d{8}$", "", self.modell or ""))
         if satz is None or self.eingabe_token is None or self.ausgabe_token is None:
             return None
         ein, aus = satz

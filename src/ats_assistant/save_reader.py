@@ -23,7 +23,7 @@ import logging
 import math
 import re
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -119,6 +119,60 @@ class GameState:
         return self.impatience >= self.impatience_to_lose
 
 
+def _ist_zahl(w: Any) -> bool:
+    return isinstance(w, (int, float)) and not isinstance(w, bool) and math.isfinite(w)
+
+
+def _feldarten() -> dict[str, type]:
+    """Je Feld von GameState die erwartete Grundart: Zahl, Text, Liste, Tabelle."""
+    out: dict[str, type] = {}
+    for f in fields(GameState):
+        typ = str(f.type)
+        for art, zeichen in ((list, "list["), (dict, "dict["), (str, "str"),
+                             (float, "float"), (float, "int")):
+            if typ.startswith(zeichen):
+                out[f.name] = art
+                break
+    return out
+
+
+def zustand_bereinigen(eintrag: dict) -> dict:
+    """Ein Zustand aus der Mitschrift, jedes bekannte Feld in seiner Art.
+
+    Die Mitschrift schreibt dieses Programm selbst -- aber aeltere Fassungen
+    schrieben andere Formen, und eine Zeile laesst sich von Hand aendern. Am
+    26.09.2026 brachen 31 Stellen in Vorhersage, Rat und Laufbericht an
+    einem Feld in fremder Art (Lager als Zahl, Jahr als Text, Zeitreihe mit
+    `null`). Hier wird einmal an der Lesegrenze geprueft: was nicht passt,
+    faellt weg, als haette es gefehlt. Unbekannte Felder bleiben.
+    """
+    out: dict = {}
+    for name, wert in eintrag.items():
+        art = _FELDARTEN.get(name)
+        if art is None or wert is None:
+            out[name] = wert
+            continue
+        if art is float:
+            if not _ist_zahl(wert):
+                continue
+        elif not isinstance(wert, art):
+            continue
+        if name == "storage":
+            wert = {k: v for k, v in wert.items() if isinstance(k, str) and _ist_zahl(v)}
+        elif name in ("goods_trends", "category_trends"):
+            wert = {k: v for k, v in wert.items() if isinstance(k, str) and isinstance(v, list)
+                    and v and all(_ist_zahl(x) for x in v)}
+        elif name == "effects":
+            wert = {k: v for k, v in wert.items()
+                    if k not in ("aktiv", "abweichungen") or isinstance(v, list)}
+        elif name == "blueprint_pick":
+            angebot = wert.get("angebot")
+            if not (isinstance(angebot, list) and all(isinstance(a, str) for a in angebot)):
+                wert = {}
+        out[name] = wert
+    return out
+
+
 def wait_for_quiet(directory: Path, settle: float = SETTLE_SECONDS,
                    timeout: float = 30.0, poll: float = 0.5) -> bool:
     """Wartet, bis sich im Spielordner `settle` Sekunden nichts mehr ruehrt.
@@ -155,6 +209,24 @@ def _ruhesignatur(directory: Path) -> tuple:
     return tuple(out)
 
 
+def _keine_zahl(_konstante: str) -> None:
+    """`NaN`, `Infinity`, `-Infinity` im Spielstand werden zu None."""
+    return None
+
+
+def laufhistorie(meta: Any) -> list[dict]:
+    """`gamesHistory.records` aus MetaSave -- leer bei fremder Form.
+
+    Drei Stellen lasen den Pfad je selbst mit `(… or {}).get(…)`; war
+    `gamesHistory` keine Tabelle, warf jede davon.
+    """
+    if not isinstance(meta, dict):
+        return []
+    historie = meta.get("gamesHistory")
+    records = historie.get("records") if isinstance(historie, dict) else None
+    return [r for r in records if isinstance(r, dict)] if isinstance(records, list) else []
+
+
 def _load(path: Path) -> Any | None:
     try:
         raw = path.read_bytes()
@@ -165,7 +237,12 @@ def _load(path: Path) -> Any | None:
     if text.startswith(b"\xef\xbb\xbf"):
         text = text[3:]
     try:
-        return json.loads(text.decode("utf-8", errors="replace"))
+        # `NaN` und `Infinity` nimmt json.loads sonst als Zahl an. Sie liefen
+        # bis in die Mitschrift und in den Auszug fuer den Rat -- und ein
+        # Auszug mit NaN ist kein gueltiges JSON mehr. Nicht messbar ist
+        # hier dasselbe wie nicht da.
+        return json.loads(text.decode("utf-8", errors="replace"),
+                          parse_constant=_keine_zahl)
     except json.JSONDecodeError as exc:
         # Halb geschriebene Datei: kein harter Abbruch, der naechste
         # Schreibvorgang kommt in 300 Spielzeitsekunden.
@@ -221,7 +298,8 @@ def _bauplanwahl(wahl: Any, belohnung: dict) -> dict[str, Any]:
         return {}
     namen: list[str] = []
     saetze: list[str] = []
-    for option in wahl.get("options") or []:
+    optionen = wahl.get("options")
+    for option in optionen if isinstance(optionen, list) else []:
         if isinstance(option, str):
             namen.append(option)
             continue
@@ -588,6 +666,9 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
     for n in notes:
         log.debug("Feld %s: %s (%s)", n.field, n.path, n.how)
     return state, notes
+
+
+_FELDARTEN = _feldarten()
 
 
 ROMAN = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100}

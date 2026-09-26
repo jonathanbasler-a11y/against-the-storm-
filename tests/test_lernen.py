@@ -181,3 +181,9 @@ def test_ein_alter_zwischenspeicher_wird_neu_gerechnet(tmp_path: Path) -> None:
         encoding="utf-8")
     bericht = lernen.berichte(runs)[0]
     assert "alt" not in bericht and bericht["hunger"] == 5
+
+
+def test_korrektur_mit_zeilentrenner_geht_nicht_verloren(tmp_path: Path) -> None:
+    pfad = tmp_path / "k.jsonl"
+    lernen.korrektur_merken(pfad, "Aussage", "Hunger\u2028ist nur schlimm, wenn Leute gehen")
+    assert lernen.korrekturen(pfad) == ["Hunger\u2028ist nur schlimm, wenn Leute gehen"]

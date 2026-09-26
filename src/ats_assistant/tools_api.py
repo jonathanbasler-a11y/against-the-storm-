@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from functools import wraps
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +26,12 @@ from .paths import strip_prefixes
 from .save_reader import GameState, read_state
 
 log = logging.getLogger(__name__)
+
+# Das Fenster schreibt aus zwei Faeden in dieselbe Mitschrift: die Lage
+# haengt Zustaende an und ersetzt dabei manchmal die letzte Zeile, der Rat
+# notiert seine Empfehlung. Ohne Sperre konnte das Ersetzen eine gerade
+# angehaengte Notiz abschneiden.
+_MITSCHRIFT_SPERRE = threading.Lock()
 
 
 def _wall(fn):
@@ -202,7 +209,8 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
         # Die Kennung darf die Spielzeit nicht enthalten -- sonst bekommt
         # jeder Aufruf seine eigene Datei, und alles, was zwei Staende
         # braucht, bleibt stumm. Genau das war auf dem Spielrechner der Fall.
-        kennung, _ = watcher.mitschreiben(state, Path(runs_dir), run_id)
+        with _MITSCHRIFT_SPERRE:
+            kennung, _ = watcher.mitschreiben(state, Path(runs_dir), run_id)
     fehlend = [n.field for n in notes if n.how == "fehlt"]
     # Gefunden, aber in fremder Form -- sieht sonst aus wie ein leeres Lager.
     unlesbar = {n.field: n.form for n in notes if n.how == "form_unbekannt"}
@@ -885,7 +893,7 @@ def food_advice(runs_dir: str | Path = "runs", db: str | Path = "kb.sqlite",
 def impatience_forecast(runs_dir: str | Path = "runs", run_id: str | None = None,
                         sekunden: float = 300.0) -> dict:
     """Ungeduldsvorhersage -- das Modell ist gegen Messungen geprueft."""
-    zustaende, quelle = _letzte_zustaende(runs_dir, run_id)
+    zustaende, quelle = _letzte_zustaende(runs_dir, run_id, anzahl=1)
     if not zustaende:
         return {"verfuegbar": False, "grund": "Keine Mitschrift vorhanden."}
     f = _impatience_forecast(_als_zustand(zustaende[-1]), seconds_ahead=sekunden)
@@ -918,7 +926,7 @@ def log_event(text: str, runs_dir: str | Path = "runs", run_id: str | None = Non
     for feld, wert in (("art", art), ("spielzeit", spielzeit), ("jahr", jahr)):
         if wert is not None:
             eintrag[feld] = wert
-    with ziel.open("a", encoding="utf-8") as fh:
+    with _MITSCHRIFT_SPERRE, ziel.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(eintrag, ensure_ascii=False) + "\n")
     return {"geschrieben": str(ziel), "eintrag": eintrag}
 
@@ -934,9 +942,8 @@ def analyze_runs(n: int = 10, save_dir: str | Path | None = None,
         if meta_pfad.exists():
             # `_load` kennt BOM und halb geschriebene Dateien; ein eigenes
             # json.loads meldete bei einer BOM "keine Laufhistorie".
-            meta = save_reader._load(meta_pfad)
-            if isinstance(meta, dict):
-                records = ((meta.get("gamesHistory") or {}).get("records")) or []
+            records = save_reader.laufhistorie(save_reader._load(meta_pfad))
+            if records:
                 quelle = "MetaSave.gamesHistory"
 
     if not records:
@@ -988,11 +995,31 @@ def _neueste_mitschrift(runs: Path) -> str | None:
     return dateien[0].stem if dateien else None
 
 
-def _letzte_zustaende(runs_dir: str | Path, run_id: str | None) -> tuple[list[dict], str | None]:
+def _letzte_zustaende(runs_dir: str | Path, run_id: str | None,
+                      anzahl: int = 2) -> tuple[list[dict], str | None]:
+    """Die letzten `anzahl` Zustaende der Mitschrift, aeltester zuerst.
+
+    Vom Dateiende her gelesen: Gemessen am 26.09.2026 las jede der vier
+    Rechnungen einer Lage die ganze Mitschrift -- bei 60 Spielstaenden
+    rund 85 ms je Aufruf, fast alles JSON-Parsen von Zustaenden, die keiner
+    braucht. Die Rechnungen brauchen nur die letzten beiden.
+    """
     runs = Path(runs_dir)
     kennung = run_id or _neueste_mitschrift(runs)
     if not kennung:
         return [], None
-    eintraege = [e for e in analysis.read_run_log(runs / f"{kennung}.jsonl")
-                 if e.get("typ") != "notiz"]
-    return eintraege, kennung
+    pfad = runs / f"{kennung}.jsonl"
+    eintraege: list[dict] = []
+    try:
+        for _, zeile in watcher._zeilen_rueckwaerts(pfad):
+            try:
+                eintrag = json.loads(zeile.decode("utf-8", "replace"))
+            except json.JSONDecodeError:
+                continue                       # abgerissene Zeile
+            if isinstance(eintrag, dict) and eintrag.get("typ") != "notiz":
+                eintraege.append(save_reader.zustand_bereinigen(eintrag))
+                if len(eintraege) >= anzahl:
+                    break
+    except OSError:
+        return [], kennung
+    return eintraege[::-1], kennung
