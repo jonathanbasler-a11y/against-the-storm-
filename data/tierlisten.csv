@@ -98,3 +98,61 @@ biom,Royal Woodlands,A,Steam-Diskussion,https://steamcommunity.com/app/1336490/d
 biom,Coral Forest,B,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,"Stufe = wie leicht; einzelne Spielermeinung, Seite nicht gelesen","Holzfällen liefert Faser, Stein und Tau"
 biom,The Marshlands,B,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,"Stufe = wie leicht; einzelne Spielermeinung, Seite nicht gelesen","am berechenbarsten: Trapperlager einbetten, Brennstoff-/Holzrezept wählen"
 biom,Cursed Royal Woodlands,C,Steam-Diskussion,https://steamcommunity.com/app/1336490/discussions/0/3960413951795114107/,unbekannt,"Stufe = wie leicht; einzelne Spielermeinung, Seite nicht gelesen","zusätzliche Herausforderung, zufälliger"
+gebaeude,Lumber Mill,S,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,
+gebaeude,Cookhouse,S,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,
+gebaeude,Carpenter,S,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,
+gebaeude,Apothecary,S,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,
+gebaeude,Beanery,A,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,S mit Füchsen oder Echsen
+gebaeude,Guild House,A,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,ab Prestige 8 fast Pflicht
+gebaeude,Forester's Hut,A,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,B ohne Füchse
+gebaeude,Trappers' Camp,A,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,
+gebaeude,Plantation,A,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,braucht Nährboden
+gebaeude,Explorers' Lodge,B,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,als Falle genannt; die Quelle sagt selbst ehrlich B
+gebaeude,Bath House,D,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,als Falle genannt
+gebaeude,Herb Garden,D,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,als Falle genannt: schwächer als Small Farm
+gebaeude,Advanced Rain Collector,D,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,als Falle genannt
+gebaeude,Teahouse,B,Switchblade,https://www.switchbladegaming.com/strategy-games/against-the-storm/best-buildings-tier-list/,2026-01,v1.9.6,A bei vielen Harpyien
+volk,Beaver,S,TheGamer,https://www.thegamer.com/against-the-storm-best-species-animal/,2024-01,,Platz 1 von 5 (Rangliste)
+volk,Lizard,A,TheGamer,https://www.thegamer.com/against-the-storm-best-species-animal/,2024-01,,Platz 2 von 5 (Rangliste)
+volk,Fox,B,TheGamer,https://www.thegamer.com/against-the-storm-best-species-animal/,2024-01,,Platz 3 von 5 (Rangliste)
+volk,Harpy,C,TheGamer,https://www.thegamer.com/against-the-storm-best-species-animal/,2024-01,,Platz 4 von 5 (Rangliste)
+volk,Human,D,TheGamer,https://www.thegamer.com/against-the-storm-best-species-animal/,2024-01,,Platz 5 von 5 (Rangliste)
+grundstein,Reinforced Axes,S,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 1 von 10 (Bestenliste)
+grundstein,Woodcutter's Song,S,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 2 von 10 (Bestenliste)
+grundstein,Farming Tools,S,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 3 von 10 (Bestenliste)
+grundstein,Grain Bags,A,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 4 von 10 (Bestenliste)
+grundstein,Blood Price Contract,A,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 5 von 10 (Bestenliste)
+grundstein,Ancient Pact,A,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 6 von 10 (Bestenliste)
+grundstein,Rich Glades,A,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 7 von 10 (Bestenliste)
+grundstein,Zhorg's Secret Ingredient,B,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 8 von 10 (Bestenliste)
+grundstein,Over-Diligent Woodworkers,B,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 9 von 10 (Bestenliste)
+grundstein,Survivor Bonding,B,GameRant,https://gamerant.com/against-the-storm-best-cornerstones/,2023-12,,Platz 10 von 10 (Bestenliste)
+gebaeude,Explorers' Lodge,S,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Beanery,S,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Apothecary,A,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Bakery,A,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Cookhouse,A,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Guild House,A,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Alchemist's Hut,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Brewery,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Butcher,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Cellar,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Clothier,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Distillery,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Furnace,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Granary,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Press,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Rain Collector,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Smokehouse,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Stamping Mill,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Teahouse,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Temple,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Tinctury,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Workshop,B,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Artisan,C,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Brick Oven,C,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Clay Pit,C,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Greenhouse,C,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Grill,C,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Advanced Rain Collector,D,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,
+gebaeude,Bath House,D,ClashiVerse,https://clashiverse.com/against-the-storm-buildings-tier-list/,2024-01,Quelle unzuverlässig: Gebäudebeschreibungen nachweislich falsch,

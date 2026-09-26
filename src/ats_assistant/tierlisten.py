@@ -58,7 +58,12 @@ def laden(pfad: Path | str = PFAD) -> list[dict]:
 
 
 def nachsehen(kategorie: str, name: str | None, pfad: Path | str = PFAD) -> list[dict]:
-    """Die Stufen eines Eintrags, je Quelle eine -- kompakt fuer den Rat."""
+    """Die Stufen eines Eintrags, je Quelle eine -- kompakt fuer den Rat.
+
+    Neueste Quelle zuerst („2026-01“ vor „2023-05“), ohne Stand zuletzt:
+    das Spiel aendert sich mit jedem Patch, und im Fenster wie im Auszug
+    fuer den Rat soll vorne stehen, was am ehesten noch gilt.
+    """
     if not name:
         return []
     ziel = schluessel(name)
@@ -71,7 +76,8 @@ def nachsehen(kategorie: str, name: str | None, pfad: Path | str = PFAD) -> list
                 if z.get(feld):
                     eintrag[feld] = z[feld]
             out.append(eintrag)
-    return out
+    return sorted(out, key=lambda e: "" if e["stand"] == "unbekannt" else e["stand"],
+                  reverse=True)
 
 
 def kurz(stufen: list[dict]) -> str:

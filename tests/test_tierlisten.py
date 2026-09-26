@@ -34,6 +34,15 @@ def test_schreibweisen_und_mehrere_quellen(tmp_path: Path) -> None:
     assert tierlisten.kurz(lager) == "A (X, 2026-09, Prestige 9) / C (Y)"
 
 
+def test_neueste_quelle_zuerst(tmp_path: Path) -> None:
+    pfad = _csv(tmp_path / "t.csv", [
+        {"kategorie": "volk", "en": "Fox", "stufe": "D", "quelle": "Alt", "stand": "2023-05"},
+        {"kategorie": "volk", "en": "Fox", "stufe": "C", "quelle": "Ohne"},
+        {"kategorie": "volk", "en": "Fox", "stufe": "B", "quelle": "Neu", "stand": "2026-01"}])
+    assert [s["quelle"] for s in tierlisten.nachsehen("volk", "Fox", pfad)] == [
+        "Neu", "Alt", "Ohne"]
+
+
 def test_fehlende_datei_ist_leer(tmp_path: Path) -> None:
     assert tierlisten.nachsehen("volk", "Harpy", tmp_path / "fehlt.csv") == []
 
@@ -50,6 +59,19 @@ def test_die_echte_datei_ist_sauber() -> None:
         schluessel = (z["kategorie"], tierlisten.schluessel(z["en"]), z["quelle"])
         assert schluessel not in gesehen, z
         gesehen.add(schluessel)
+
+
+def test_die_echte_datei_hat_alle_quellen() -> None:
+    quellen = {(z["kategorie"], z["quelle"]) for z in tierlisten.laden()}
+    for erwartet in [("gebaeude", "Switchblade"), ("gebaeude", "GameRant"),
+                     ("gebaeude", "ClashiVerse"), ("volk", "TheGamer"),
+                     ("volk", "GameRant"), ("grundstein", "GameRant"),
+                     ("grundstein", "ClashiVerse")]:
+        assert erwartet in quellen, erwartet
+    sagewerk = tierlisten.nachsehen("gebaeude", "Lumber Mill")
+    assert sagewerk[0]["quelle"] == "Switchblade" and sagewerk[0]["kontext"] == "v1.9.6"
+    lodge = tierlisten.nachsehen("gebaeude", "Explorer's Lodge")
+    assert "unzuverlässig" in next(s["kontext"] for s in lodge if s["quelle"] == "ClashiVerse")
 
 
 def test_der_rat_bekommt_die_stufen() -> None:
