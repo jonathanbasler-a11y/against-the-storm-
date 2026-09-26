@@ -37,7 +37,8 @@ mit `git pull`, die Arbeit kommt per Squash-Merge herein.
 | 3 | Bildschirmauslesung | **fertig** für Auswahlbildschirme (Windows-Texterkennung über `winsdk`) |
 | 4 | MCP-Server | **fertig**, acht Werkzeuge |
 | 5 | Entscheidungslogik `ats-advisor` | **fertig**, wächst mit der Wissensbasis |
-| — | Desktop-Fenster | **fertig**, vier Reiter, siehe [docs/APP.md](docs/APP.md) |
+| — | Desktop-Fenster | **fertig**, fünf Reiter, siehe [docs/APP.md](docs/APP.md) |
+| — | HUD über dem Spiel | **neu**: Engpass (Nahrung, Ungeduld, Pestfäule), Auswahl mit Tiers, Karten lesen mit Strg+Umschalt+L — siehe [docs/APP.md](docs/APP.md#das-hud-über-dem-spiel) |
 
 ## Im Betrieb
 

@@ -20,6 +20,7 @@ from typing import Any
 
 from . import (analysis, forecast, kb, nahrung, namen_match, save_reader, screen,
                tierlisten, watcher)
+from .engpass import uhren as _uhren
 from .forecast import food_forecast as _food_forecast
 from .forecast import impatience_forecast as _impatience_forecast
 from .paths import strip_prefixes
@@ -907,6 +908,29 @@ def impatience_forecast(runs_dir: str | Path = "runs", run_id: str | None = None
         "in_zukunft": f.projected,
         "warnung": f.warning,
     }
+
+
+@_wall
+def engpass(runs_dir: str | Path = "runs", run_id: str | None = None,
+            nahrung: dict | None = None, ungeduld: dict | None = None) -> dict:
+    """Was gerade entscheidet: Nahrung, Ungeduld oder Pestfäule.
+
+    Die Uhren kommen aus den Vorhersagen, die ohnehin gerechnet werden; wer
+    sie schon hat, reicht sie herein. Die Statistik der letzten zwei Stände
+    sagt, was seit dem letzten Speichern dazukam -- Hunger zählt erst, wenn
+    auch Leute gegangen sind.
+    """
+    zustaende, quelle = _letzte_zustaende(runs_dir, run_id)
+    if not zustaende:
+        return {"verfuegbar": False, "grund": "Keine Mitschrift vorhanden."}
+    if nahrung is None:
+        nahrung = food_forecast(runs_dir, quelle)
+    if ungeduld is None:
+        ungeduld = impatience_forecast(runs_dir, quelle)
+    jetzt = zustaende[-1].get("stats") or {}
+    vorher = (zustaende[-2].get("stats") or {}) if len(zustaende) > 1 else None
+    return {"verfuegbar": True, "quelle": quelle,
+            **_uhren(nahrung, ungeduld, jetzt, vorher)}
 
 
 @_wall

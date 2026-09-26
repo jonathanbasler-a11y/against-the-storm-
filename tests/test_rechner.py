@@ -47,8 +47,8 @@ def test_ein_auftrag_legt_jede_antwort_in_die_warteschlange(tmp_path: Path) -> N
     arten = []
     while not ausgang.empty():
         arten.append(ausgang.get_nowait()[0])
-    assert arten == ["zustand", "nahrung", "ungeduld", "ketten", "wissen", "umgebung",
-                     "anmeldung"]
+    assert arten == ["zustand", "nahrung", "ungeduld", "engpass", "ketten", "wissen",
+                     "umgebung", "anmeldung"]
 
 
 def test_ein_fehler_bringt_den_thread_nicht_um(tmp_path: Path) -> None:

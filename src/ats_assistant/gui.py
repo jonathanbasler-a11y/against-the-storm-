@@ -27,6 +27,8 @@ from pathlib import Path
 from tkinter import ttk
 
 from . import aktualisieren, berater, screen, tierlisten
+from .hud import Hud, Tasten
+from .lernen import wissensordner
 from .mcp_server import aufloesen
 from .orte import finde_spielordner
 from .rechner import (ABHOLEN_MS, Rechner, alter as _alter,
@@ -182,10 +184,17 @@ class App:
         self.root.geometry("980x640")
         self.root.minsize(760, 520)
 
+        self.engpass: dict | None = None
+        # Was `_auswahl_lesen` fürs Foto versteckt hat -- nur das kommt zurück.
+        self._versteckt: set[str] | None = None
+
         self.ausgang: queue.Queue = queue.Queue()
         self.rechner = Rechner(save_dir, runs_dir, db, self.ausgang)
 
         self._bauen()
+        self.hud = self._hud_bauen()
+        self.hud_an.set(bool(self.hud is not None and self.hud.sichtbar))
+        self.tasten = self._tasten_starten()
         self.rechner.start()
         self.root.after(ABHOLEN_MS, self._abholen)
         self.root.protocol("WM_DELETE_WINDOW", self._schliessen)
@@ -210,6 +219,11 @@ class App:
         self.status.bind("<Enter>", self._status_hinweis)
         ttk.Button(leiste, text="Aktualisieren",
                    command=self._aktualisieren).pack(side="right", padx=(6, 0))
+        # Das HUD über dem Spiel -- ein- und ausschalten; Strg+Umschalt+H tut
+        # dasselbe aus dem Spiel heraus.
+        self.hud_an = tk.BooleanVar(value=True)
+        ttk.Checkbutton(leiste, text="HUD", variable=self.hud_an,
+                        command=self._hud_schalter).pack(side="right", padx=(6, 0))
         ttk.Button(leiste, text="Neu lesen",
                    command=lambda: self.rechner.bitte("lage")).pack(side="right")
         self.suche = ttk.Entry(leiste, width=22)
@@ -328,9 +342,10 @@ class App:
         ttk.Button(unten, text="Stimmt nicht",
                    command=self._korrektur_senden).pack(side="left")
         self.rat_letzte = ""
-        # Einmal je neuer Bauplanwahl im Spielstand von selbst fragen.
+        # Einmal je neuer Bauplanwahl im Spielstand und je gelesenem Angebot
+        # von selbst fragen.
         self.bauplan_auto = tk.BooleanVar(value=True)
-        ttk.Checkbutton(rahmen, text="Bauplanwahl automatisch fragen",
+        ttk.Checkbutton(rahmen, text="Auswahl automatisch fragen (Baupläne und gelesene Karten)",
                         variable=self.bauplan_auto).pack(anchor="w", pady=(4, 0))
 
     def _reiter_laeufe(self) -> None:
@@ -347,7 +362,7 @@ class App:
 
     # -- Ereignisse --------------------------------------------------------
 
-    def _auswahl_lesen(self, von_hand: bool = False) -> None:
+    def _auswahl_lesen(self, von_hand: bool = False, aus_spiel: bool = False) -> None:
         if von_hand:
             roh = self.hand.get().strip()
             text = [t.strip() for t in roh.split(",") if t.strip()] or None
@@ -361,8 +376,23 @@ class App:
         # Fenster darauf. Am Spielrechner lag es über dem Auswahldialog; ein
         # Stück weiter rechts, und die Texterkennung läse sauber die eigene
         # Oberfläche statt der Karten. Also geht es kurz aus dem Weg.
+        #
+        # Aus dem Spiel heraus (HUD-Knopf, Tastenkombination) nur das HUD: das
+        # Hauptfenster liegt dann hinter dem Spiel, und es danach
+        # zurückzuholen, zöge es vor das Spiel.
         self._schreiben(self.auswahl_text, "wird gelesen …")
-        self.root.withdraw()
+        self._foto_art = self._art_im_spiel() if aus_spiel else self.art.get()
+        self._versteckt = set()
+        if not aus_spiel:
+            self.root.withdraw()
+            self._versteckt.add("haupt")
+        if self.hud is not None and self.hud.sichtbar:
+            try:
+                self._hud_melden("lesen")
+                self.hud.verstecken(vorlaeufig=True)
+                self._versteckt.add("hud")
+            except Exception:
+                log.exception("HUD nicht versteckt")
         self._foto_zu_spaet = False
         self._sicherung = self.root.after(SICHERUNG_MS, self._sicherheitsnetz)
         self.root.after(VERSTECKT_MS, self._foto_machen)
@@ -376,8 +406,8 @@ class App:
         PowerShell-Aufnahme dauert Sekunden, und solange konnte das
         Sicherheitsnetz nicht feuern.
         """
-        threading.Thread(target=self._foto_aufnehmen, args=(self.art.get(),),
-                         daemon=True).start()
+        art = getattr(self, "_foto_art", None) or self.art.get()
+        threading.Thread(target=self._foto_aufnehmen, args=(art,), daemon=True).start()
 
     def _foto_aufnehmen(self, art: str) -> None:
         """Im Faden: nur aufnehmen und das Ergebnis in die Warteschlange legen.
@@ -408,6 +438,19 @@ class App:
                 self.root.after_cancel(kennung)
             except Exception:          # eine abgelaufene Kennung ist kein Fehler
                 pass
+        # Nur zurück, was `_auswahl_lesen` versteckt hat. Ohne Vermerk (ein
+        # Aufruf von woanders) gilt wie früher das Hauptfenster.
+        was = getattr(self, "_versteckt", None)
+        self._versteckt = None
+        if was is None:
+            was = {"haupt"}
+        if "hud" in was and self.hud is not None:
+            try:
+                self.hud.einblenden(vorlaeufig=True)
+            except Exception:
+                log.exception("HUD nicht zurückgeholt")
+        if "haupt" not in was:
+            return
         # Nur ein verstecktes Fenster zurueckholen: `deiconify` auf einem
         # sichtbaren hebt es ueber das Spiel und nimmt ihm den Fokus.
         try:
@@ -424,10 +467,12 @@ class App:
                      ungeduld=self.ungeduld, auswahl=self.auswahl,
                      ketten=getattr(self, "nahrungsrat", None),
                      wissen=getattr(self, "wissen", None),
+                     engpass=getattr(self, "engpass", None),
                      frage=frage or self.rat_frage.get().strip() or None,
                      modell=self.modell.get())
         if automatisch:
             daten["automatisch"] = True
+        self._hud_melden("rat_frage")
         self.rechner.bitte("rat", **daten)
 
     def _bauplan_pruefen(self) -> None:
@@ -449,6 +494,7 @@ class App:
         if schluessel == getattr(self, "_bauplan_schluessel", None):
             return
         self._bauplan_schluessel = schluessel
+        self._hud_melden("rat_leeren")         # der Satz zur vorigen Wahl gilt nicht mehr
         vergleich = (getattr(self, "wissen", None) or {}).get("bauplan_vergleich") or []
         gespeichert = _alter(z.get("gespeichert"), "gespeichert") if z.get("gespeichert") else ""
         self._schreiben(self.auswahl_text, _bauplan_text(wahl, vergleich, gespeichert))
@@ -465,7 +511,8 @@ class App:
                                  ungeduld=self.ungeduld, auswahl=self.auswahl,
                                  frage=self.rat_frage.get().strip() or None,
                                  ketten=getattr(self, "nahrungsrat", None),
-                                 wissen=getattr(self, "wissen", None))
+                                 wissen=getattr(self, "wissen", None),
+                                 engpass=getattr(self, "engpass", None))
         self.root.clipboard_clear()
         self.root.clipboard_append(json.dumps(auszug, ensure_ascii=False, indent=1))
         self.rat_fuss.configure(text="Lage in der Zwischenablage – in Claude einfügen.")
@@ -508,7 +555,83 @@ class App:
 
     def _schliessen(self) -> None:
         self.rechner.stoppen()
+        if getattr(self, "tasten", None) is not None:
+            try:
+                self.tasten.stoppen()
+            except Exception:
+                log.exception("Tastenkombinationen nicht abgemeldet")
         self.root.destroy()
+
+    # -- HUD ---------------------------------------------------------------
+
+    def _hud_bauen(self) -> Hud | None:
+        """Ein HUD, das nicht aufgeht, darf das Fenster nicht mitnehmen."""
+        try:
+            return Hud(self.root, pfad=wissensordner(self.runs_dir) / "hud.json",
+                       beim_lesen=lambda: self._auswahl_lesen(aus_spiel=True),
+                       beim_schliessen=lambda: self.hud_an.set(False))
+        except Exception:
+            log.exception("HUD nicht aufgebaut")
+            return None
+
+    def _tasten_starten(self) -> Tasten | None:
+        if self.hud is None:
+            return None
+        tasten = Tasten(self.hud.werte["tasten"],
+                        lambda art, wert: self.ausgang.put((art, wert)))
+        try:
+            tasten.starten()
+        except Exception:
+            log.exception("Tastenkombinationen nicht gestartet")
+            return None
+        return tasten
+
+    def _hud_melden(self, art: str, wert=None) -> None:
+        if getattr(self, "hud", None) is None:
+            return
+        try:
+            self.hud.zeigen(art, wert)
+        except Exception:
+            log.exception("HUD-Anzeige von %s gescheitert", art)
+
+    def _hud_schalter(self) -> None:
+        if getattr(self, "hud", None) is None:
+            self.hud_an.set(False)
+            return
+        try:
+            if self.hud_an.get():
+                self.hud.einblenden()
+            else:
+                self.hud.verstecken()
+        except Exception:
+            log.exception("HUD nicht umgeschaltet")
+
+    def _hud_umschalten(self) -> None:
+        if getattr(self, "hud", None) is None:
+            return
+        try:
+            self.hud_an.set(self.hud.umschalten())
+        except Exception:
+            log.exception("HUD nicht umgeschaltet")
+
+    def _art_im_spiel(self) -> str:
+        """Aus dem Spiel heraus gelesen: eine offene Bauplanwahl heißt Baupläne."""
+        wahl = ((getattr(self, "zustand", None) or {}).get("bauplan_wahl") or {})
+        return "building" if wahl.get("angebot") else "effect"
+
+    def _auswahl_rat(self, wert) -> None:
+        """Nach einer Lesung einmal von selbst fragen -- wie bei der Bauplanwahl."""
+        if not (isinstance(wert, dict) and wert.get("verfuegbar") and wert.get("belegt")):
+            return
+        if not (self.bauplan_auto.get() and getattr(self, "_anmeldung", None) is True):
+            return
+        z = getattr(self, "zustand", None) or {}
+        schluessel = (z.get("mitschrift"), tuple(e.get("en") for e in wert["belegt"]))
+        if schluessel == getattr(self, "_auswahl_schluessel", None):
+            return
+        self._auswahl_schluessel = schluessel
+        self._rat_holen(frage="Welche der angebotenen Karten soll ich nehmen?",
+                        automatisch=True)
 
     # -- Anzeige -----------------------------------------------------------
 
@@ -541,15 +664,20 @@ class App:
             self._alte_lage_verwerfen(wert or {})
             self.zustand = wert
             self._zeige_zustand(wert)
+            self._hud_melden("zustand", wert)
         elif art == "foto":
             if getattr(self, "_foto_zu_spaet", False):
                 self._schreiben(self.auswahl_text,
                                 "Das Foto dauerte zu lange – das Fenster war schon wieder "
                                 "zu sehen. Bitte nochmal „Bildschirm lesen“.")
+                self._hud_melden("auswahl", {"verfuegbar": False,
+                                             "grund": "Das Foto dauerte zu lange – nochmal lesen."})
                 return
             self._fenster_zurueck()
             if wert.get("fehler"):
                 self._schreiben(self.auswahl_text, f"Keine Aufnahme: {wert['fehler']}")
+                self._hud_melden("auswahl", {"verfuegbar": False,
+                                             "grund": f"Keine Aufnahme: {wert['fehler']}"})
                 return
             self.rechner.bitte("auswahl", arten=(wert.get("art") or self.art.get(),),
                                bild=wert["bild"])
@@ -560,12 +688,16 @@ class App:
             self.ungeduld = wert
             self.felder["verlust"].configure(
                 text=_minuten(wert.get("sekunden_bis_verlust")))
+        elif art == "engpass":
+            self.engpass = wert if isinstance(wert, dict) and wert.get("verfuegbar") else None
+            self._hud_melden("engpass", self.engpass)
         elif art == "ketten":
             self.nahrungsrat = wert
             self._zeige_ketten(wert)
         elif art == "wissen":
             self.wissen = wert
             self._zeige_trends(wert)
+            self._hud_melden("wissen", wert)
         elif art == "auswahl":
             _eigenes_foto_loeschen(wert.get("quelle"))
             self.auswahl = wert
@@ -574,6 +706,8 @@ class App:
             self._auswahl_zeit = jetzt.get("spielzeit")
             self._fenster_zurueck()
             self._zeige_auswahl(wert)
+            self._hud_melden("auswahl", wert)
+            self._auswahl_rat(wert)
         elif art == "nachschlag":
             self._zeige_nachschlag(wert)
         elif art == "anmeldung":
@@ -596,6 +730,17 @@ class App:
             else:
                 fuss = ""
             self.rat_fuss.configure(text=fuss)
+            self._hud_melden("rat", wert)
+        elif art == "taste":
+            # Aus dem Spiel heraus, über die Tastenkombination.
+            if wert == "lesen":
+                self._auswahl_lesen(aus_spiel=True)
+            elif wert == "hud":
+                self._hud_umschalten()
+        elif art == "tastenfehler":
+            self.status.configure(text=str(wert)[:150])
+            self.status_alles = str(wert)
+            self._hud_melden("tastenfehler", wert)
         elif art == "aktualisiert":
             self._nach_aktualisieren(wert or {})
         elif art == "korrektur":
@@ -631,6 +776,8 @@ class App:
         """
         if neu.get("verfuegbar") is False:
             self.nahrung = self.ungeduld = self.nahrungsrat = self.wissen = None
+            self.engpass = None
+            self._hud_melden("engpass", None)
             verfallen = True
         else:
             lauf, zeit = neu.get("mitschrift"), neu.get("spielzeit")
@@ -642,12 +789,18 @@ class App:
                     and (zeit < start or zeit - start > AUSWAHL_GILT_S)))
         if verfallen and getattr(self, "auswahl", None):
             self.auswahl = None
+            self._hud_melden("auswahl", None)
             self._schreiben(self.auswahl_text,
                             "Die gelesene Auswahl ist verfallen – das Spiel lief weiter. "
                             "Neu lesen, falls sie noch offen ist.")
 
     def _kopf_auffrischen(self) -> None:
         """Das Alter im Kopf laeuft mit -- sonst stand "gerade eben" ewig."""
+        if getattr(self, "hud", None) is not None:
+            try:
+                self.hud.auffrischen()
+            except Exception:
+                log.exception("HUD nicht aufgefrischt")
         z = getattr(self, "zustand", None)
         if not z or z.get("verfuegbar") is False:
             return

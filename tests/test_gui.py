@@ -88,9 +88,13 @@ def _vergiss_das_fenstermodul() -> None:
     """
     import ats_assistant
 
-    sys.modules.pop("ats_assistant.gui", None)
-    if hasattr(ats_assistant, "gui"):
-        delattr(ats_assistant, "gui")
+    # Das HUD ebenso: es bindet tkinter beim Import. Hatte ein Test mit echtem
+    # Tk es vorher geladen, baute das Fenster mit Stubs ein echtes Toplevel
+    # auf einer Attrappe -- einzeln grün, in der Gesamtsuite rot.
+    for name in ("gui", "hud"):
+        sys.modules.pop(f"ats_assistant.{name}", None)
+        if hasattr(ats_assistant, name):
+            delattr(ats_assistant, name)
 
 
 def test_das_fenster_laesst_sich_aufbauen(gui, tmp_path: Path) -> None:
@@ -100,7 +104,8 @@ def test_das_fenster_laesst_sich_aufbauen(gui, tmp_path: Path) -> None:
 
 
 ALLE_ARTEN = ("zustand", "nahrung", "ungeduld", "ketten", "auswahl",
-              "nachschlag", "rat", "umgebung", "anmeldung", "fehler")
+              "nachschlag", "rat", "umgebung", "anmeldung", "fehler", "engpass",
+              "tastenfehler")
 
 
 def test_jede_nachrichtenart_wird_angezeigt(gui, tmp_path: Path) -> None:
@@ -131,6 +136,11 @@ def test_jede_nachrichtenart_wird_angezeigt(gui, tmp_path: Path) -> None:
         "umgebung": {"fehlt": [], "namen": 2266, "mitschriften_da": 2},
         "anmeldung": False,
         "fehler": "irgendwas ist schiefgegangen",
+        "engpass": {"verfuegbar": True, "entscheidend": "nahrung", "stufe": "rot",
+                    "kurz": "Nahrung 4 min", "uhren": [
+                        {"art": "nahrung", "name": "Nahrung", "sekunden": 240.0,
+                         "text": "leer in 4 min", "stufe": "rot", "zusatz": ""}]},
+        "tastenfehler": "„Strg+Umschalt+L“ ist schon vergeben",
     }
     assert set(beispiele) == set(ALLE_ARTEN)
     for art in ALLE_ARTEN:
@@ -184,6 +194,7 @@ def test_der_stub_laeuft_nicht_in_andere_tests_aus() -> None:
 
     assert "ats_assistant.gui" not in sys.modules
     assert not hasattr(ats_assistant, "gui")
+    assert "ats_assistant.hud" not in sys.modules
 
 
 # --------------------------------------------------------------------------
@@ -805,3 +816,152 @@ def test_bauplantabelle_nennt_die_stufe(gui) -> None:
         {"gebaeude": "Ranch", "gebaeude_de": "Ranch", "besser_oder_neu": 1, "nahrung": 0,
          "waren": []}])
     assert "Tier B (GameRant, 2023-05, Early Access)" in text
+
+
+# --------------------------------------------------------------------------
+# Runde 21: HUD über dem Spiel
+# --------------------------------------------------------------------------
+
+
+class HudProtokoll:
+    """Ein HUD, das mitschreibt."""
+
+    def __init__(self, sichtbar: bool = True):
+        self.protokoll: list = []
+        self.sichtbar = sichtbar
+        self.werte = {"tasten": {}}
+
+    def zeigen(self, art, wert=None):
+        self.protokoll.append(("zeigen", art))
+
+    def verstecken(self, vorlaeufig=False):
+        self.protokoll.append(("verstecken", vorlaeufig))
+
+    def einblenden(self, vorlaeufig=False):
+        self.protokoll.append(("einblenden", vorlaeufig))
+
+    def umschalten(self):
+        self.sichtbar = not self.sichtbar
+        return self.sichtbar
+
+    def auffrischen(self):
+        self.protokoll.append(("auffrischen",))
+
+
+def test_das_hud_wird_gebaut_und_gespeist(gui, tmp_path: Path) -> None:
+    app = gui.App(tmp_path / "save", tmp_path / "runs", tmp_path / "kb.sqlite")
+    app.rechner.stoppen()
+    assert app.hud is not None
+    app.hud = HudProtokoll()
+    for art, wert in (("zustand", {"jahr": 2}), ("engpass", {"verfuegbar": True, "uhren": []}),
+                      ("wissen", {}), ("rat", {"ok": True, "text": "Nimm X."})):
+        app._anzeigen(art, wert)
+    assert [p[1] for p in app.hud.protokoll if p[0] == "zeigen"] == [
+        "zustand", "engpass", "wissen", "rat"]
+    assert ("auffrischen",) in app.hud.protokoll          # das Alter läuft mit
+
+
+def test_die_taste_liest_und_versteckt_nur_das_hud(gui, tmp_path: Path, monkeypatch) -> None:
+    """Aus dem Spiel heraus darf das Hauptfenster nicht vor das Spiel springen."""
+    app = _vorbereitet(gui, tmp_path)
+    app.hud = HudProtokoll()
+    _gleichlaufend(monkeypatch, gui)
+    monkeypatch.setattr(gui.screen, "aufnehmen", lambda *a, **k: tmp_path / "foto.png")
+    app.zustand = {"bauplan_wahl": {"angebot": ["Kiln", "Workshop"]}}
+    app._anzeigen("taste", "lesen")
+    assert "withdraw" not in app.root.protokoll
+    assert ("verstecken", True) in app.hud.protokoll
+    _foto_und_abholen(app)
+    assert app.rechner.gebeten[-1][1]["arten"] == ("building",)   # offene Bauplanwahl
+    assert ("einblenden", True) in app.hud.protokoll
+    assert "deiconify" not in app.root.protokoll
+
+
+def test_ein_ausgeschaltetes_hud_bleibt_nach_dem_foto_aus(gui, tmp_path: Path,
+                                                         monkeypatch) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app.hud = HudProtokoll(sichtbar=False)
+    _gleichlaufend(monkeypatch, gui)
+    monkeypatch.setattr(gui.screen, "aufnehmen", lambda *a, **k: tmp_path / "foto.png")
+    app._auswahl_lesen()                                  # Knopf im Hauptfenster
+    assert "withdraw" in app.root.protokoll
+    _foto_und_abholen(app)
+    assert not [p for p in app.hud.protokoll if p[0] in ("verstecken", "einblenden")]
+    assert "deiconify" in app.root.protokoll
+    assert app.rechner.gebeten[-1][1]["arten"] == ("effect",)
+
+
+def test_die_taste_hud_schaltet_um(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app.hud = HudProtokoll()
+    app._anzeigen("taste", "hud")
+    assert app.hud.sichtbar is False and app.hud_an.get() is False
+    app._anzeigen("taste", "hud")
+    assert app.hud.sichtbar is True and app.hud_an.get() is True
+
+
+GELESEN = {"verfuegbar": True, "quelle": "foto.png", "gelesene_zeilen": 4,
+           "angebot": [{"de": "Verstärkte Äxte", "en": "Reinforced Axes", "guete": 0.97,
+                        "belegt": True, "kind": "effect"}],
+           "belegt": [{"de": "Verstärkte Äxte", "en": "Reinforced Axes", "guete": 0.97,
+                       "belegt": True, "kind": "effect"}]}
+
+
+def test_gelesene_karten_fragen_den_rat_einmal_je_angebot(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app.hud = HudProtokoll()
+    app.zustand = {"mitschrift": "lauf"}
+    app._anzeigen("anmeldung", True)
+    app._anzeigen("auswahl", GELESEN)
+    app._anzeigen("auswahl", GELESEN)                     # dieselben Karten noch einmal
+    gefragt = [d for art, d in app.rechner.gebeten if art == "rat"]
+    assert len(gefragt) == 1 and gefragt[0]["automatisch"] is True
+    assert "Karten" in gefragt[0]["frage"]
+    # Erst die Auswahl ins HUD, dann „Rat wird gefragt“ -- sonst löschte die
+    # Auswahl den Hinweis gleich wieder.
+    arten = [p[1] for p in app.hud.protokoll if p[0] == "zeigen"]
+    assert arten.index("auswahl") < arten.index("rat_frage")
+
+
+def test_ohne_haekchen_oder_anmeldung_fragen_karten_nicht(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app._anzeigen("anmeldung", False)
+    app._anzeigen("auswahl", GELESEN)
+    app._anmeldung = True
+    app.bauplan_auto = Variable(value=False)
+    app._anzeigen("auswahl", dict(GELESEN, belegt=[dict(GELESEN["belegt"][0], en="Other")]))
+    assert not [1 for art, _ in app.rechner.gebeten if art == "rat"]
+
+
+def test_der_rat_bekommt_den_engpass(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    e = {"verfuegbar": True, "entscheidend": "ungeduld", "uhren": [
+        {"art": "ungeduld", "sekunden": 100.0, "stufe": "rot", "text": "voll in 2 min"}]}
+    app._anzeigen("engpass", e)
+    app._rat_holen()
+    assert app.rechner.gebeten[-1][1]["engpass"] == e
+    app._anzeigen("zustand", {"verfuegbar": False, "grund": "weg"})
+    assert app.engpass is None
+
+
+def test_ein_tastenfehler_steht_in_der_statuszeile(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    gesetzt = []
+    app.status = Egal()
+    app.status.configure = lambda **kw: gesetzt.append(kw.get("text"))
+    app._anzeigen("tastenfehler", "„Strg+Umschalt+L“ ist schon vergeben")
+    assert gesetzt and "vergeben" in gesetzt[-1]
+
+
+def test_ein_kaputtes_hud_nimmt_das_fenster_nicht_mit(gui, tmp_path: Path,
+                                                    monkeypatch) -> None:
+    def platzt(*a, **k):
+        raise RuntimeError("kein HUD")
+
+    monkeypatch.setattr(gui, "Hud", platzt)
+    app = gui.App(tmp_path / "save", tmp_path / "runs", tmp_path / "kb.sqlite")
+    app.rechner.stoppen()
+    assert app.hud is None and app.tasten is None
+    app._anzeigen("engpass", {"verfuegbar": True, "uhren": []})
+    app._anzeigen("taste", "hud")
+    app._hud_schalter()
