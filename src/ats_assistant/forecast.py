@@ -141,7 +141,7 @@ def geaenderte_stellen(paare) -> set[int] | None:
     out: set[int] = set()
     for vorher, jetzt in brauchbar:
         if len(jetzt) == n:
-            out.update(i for i, (a, b) in enumerate(zip(vorher, jetzt)) if a != b)
+            out.update(i for i, (a, b) in enumerate(zip(vorher, jetzt, strict=True)) if a != b)
     return out
 
 
