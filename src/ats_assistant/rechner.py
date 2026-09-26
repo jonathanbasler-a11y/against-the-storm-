@@ -210,8 +210,13 @@ class Rechner(threading.Thread):
                 # Nahrung und Ungeduld der letzten Siedlung und fuellten die
                 # gerade geleerten Felder wieder.
                 lauf = zustand.get("mitschrift")
-                self.ausgang.put(("nahrung", tools_api.food_forecast(self.runs_dir, lauf)))
-                self.ausgang.put(("ungeduld", tools_api.impatience_forecast(self.runs_dir, lauf)))
+                nahrung = tools_api.food_forecast(self.runs_dir, lauf)
+                ungeduld = tools_api.impatience_forecast(self.runs_dir, lauf)
+                self.ausgang.put(("nahrung", nahrung))
+                self.ausgang.put(("ungeduld", ungeduld))
+                # Welche der Uhren zuerst ablaeuft -- fuer HUD und Rat.
+                self.ausgang.put(("engpass", tools_api.engpass(
+                    self.runs_dir, lauf, nahrung=nahrung, ungeduld=ungeduld)))
                 self.ausgang.put(("ketten", tools_api.food_advice(self.runs_dir, self.db, lauf)))
                 self.ausgang.put(("wissen", tools_api.lage_wissen(self.runs_dir, self.db, lauf)))
             self.ausgang.put(("umgebung", umgebungslage(self.save_dir, self.runs_dir, self.db)))
@@ -278,7 +283,7 @@ class Rechner(threading.Thread):
             return
         satz = erster_satz(text)
         if daten.get("automatisch"):
-            satz += " (automatisch zur Bauplanwahl)"
+            satz += " (automatisch zur Auswahl)"
         elif daten.get("frage"):
             satz += f" (Frage: {str(daten['frage'])[:200]})"
         try:
@@ -292,7 +297,8 @@ class Rechner(threading.Thread):
             zustand=daten.get("zustand"), nahrung=daten.get("nahrung"),
             ungeduld=daten.get("ungeduld"), auswahl=daten.get("auswahl"),
             frage=daten.get("frage"), ketten=daten.get("ketten"),
-            wissen=daten.get("wissen"), lernen=self._gelerntes())
+            wissen=daten.get("wissen"), lernen=self._gelerntes(),
+            engpass=daten.get("engpass"))
         try:
             antwort = berater.frage(
                 auszug, modell=daten.get("modell", berater.MODELL),
@@ -310,7 +316,7 @@ class Rechner(threading.Thread):
         kosten = antwort.kosten_cent
         fuss = f"{antwort.modell}"
         if daten.get("automatisch"):
-            fuss = f"automatisch zur Bauplanwahl · {fuss}"
+            fuss = f"automatisch zur Auswahl · {fuss}"
         if kosten is not None:
             fuss += f", rund {kosten:.1f} Cent"
         if antwort.runden > 1:

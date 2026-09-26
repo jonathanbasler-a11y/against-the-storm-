@@ -50,6 +50,50 @@ Statuszeile. Neue Python-Pakete holt der Knopf nicht; dafür bleibt
 
 Unten steht, was fehlt, und ein Suchfeld für den Nachschlag.
 
+## Das HUD über dem Spiel
+
+Ein kleiner dunkler Kasten, der über dem Spiel liegt — damit niemand aus dem
+Spiel wechseln muss, um zu sehen, was drängt. Er zeigt:
+
+| Zeile | |
+|---|---|
+| **Engpass** | Was zuerst zuschlägt, in der Kopfzeile in seiner Farbe: rot unter einem Speicherintervall (5 Spielminuten), gelb unter 15 Spielminuten |
+| **Nahrung** | Wann das Lager leer ist; dazu Hunger und Gegangene. Hunger allein hebt die Stufe nicht — erst Hunger **und** Abgänge seit dem letzten Speichern |
+| **Ungeduld** | Wann die Schwelle erreicht ist, und wo sie jetzt steht |
+| **Pestfäule** | Die gezählten Zysten (entstanden, verbrannt, entfernt). Eine Zeit bis zum verseuchten Herd gibt es noch nicht — das ist nicht gemessen und wird nicht geraten |
+| **Auswahl** | Die offene Bauplanwahl aus dem Spielstand oder die gelesenen Karten, je mit der Tier-Stufe der neuesten Quelle; darunter der erste Satz des Rats |
+
+**Bedienung:** an der Kopfzeile ziehen verschiebt; am Griff „◢“ unten rechts
+ziehen macht ihn breiter oder schmaler, die Schrift wächst mit; „−“ und „+“
+tun dasselbe in Stufen; „▁“ oder ein Doppelklick auf die Kopfzeile klappt ihn
+ein, bis nur noch der Engpass dasteht; „×“ blendet ihn aus. Platz, Breite und
+Zustand bleiben über einen Neustart in `runs/wissen/hud.json`. Der Haken
+„HUD“ unten im Fenster schaltet ihn wieder ein.
+
+**Aus dem Spiel heraus:**
+
+| Tasten | |
+|---|---|
+| **Strg+Umschalt+L** | Die Karten lesen — das HUD geht fürs Foto kurz weg, das Hauptfenster bleibt, wo es ist. Bei offener Bauplanwahl liest es Baupläne, sonst Grundsteine. Mit Haken „Auswahl automatisch fragen“ und Anmeldung fragt es danach einmal den Rat |
+| **Strg+Umschalt+H** | HUD ein und aus |
+
+Dasselbe Lesen liegt auf dem Knopf „▶ Karten lesen“ im HUD. Ein Klick ins HUD
+nimmt dem Spiel nicht den Fokus. Die Tasten meldet Windows über
+`RegisterHotKey` — genau diese zwei Kombinationen, keine andere Taste wird
+mitgelesen. Ist eine schon vergeben, steht es in der Statuszeile; eine andere
+lässt sich in `hud.json` unter `"tasten"` eintragen.
+
+**Wenn der Kasten nicht zu sehen ist:** Über einem Spiel im *exklusiven*
+Vollbild kann kein Fenster liegen. Dann in den Spieleinstellungen das
+randlose Fenster wählen. Prüfen lässt sich das ohne laufende Siedlung:
+
+```powershell
+python tools\hud_probe.py --tasten
+```
+
+zeigt den Kasten 20 Sekunden lang mit Beispielwerten — ins Spiel wechseln und
+schauen, ob er darüber steht und ob die Tasten ankommen.
+
 ## Es aktualisiert sich selbst
 
 Das Fenster sieht alle drei Sekunden nach, ob das Spiel geschrieben hat, und
@@ -97,7 +141,8 @@ sieht. Behebung: Python-Installer erneut starten, *Modify* wählen und
 
 ## Was es nicht tut
 
-Es klickt nichts, es ändert keinen Spielstand, es liest nur. Und es rechnet
+Es klickt nichts, es ändert keinen Spielstand, es liest nur — auch das HUD
+zeigt nur an. Und es rechnet
 selbst nichts aus — jede Zahl kommt aus denselben Werkzeugen, die auch der
 MCP-Server und die Kommandozeile benutzen. Das Fenster ist eine Ansicht,
 keine zweite Wahrheit.

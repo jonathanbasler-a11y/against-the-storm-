@@ -84,6 +84,12 @@ Bonus überhaupt greift.
   `hunger` (Hungerereignisse), `gegangen`, `tot`, Zysten. Hunger allein ist
   kein Alarm — er kostet Zufriedenheit; schlimm wird es, wenn deshalb Leute
   gehen (`gegangen`, `tot`). Am Spielrechner so korrigiert, 25.09.2026.
+- **`engpass`** stellt drei Uhren nebeneinander: Nahrung leer, Ungeduld voll,
+  Pestfäule (bisher nur gezählte Zysten, keine Zeit — nicht gemessen).
+  `entscheidend` ist die dringendste Uhr, die `gelb` (unter 15 Minuten) oder
+  `rot` (unter einem Speicherintervall) steht. **Steht sie rot, zuerst darauf
+  eingehen**; eine offene Wahl daran messen, ob sie diesen Engpass löst. Für
+  die Pestfäule keine Zeit schätzen, die nicht dasteht.
 - **`effekte.aktiv`** ist, was gerade wirkt (Reiter „Allgemeine Effekte“),
   dazu `hunger_multiplikator` und `mehrverbrauch`. Ein Bonus, der dort nicht
   steht, wirkt nicht. **`effekte.abweichungen`** nennt jede Rate, die auf

@@ -56,6 +56,11 @@ BEISPIELE = {
          "seltenheit": "Epic", "wirkung": "+1 Pilze je 25 Produktion"}]},
     "rat": {"ok": True, "text": "Nimm die Räucherei.", "fuss": "claude-opus-5"},
     "umgebung": {"fehlt": [], "namen": 2266, "mitschriften_da": 2},
+    "engpass": {"verfuegbar": True, "entscheidend": "nahrung", "stufe": "rot",
+                "kurz": "Nahrung 4 min", "uhren": [
+                    {"art": "nahrung", "name": "Nahrung", "sekunden": 240.0,
+                     "text": "leer in 4 min", "stufe": "rot", "zusatz": ""}]},
+    "tastenfehler": "„Strg+Umschalt+L“ ist schon vergeben",
     "anmeldung": False,
     "fehler": "irgendwas ist schiefgegangen",
 }
@@ -64,6 +69,10 @@ BEISPIELE = {
 def test_das_fenster_baut_sich_wirklich_auf(app) -> None:
     """Jede Option muss Tk gefallen, nicht nur einem Stub."""
     assert app.root.winfo_exists()
+    # Das HUD wird in try/except gebaut -- ohne diese Zeile fiele ein
+    # gescheiterter Aufbau nirgends auf (so geschehen: ein Mauszeiger, den
+    # nur Windows kennt).
+    assert app.hud is not None and app.hud.fenster.winfo_exists()
     assert len(app.reiter.tabs()) == 5
     assert [app.reiter.tab(t, "text") for t in app.reiter.tabs()] == [
         "Lage", "Nahrung", "Auswahl", "Rat", "Läufe"]
