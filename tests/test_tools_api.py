@@ -1030,3 +1030,8 @@ def test_read_choice_liest_zweizeilige_titel(tmp_path: Path, monkeypatch) -> Non
     out = tools_api.read_choice(bild=bild, db=db)
     assert [a["en"] for a in out["angebot"]] == ["Dual Carriage System", "Lost Supplies"]
     assert out["unsicher"] == [] and out["gelesene_zeilen"] == 3
+
+
+def test_nachschlagen_nennt_die_stufe(tmp_path: Path) -> None:
+    out = tools_api.query_kb("Harpy", db=tmp_path / "kb.sqlite")
+    assert out["tier"]["volk"][0]["stufe"] == "S"

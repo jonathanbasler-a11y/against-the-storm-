@@ -798,3 +798,10 @@ def test_schon_freigeschaltet_steht_in_der_tabelle(gui) -> None:
         {"gebaeude": "Trapper's Camp", "gebaeude_de": "Fallenstellerlager",
          "schon_freigeschaltet": "baubar", "besser_oder_neu": 0, "nahrung": 0, "waren": []}])
     assert "SCHON FREIGESCHALTET" in text
+
+
+def test_bauplantabelle_nennt_die_stufe(gui) -> None:
+    text = gui._bauplan_text({"angebot": ["Ranch"]}, [
+        {"gebaeude": "Ranch", "gebaeude_de": "Ranch", "besser_oder_neu": 1, "nahrung": 0,
+         "waren": []}])
+    assert "Tier A (Community)" in text
