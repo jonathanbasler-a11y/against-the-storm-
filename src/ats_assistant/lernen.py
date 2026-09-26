@@ -24,6 +24,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -228,7 +230,12 @@ def berichte(runs_dir: Path | str, historie: list[dict] | None = None) -> list[d
         out.append(bericht)
     try:
         speicher_pfad.parent.mkdir(parents=True, exist_ok=True)
-        speicher_pfad.write_text(json.dumps(neu, ensure_ascii=False), encoding="utf-8")
+        # Erst daneben schreiben, dann ersetzen: Lage und Rat rufen das aus
+        # zwei Faeden, und ein halb geschriebener Speicher waere verloren.
+        zwischen = speicher_pfad.with_name(
+            f"{speicher_pfad.name}.{threading.get_ident()}.tmp")
+        zwischen.write_text(json.dumps(neu, ensure_ascii=False), encoding="utf-8")
+        os.replace(zwischen, speicher_pfad)
     except OSError as exc:
         log.warning("Berichte nicht zwischengespeichert: %s", exc)
     return out

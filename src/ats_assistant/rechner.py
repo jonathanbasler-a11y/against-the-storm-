@@ -26,6 +26,10 @@ from .watcher import _signatur
 log = logging.getLogger(__name__)
 
 TAKT_SEKUNDEN = 3.0          # wie oft nach einem neuen Spielstand gesehen wird
+# Auftraege, die aufs Netz warten -- eine Rat-Frage bis zu einer Minute. Sie
+# laufen in einem eigenen Faden: vorher warteten Lage, Texterkennung und
+# Nachschlagen hinter ihnen, und das Fenster stand so lange still.
+NETZ_AUFTRAEGE = frozenset({"rat", "aktualisieren"})
 ABHOLEN_MS = 150             # wie oft der UI-Thread die Warteschlange leert
 
 
@@ -130,14 +134,42 @@ class Rechner(threading.Thread):
         self.db = db
         self.ausgang = ausgang
         self.eingang: queue.Queue[Auftrag] = queue.Queue()
+        self.netz_eingang: queue.Queue[Auftrag] = queue.Queue()
         self._ende = threading.Event()
         self._signatur = None
+        # Eine Lage wartet schon: eine zweite brächte nichts Neues. Sonst
+        # stapelten sich hinter einer langsamen Arbeit mehrere Durchgänge.
+        self._lage_wartet = False
 
     def stoppen(self) -> None:
         self._ende.set()
 
     def bitte(self, art: str, **daten) -> None:
+        if art in NETZ_AUFTRAEGE:
+            self.netz_eingang.put(Auftrag(art, daten))
+            return
+        if art == "lage" and not daten:
+            if self._lage_wartet:
+                return
+            self._lage_wartet = True
         self.eingang.put(Auftrag(art, daten))
+
+    def _sicher(self, auftrag: Auftrag) -> None:
+        if auftrag.art == "lage":
+            self._lage_wartet = False
+        try:
+            self._ausfuehren(auftrag)
+        except Exception as exc:                  # nie sterben
+            log.exception("Auftrag %s gescheitert", auftrag.art)
+            self.ausgang.put(("fehler", f"{type(exc).__name__}: {exc}"))
+
+    def _netz_schleife(self) -> None:
+        while not self._ende.is_set():
+            try:
+                auftrag = self.netz_eingang.get(timeout=TAKT_SEKUNDEN)
+            except queue.Empty:
+                continue
+            self._sicher(auftrag)
 
     def _anfangen(self) -> None:
         # Die Signatur gleich merken: sonst sah `_nachsehen` drei Sekunden
@@ -149,6 +181,7 @@ class Rechner(threading.Thread):
         self.bitte("lage")
 
     def run(self) -> None:
+        threading.Thread(target=self._netz_schleife, daemon=True, name="ats-netz").start()
         self._anfangen()
         while not self._ende.is_set():
             try:
@@ -156,11 +189,7 @@ class Rechner(threading.Thread):
             except queue.Empty:
                 self._nachsehen()
                 continue
-            try:
-                self._ausfuehren(auftrag)
-            except Exception as exc:                  # nie sterben
-                log.exception("Auftrag %s gescheitert", auftrag.art)
-                self.ausgang.put(("fehler", f"{type(exc).__name__}: {exc}"))
+            self._sicher(auftrag)
 
     def _nachsehen(self) -> None:
         """Hat das Spiel geschrieben?"""

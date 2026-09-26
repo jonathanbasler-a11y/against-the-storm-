@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from functools import wraps
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +26,12 @@ from .paths import strip_prefixes
 from .save_reader import GameState, read_state
 
 log = logging.getLogger(__name__)
+
+# Das Fenster schreibt aus zwei Faeden in dieselbe Mitschrift: die Lage
+# haengt Zustaende an und ersetzt dabei manchmal die letzte Zeile, der Rat
+# notiert seine Empfehlung. Ohne Sperre konnte das Ersetzen eine gerade
+# angehaengte Notiz abschneiden.
+_MITSCHRIFT_SPERRE = threading.Lock()
 
 
 def _wall(fn):
@@ -202,7 +209,8 @@ def get_state(save_dir: str | Path, runs_dir: str | Path = "runs",
         # Die Kennung darf die Spielzeit nicht enthalten -- sonst bekommt
         # jeder Aufruf seine eigene Datei, und alles, was zwei Staende
         # braucht, bleibt stumm. Genau das war auf dem Spielrechner der Fall.
-        kennung, _ = watcher.mitschreiben(state, Path(runs_dir), run_id)
+        with _MITSCHRIFT_SPERRE:
+            kennung, _ = watcher.mitschreiben(state, Path(runs_dir), run_id)
     fehlend = [n.field for n in notes if n.how == "fehlt"]
     # Gefunden, aber in fremder Form -- sieht sonst aus wie ein leeres Lager.
     unlesbar = {n.field: n.form for n in notes if n.how == "form_unbekannt"}
@@ -918,7 +926,7 @@ def log_event(text: str, runs_dir: str | Path = "runs", run_id: str | None = Non
     for feld, wert in (("art", art), ("spielzeit", spielzeit), ("jahr", jahr)):
         if wert is not None:
             eintrag[feld] = wert
-    with ziel.open("a", encoding="utf-8") as fh:
+    with _MITSCHRIFT_SPERRE, ziel.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(eintrag, ensure_ascii=False) + "\n")
     return {"geschrieben": str(ziel), "eintrag": eintrag}
 
