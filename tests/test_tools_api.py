@@ -1034,4 +1034,6 @@ def test_read_choice_liest_zweizeilige_titel(tmp_path: Path, monkeypatch) -> Non
 
 def test_nachschlagen_nennt_die_stufe(tmp_path: Path) -> None:
     out = tools_api.query_kb("Harpy", db=tmp_path / "kb.sqlite")
-    assert out["tier"]["volk"][0]["stufe"] == "B"
+    stufen = {s["quelle"]: s["stufe"] for s in out["tier"]["volk"]}
+    assert stufen == {"TheGamer": "C", "GameRant": "B"}
+    assert out["tier"]["volk"][0]["quelle"] == "TheGamer"      # neuere Quelle zuerst

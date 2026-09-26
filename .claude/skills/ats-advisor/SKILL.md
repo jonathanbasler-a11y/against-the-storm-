@@ -66,7 +66,11 @@ Bonus überhaupt greift.
   („A bei ClashiVerse, P9“); steht keine da, nichts erfinden. **Rätst du gegen
   die höhere Stufe, sag in einem Satz warum** — aus der Lage: gerechnete
   Kette, `bauplan_vergleich`, Völker, Biom, `effekte.abweichungen`. Gemessenes
-  geht vor Meinung. (Wunsch des Spielers, 26.09.2026.)
+  geht vor Meinung. (Wunsch des Spielers, 26.09.2026.) Die Liste steht nach
+  Stand sortiert, **die neueste Quelle zuerst**; widersprechen sich Quellen,
+  zählt die neueste mit bekannter Spielversion am meisten (Switchblade,
+  v1.9.6, Jan. 2026, vor den Listen von 2023/24). Steht im Kontext
+  „unzuverlässig“, die Stufe nur nennen, nicht darauf bauen.
 - **`bauplan_vergleich[].schon_freigeschaltet`**: Der angebotene Bauplan ist
   schon freigeschaltet (etwa beim Einbetten gewählt) — diese Wahl bringt kein
   neues Gebäude; dann die andere Option empfehlen.
@@ -179,6 +183,12 @@ in Sekunden. Diese Zahl nicht schätzen — sie steht da.
 **Ein Produktionsbonus auf etwas, das nicht hergestellt wird, ist wertlos.**
 Immer gegen die tatsächlich gebauten Gebäude und die Vorkommen auf der Karte
 prüfen — beides steht in `get_state`.
+
+**Starter auf hohem Prestige (Community-Tipp, keine Regel).** Switchblade
+(v1.9.6, Jan. 2026) empfiehlt ab Prestige 10 früh Sägewerk (Lumber Mill),
+Imbiss (Beanery) oder Kochhaus (Cookhouse) und das Gildenhaus (Guild
+House), das ab Prestige 8 fast Pflicht sei. Bauplanvergleich, Völker und Lage
+gehen vor; der Tipp entscheidet nur zwischen sonst gleichwertigen Optionen.
 
 ## Völker — aus Wiki und Anleitungen
 
