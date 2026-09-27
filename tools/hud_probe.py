@@ -36,10 +36,12 @@ def beispiel(kasten) -> None:
     kasten.zeigen("wissen", {"bauplan_vergleich": [
         {"gebaeude": "Kiln", "gebaeude_de": "Brennofen", "besser_oder_neu": 2},
         {"gebaeude": "Workshop", "gebaeude_de": "Werkstatt"}]})
-    kasten.zeigen("engpass", engpass.uhren(
+    e = engpass.uhren(
         {"reichweite_sekunden": 240.0},
         {"sekunden_bis_verlust": 780.0, "jetzt": 9.2, "schwelle": 14},
-        {"hunger": 3, "gegangen": 1, "zysten": {"entstanden": 6, "verbrannt": 4}}))
+        {"hunger": 3, "gegangen": 1, "zysten": {"entstanden": 6, "verbrannt": 4}})
+    e["ruf"] = engpass.ruf_tempo(6.5, 18, 5, 0)       # Jahr 5: zu langsam für Jahr 7
+    kasten.zeigen("engpass", e)
     kasten.zeigen("rat", {"ok": True, "text": "Beispiel: Nimm den Brennofen. Er macht Ziegel."})
 
 

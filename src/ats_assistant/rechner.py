@@ -246,8 +246,14 @@ class Rechner(threading.Thread):
             self.ausgang.put(("aktualisiert", aktualisieren.aktualisieren()))
         elif auftrag.art == "laeufe":
             berichte = lernen.berichte(self.runs_dir, self._historie())
+            # Die Spielhistorie des Spiels selbst: alle Läufe, auch die vor
+            # der ersten Mitschrift -- Dauer, Siege, Biome.
+            historie = tools_api.analyze_runs(n=100, save_dir=self.save_dir,
+                                              runs_dir=self.runs_dir)
             self.ausgang.put(("laeufe", {"berichte": berichte,
-                                         "lehren": lernen.lehren(berichte)}))
+                                         "lehren": lernen.lehren(berichte),
+                                         "historie": historie.get("kurzfassung")
+                                         if historie.get("verfuegbar") else None}))
 
     def _korrekturpfad(self) -> Path:
         return lernen.wissensordner(self.runs_dir) / "korrekturen.jsonl"

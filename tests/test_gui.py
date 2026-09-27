@@ -965,3 +965,14 @@ def test_ein_kaputtes_hud_nimmt_das_fenster_nicht_mit(gui, tmp_path: Path,
     app._anzeigen("engpass", {"verfuegbar": True, "uhren": []})
     app._anzeigen("taste", "hud")
     app._hud_schalter()
+
+
+
+def test_laeufe_zeigen_die_spielhistorie_mit_biom_namen(gui) -> None:
+    text = gui._laeufe_text({"lehren": [], "historie": "20 Läufe: 15 gewonnen.\nGewonnen nach "
+                             "Biom: Bambusebene 1 von 6.",
+                             "berichte": [{"kennung": "lauf-a", "biom": "Poro Biome",
+                                           "jahre": 4, "ausgang": "verloren"}]})
+    assert "Spielhistorie (aus dem Spielstand):" in text
+    assert "  Gewonnen nach Biom: Bambusebene 1 von 6." in text
+    assert "lauf-a: Bambusebene · 4 Jahre · verloren" in text

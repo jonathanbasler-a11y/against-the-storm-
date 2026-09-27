@@ -47,6 +47,7 @@ Statuszeile. Neue Python-Pakete holt der Knopf nicht; dafür bleibt
 | **Nahrung** | Die drei Sätze — Empfehlung, Begründung, Alternative — darunter jede Kette, die der Bestand trägt: Gebäude, Einsatz, gewonnene Sättigung, Faktor, Engpass, Arbeitszeit, gewonnene Reichweite |
 | **Auswahl** | „Bildschirm lesen" bei offener Grundstein- oder Bauplanwahl; oder die Namen von Hand eintippen, mit Komma getrennt |
 | **Rat** | Claude bekommt die Lage als JSON und antwortet in drei Sätzen |
+| **Läufe** | „Auswerten“: Lehren aus den Mitschriften, darunter die **Spielhistorie** aus dem Spielstand — alle abgeschlossenen Läufe, Dauer bei Sieg und Niederlage, gewonnen je Biom (mit den Namen aus dem Spiel, nicht „Poro Biome“) |
 
 Unten steht, was fehlt, und ein Suchfeld für den Nachschlag.
 
@@ -61,6 +62,7 @@ Spiel wechseln muss, um zu sehen, was drängt. Er zeigt:
 | **Nahrung** | Wann das Lager leer ist; dazu Hunger und Gegangene. Hunger allein hebt die Stufe nicht — erst Hunger **und** Abgänge seit dem letzten Speichern |
 | **Ungeduld** | Wann die Schwelle erreicht ist, und wo sie jetzt steht |
 | **Pestfäule** | Die gezählten Zysten (entstanden, verbrannt, entfernt). Eine Zeit bis zum verseuchten Herd gibt es noch nicht — das ist nicht gemessen und wird nicht geraten |
+| **Ruf** | Wie schnell der Ruf wächst, in welchem Jahr der Sieg bei diesem Tempo käme und was für einen Sieg in Jahr 7 nötig wäre. Die Community nennt auf hohem Prestige 6–8 Jahre üblich; deine Siege dauerten 9–13. Gelb oder rot heißt: zu langsam für Jahr 7 — erst Ruf (Aufträge, Zufriedenheit), dann weiter ausbauen. Die Jahreszeiten sind verschieden lang, das Tempo ist eine Näherung |
 | **Auswahl** | Die offene Bauplanwahl aus dem Spielstand oder die gelesenen Karten, je mit der Tier-Stufe der neuesten Quelle; darunter der erste Satz des Rats |
 
 **Bedienung:** an der Kopfzeile ziehen verschiebt; am Griff „◢“ unten rechts

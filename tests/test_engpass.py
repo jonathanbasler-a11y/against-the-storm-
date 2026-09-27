@@ -93,3 +93,65 @@ def test_der_rat_bekommt_den_engpass() -> None:
     berater.pruefe_auszug(auszug)
     text = " ".join(berater.systemtext().split())
     assert "`engpass`" in text and "zuerst darauf eingehen" in text
+
+
+# --------------------------------------------------------------------------
+# Ruf-Tempo und Biom-Namen (Runde 22, nach der Spielhistorie vom 27.09.2026)
+# --------------------------------------------------------------------------
+
+
+def test_ruf_tempo_misst_gegen_sieben_jahre() -> None:
+    langsam = engpass.ruf_tempo(6.5, 18, 5, 0)           # vier Jahre vorbei
+    assert langsam["tempo_je_jahr"] == 1.62 and langsam["noetig_je_jahr"] == 3.83
+    assert langsam["sieg_etwa_jahr"] == 12 and langsam["stufe"] == "rot"
+    assert langsam["text"] == "6,5 von 18 · 1,6/Jahr → Sieg etwa Jahr 12"
+    assert langsam["zusatz"] == "für Jahr 7: 3,8/Jahr"
+    schnell = engpass.ruf_tempo(6, 18, 3, 0)
+    assert schnell["stufe"] == "ruhig" and schnell["sieg_etwa_jahr"] == 7
+    knapp = engpass.ruf_tempo(4.5, 18, 3, 0)            # 2,25 gegen 2,7
+    assert knapp["stufe"] == "gelb"
+
+
+def test_ruf_tempo_grenzfaelle() -> None:
+    assert engpass.ruf_tempo(1.2, 18, 1, 1)["zusatz"] == "Tempo ab Jahr 2"
+    assert engpass.ruf_tempo(18, 18, 9, 2)["stufe"] == "ruhig"
+    spaet = engpass.ruf_tempo(12, 18, 9, 0)
+    assert spaet["noetig_je_jahr"] is None and spaet["zusatz"] == "Jahr 7 ist vorbei"
+    assert engpass.ruf_tempo(0, 18, 4, 0)["text"].endswith("kein Zuwachs")
+    for kaputt in ((None, 18, 3, 0), (5, 0, 3, 0), (5, 18, None, 0), ("x", 18, 3, 0)):
+        assert engpass.ruf_tempo(*kaputt) is None
+
+
+def test_der_engpass_bringt_das_tempo_mit(tmp_path: Path) -> None:
+    zeilen = [{"game_time": 100.0, "year": 4, "season": 1, "reputation": 5.0,
+               "reputation_to_win": 18}]
+    (tmp_path / "lauf.jsonl").write_text(json.dumps(zeilen[0]) + "\n", encoding="utf-8")
+    e = tools_api.engpass(tmp_path, "lauf", nahrung={}, ungeduld={})
+    assert e["ruf"]["sieg_etwa_jahr"] == 13               # 3,33 Jahre vorbei, 1,5/Jahr
+    auszug = berater.kontext(zustand={"jahr": 4}, engpass=e)
+    assert auszug["engpass"]["ruf"]["noetig_je_jahr"] == e["ruf"]["noetig_je_jahr"]
+    assert "`engpass.ruf`" in " ".join(berater.systemtext().split())
+
+
+def test_biome_aus_dem_spielstand_bekommen_ihren_namen() -> None:
+    from ats_assistant import biome, tierlisten
+
+    assert biome.nachsehen("Poro Biome") == {"en": "Bamboo Flats", "de": "Bambusebene"}
+    assert biome.deutsch("Moorlands") == "Scharlachroter Obstgarten"
+    assert biome.deutsch("The Marshlands") == "Sümpfe"
+    assert biome.deutsch("Unbekannt") == "Unbekannt" and biome.deutsch(None) is None
+    # Die Tierliste führt „Scarlet Orchard“, der Spielstand sagt „Moorlands“.
+    assert tierlisten.nachsehen("biom", "Moorlands")[0]["stufe"] == "A"
+    assert tierlisten.nachsehen("biom", "The Marshlands")[0]["stufe"] == "B"
+
+
+def test_die_historie_nennt_biome_wie_im_spiel() -> None:
+    from ats_assistant import analysis
+
+    laeufe = ([{"hasWon": False, "biome": "Poro Biome", "years": j, "endTimestamp": j}
+               for j in (2, 4, 7, 9, 13)]
+              + [{"hasWon": True, "biome": "Poro Biome", "years": 13, "endTimestamp": 20}]
+              + [{"hasWon": True, "biome": "Moorlands", "years": 11, "endTimestamp": 30 + i}
+                 for i in range(2)])
+    text = analysis.summarise(analysis.compare_runs(laeufe, n=100))
+    assert "Gewonnen nach Biom: Bambusebene 1 von 6, Scharlachroter Obstgarten 2 von 2." in text

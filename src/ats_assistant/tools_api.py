@@ -18,8 +18,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import (analysis, forecast, kb, nahrung, namen_match, save_reader, screen,
+from . import (analysis, biome, forecast, kb, nahrung, namen_match, save_reader, screen,
                tierlisten, watcher)
+from .engpass import ruf_tempo as _ruf_tempo
 from .engpass import uhren as _uhren
 from .forecast import food_forecast as _food_forecast
 from .forecast import impatience_forecast as _impatience_forecast
@@ -149,6 +150,7 @@ def _zustand_als_dict(state: GameState) -> dict:
         "jahr": state.year,
         "jahreszeit": state.season,
         "biom": state.biome,
+        "biom_de": biome.deutsch(state.biome),
         "prestige": state.prestige,
         "prestige_roh": state.prestige_raw,
         "bevoelkerung": state.population,
@@ -927,10 +929,17 @@ def engpass(runs_dir: str | Path = "runs", run_id: str | None = None,
         nahrung = food_forecast(runs_dir, quelle)
     if ungeduld is None:
         ungeduld = impatience_forecast(runs_dir, quelle)
-    jetzt = zustaende[-1].get("stats") or {}
+    letzter = zustaende[-1]
+    jetzt = letzter.get("stats") or {}
     vorher = (zustaende[-2].get("stats") or {}) if len(zustaende) > 1 else None
-    return {"verfuegbar": True, "quelle": quelle,
-            **_uhren(nahrung, ungeduld, jetzt, vorher)}
+    out = {"verfuegbar": True, "quelle": quelle, **_uhren(nahrung, ungeduld, jetzt, vorher)}
+    # Nicht was droht, sondern wie schnell der Sieg kommt -- daneben, nicht
+    # unter den Uhren: ein langsamer Lauf ist kein Notfall.
+    ruf = _ruf_tempo(letzter.get("reputation"), letzter.get("reputation_to_win"),
+                     letzter.get("year"), letzter.get("season"))
+    if ruf:
+        out["ruf"] = ruf
+    return out
 
 
 @_wall

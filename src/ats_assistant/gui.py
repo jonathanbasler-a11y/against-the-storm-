@@ -26,7 +26,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
 
-from . import aktualisieren, berater, screen, tierlisten
+from . import aktualisieren, berater, biome, screen, tierlisten
 from .hud import Hud, Tasten
 from .lernen import wissensordner
 from .mcp_server import aufloesen
@@ -86,12 +86,15 @@ def _anmeldehinweis(gefunden: bool | None) -> str:
 def _laeufe_text(wert: dict) -> str:
     """Lehren oben, darunter je Siedlung eine kurze Zeile -- neueste zuerst."""
     zeilen = ["Lehren:"] + [f"  • {s}" for s in wert.get("lehren") or []]
+    if wert.get("historie"):
+        zeilen += ["", "Spielhistorie (aus dem Spielstand):"]
+        zeilen += [f"  {z}" for z in str(wert["historie"]).splitlines()]
     berichte = list(reversed(wert.get("berichte") or []))
     zeilen.append("")
     zeilen.append(f"Mitgeschriebene Läufe ({len(berichte)}):" if berichte
                   else "Noch keine Mitschrift.")
     for b in berichte:
-        teile = [b.get("biom") or "Biom unbekannt"]
+        teile = [biome.deutsch(b.get("biom")) or "Biom unbekannt"]
         if b.get("jahre"):
             teile.append(f"{b['jahre']} Jahre")
         teile.append(b.get("ausgang") or "offen")
@@ -808,7 +811,7 @@ class App:
             wann = _alter(z["gespeichert"], "gespeichert")
         else:
             wann = _alter(z.get("zeitpunkt"))
-        text = (f"Jahr {z.get('jahr', '?')} · {z.get('biom') or '?'} · "
+        text = (f"Jahr {z.get('jahr', '?')} · {z.get('biom_de') or z.get('biom') or '?'} · "
                 f"Prestige {z.get('prestige', '?')} · {wann}")
         if text != getattr(self, "_kopf_text", None):
             self._kopf_text = text

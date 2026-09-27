@@ -90,6 +90,14 @@ Bonus überhaupt greift.
   `rot` (unter einem Speicherintervall) steht. **Steht sie rot, zuerst darauf
   eingehen**; eine offene Wahl daran messen, ob sie diesen Engpass löst. Für
   die Pestfäule keine Zeit schätzen, die nicht dasteht.
+- **`engpass.ruf`** ist das Ruf-Tempo: Ruf je Jahr, was für einen Sieg in
+  sieben Jahren nötig wäre, und in welchem Jahr der Sieg bei diesem Tempo
+  käme. Gemessen an der Spielhistorie: 15 Siege nach 9–13 Jahren (Median 11),
+  alle 5 Niederlagen in der Bambusebene. Die Community nennt auf hohem
+  Prestige 6–8 Jahre üblich — und jedes Jahr mehr lässt die Ungeduld weiter
+  steigen (P16 endete bei 13,88 von 14). Steht `ruf.stufe` gelb oder rot und
+  ist nichts akut, zuerst Ruf empfehlen (Aufträge, Zufriedenheit des größten
+  Volks über seine Schwelle) statt weiteren Ausbau.
 - **`effekte.aktiv`** ist, was gerade wirkt (Reiter „Allgemeine Effekte“),
   dazu `hunger_multiplikator` und `mehrverbrauch`. Ein Bonus, der dort nicht
   steht, wirkt nicht. **`effekte.abweichungen`** nennt jede Rate, die auf
