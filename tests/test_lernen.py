@@ -187,3 +187,29 @@ def test_korrektur_mit_zeilentrenner_geht_nicht_verloren(tmp_path: Path) -> None
     pfad = tmp_path / "k.jsonl"
     lernen.korrektur_merken(pfad, "Aussage", "Hunger\u2028ist nur schlimm, wenn Leute gehen")
     assert lernen.korrekturen(pfad) == ["Hunger\u2028ist nur schlimm, wenn Leute gehen"]
+
+
+def test_das_verlaufswerkzeug_zeigt_je_speicherstand_eine_zeile(tmp_path: Path, capsys) -> None:
+    import importlib.util
+
+    pfad = Path(__file__).resolve().parent.parent / "tools" / "verlauf.py"
+    spec = importlib.util.spec_from_file_location("verlauf", pfad)
+    verlauf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(verlauf)
+    reihe = [100.0] * 180
+    zustaende = [{"game_time": 300.0, "year": 1, "season": 1, "biome": "The Marshlands",
+                  "prestige": 17, "impatience": 2.0, "reputation": 1.0,
+                  "category_trends": {"Food": reihe}, "stats": {"hunger": 0}},
+                 {"game_time": 600.0, "year": 1, "season": 2, "biome": "The Marshlands",
+                  "prestige": 17, "impatience": 4.0, "reputation": 1.5,
+                  "category_trends": {"Food": [100.0 - (i % 30) for i in range(180)]},
+                  "stats": {"hunger": 3, "gegangen": 1}}]
+    (tmp_path / "lauf-p17.jsonl").write_text(
+        "\n".join(json.dumps(z) for z in zustaende)
+        + '\n{"typ": "notiz", "art": "rat", "jahr": 1, "text": "Nimm die Räucherei."}\n',
+        encoding="utf-8")
+    assert verlauf.main(["--runs", str(tmp_path)]) == 0
+    text = capsys.readouterr().out
+    assert "lauf-p17 | Sümpfe | Prestige 17" in text
+    assert text.count("\nJ1/") == 2 and "Rat (Jahr 1): Nimm die Räucherei." in text
+    assert verlauf.main(["--runs", str(tmp_path / "leer")]) == 1
