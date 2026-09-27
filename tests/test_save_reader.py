@@ -704,3 +704,16 @@ def test_laufhistorie_in_fremder_form(meta) -> None:
     erwartet = [{"hasWon": True}] if isinstance(meta, dict) and meta.get(
         "gamesHistory", {}) == {"records": [1, None, {"hasWon": True}]} else []
     assert laufhistorie(meta) == erwartet
+
+
+def test_die_bevoelkerung_sind_die_siedler_nicht_die_weltkarte(tmp_path: Path) -> None:
+    """Gemessen am 27.09.2026: das Fenster zeigte 0 (sonst immer 13), weil
+    `population` aus WorldSave die Weltkarte ist. Die Siedler stehen in
+    `Save.actors.villagers`."""
+    siedler = [{"isMale": True, "house": i} for i in range(23)]
+    ordner = schreibe_buendel(tmp_path, save={"actors": {"villagers": siedler}})
+    state, _ = read_state(ordner, wait=False)
+    assert state.population == 23
+    (tmp_path / "ohne").mkdir()
+    ordner = schreibe_buendel(tmp_path / "ohne", save={"actors": {"villagers": []}})
+    assert read_state(ordner, wait=False)[0].population == 0      # alle weg: wirklich 0

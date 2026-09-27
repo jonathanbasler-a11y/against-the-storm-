@@ -183,6 +183,15 @@ Angewandt aus der Lage heraus, nicht stur abgearbeitet.
 Situation ohne Ausweichweg. Vor jeder Empfehlung prüfen, ob die Versorgung für
 zwei Jahreszeiten steht.
 
+**Steht die Nahrung gelb oder rot (`engpass`), schlägt ein Nahrungsgebäude
+jede Tier-Stufe.** Gemessen an P17 (27.09.2026): Reichweite in Jahr 1 nur 4–6
+Minuten, und der Rat empfahl Weber und Manufaktur, weil sie in der Tierliste
+höher standen — die Kleinfarm für zehn brachliegende Äcker kam erst in Jahr 6,
+nach 176 Hungerereignissen und 8 Toten. Bei knapper Nahrung zuerst: was
+Rohnahrung liefert oder vorhandene Äcker und Vorkommen nutzbar macht, dann
+was sie verarbeitet (`nahrung_rat`), und erst danach die Tierliste. Stehen
+Äcker (`Farmfield`) ohne Farm in `gebaeude_liste`, ist das der erste Satz.
+
 **Verarbeitete Nahrung sättigt zwei- bis dreimal so viel wie rohe.** Gemessen
 aus den Spieldaten: Rohnahrung 1,0, Haferbrei/Dörrfleisch/Kekse/Paste 2,0,
 Eingelegte Nahrung/Pastete/Fleischspieße 3,0. Ein Rezept, das aus 5 roh 10 verarbeitet
