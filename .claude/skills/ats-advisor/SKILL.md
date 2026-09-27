@@ -92,8 +92,9 @@ Bonus überhaupt greift.
   die Pestfäule keine Zeit schätzen, die nicht dasteht.
 - **`engpass.ruf`** ist das Ruf-Tempo: Ruf je Jahr, was für einen Sieg in
   sieben Jahren nötig wäre, und in welchem Jahr der Sieg bei diesem Tempo
-  käme. Gemessen an der Spielhistorie: 15 Siege nach 9–13 Jahren (Median 11),
-  alle 5 Niederlagen in der Bambusebene. Die Community nennt auf hohem
+  käme. Gemessen an der Spielhistorie: 15 Siege nach 9–13 Jahren (Median 11).
+  Die 5 Niederlagen in der Bambusebene waren laut Spieler Ausprobieren —
+  nicht als Schwäche des Bioms werten. Die Community nennt auf hohem
   Prestige 6–8 Jahre üblich — und jedes Jahr mehr lässt die Ungeduld weiter
   steigen (P16 endete bei 13,88 von 14). Steht `ruf.stufe` gelb oder rot und
   ist nichts akut, zuerst Ruf empfehlen (Aufträge, Zufriedenheit des größten
