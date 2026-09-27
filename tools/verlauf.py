@@ -13,6 +13,7 @@ die Reichweite, wann kam Hunger, wann gingen Leute? Nur lesen, nichts ändern.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -23,7 +24,11 @@ from ats_assistant.mcp_server import aufloesen  # noqa: E402
 
 
 def _zahl(wert, muster: str = "{:.1f}") -> str:
-    return muster.format(wert) if isinstance(wert, (int, float)) else "–"
+    """Formatiert -- und hält die Spaltenbreite auch ohne Wert."""
+    if isinstance(wert, (int, float)) and not isinstance(wert, bool):
+        return muster.format(wert)
+    breite = re.search(r">(\d+)", muster)
+    return "–".rjust(int(breite.group(1))) if breite else "–"
 
 
 def zeilen(datei: Path) -> list[str]:
