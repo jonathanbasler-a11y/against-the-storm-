@@ -306,3 +306,16 @@ def test_der_fensterstil_wird_gesetzt(monkeypatch) -> None:
     assert gesetzt[0] == 0x1a2b and gesetzt[1] == hud.GWL_EXSTYLE
     assert gesetzt[2] & hud.WS_EX_TOOLWINDOW and gesetzt[2] & hud.WS_EX_NOACTIVATE
     assert protokoll[-1][0] == "SetWindowPos"
+
+
+@braucht_anzeige
+def test_das_hud_zeigt_das_ruf_tempo(wurzel) -> None:
+    kasten = hud.Hud(wurzel, pfad=None)
+    e = engpass.uhren({}, {})
+    e["ruf"] = engpass.ruf_tempo(6.5, 18, 5, 0)
+    kasten.zeigen("engpass", e)
+    wurzel.update_idletasks()
+    zeile = kasten.zeilen["ruf"]
+    assert zeile["name"].cget("text") == "Ruf"
+    assert zeile["text"].cget("text").startswith("6,5 von 18 · 1,6/Jahr → Sieg etwa Jahr 12")
+    assert zeile["fuellung"].place_info()["relwidth"].startswith("0.36")

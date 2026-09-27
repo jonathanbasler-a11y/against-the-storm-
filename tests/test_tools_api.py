@@ -45,6 +45,7 @@ def test_get_state_liefert_zahlen_und_namen_ohne_zeitreihen(tmp_path: Path) -> N
     save_dir = buendel(tmp_path / "save")
     out = tools_api.get_state(save_dir, tmp_path / "runs", auf_ruhe_warten=False)
     assert out["jahr"] == 13 and out["biom"] == "Coral Forest"
+    assert out["biom_de"] == "Korallenwald"
     assert out["prestige"] == 13 and out["prestige_roh"] == "Prestige 16 Ascension XIII"
     assert out["lager"] == {"Meat": 42}
     assert out["gewonnen"] is True

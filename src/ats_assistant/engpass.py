@@ -135,6 +135,50 @@ def _pestfaeule(statistik: dict, vorher: dict | None, gemessen: dict | None) -> 
             "zusatz": "keine Zeit gemessen"}
 
 
+# Gemessen am 27.09.2026 an der Spielhistorie des Spielers: 15 Siege, alle
+# nach 9 bis 13 Jahren, im Median 11. Die Community nennt auf hohem Prestige
+# 6 bis 8 Jahre üblich (Steam-Diskussionen, gefunden per Suche). Sieben Jahre
+# sind deshalb das Ziel, gegen das das Tempo gemessen wird.
+ZIEL_JAHRE = 7
+
+
+def ruf_tempo(ruf, ziel, jahr, jahreszeit, ziel_jahre: int = ZIEL_JAHRE) -> dict | None:
+    """Wie schnell der Ruf wächst -- und ob das für einen Sieg in `ziel_jahre` reicht.
+
+    Die vergangene Zeit ist `(Jahr - 1) + Jahreszeit / 3`: die Jahreszeiten
+    sind nicht gleich lang, also ist das Tempo eine Näherung -- genau genug,
+    um zu sehen, ob ein Lauf auf sieben oder auf elf Jahre zuläuft.
+    """
+    ruf, ziel, jahr = _zahl(ruf), _zahl(ziel), _zahl(jahr)
+    if ruf is None or not ziel or jahr is None:
+        return None
+    zeit = _zahl(jahreszeit)
+    vergangen = (jahr - 1) + (min(max(zeit, 0.0), 2.0) / 3 if zeit is not None else 0.0)
+    stand = f"{ruf:.1f} von {ziel:g}".replace(".", ",")
+    out: dict[str, Any] = {"ruf": ruf, "ziel": ziel, "jahre_vergangen": round(vergangen, 2)}
+    if ruf >= ziel:
+        return {**out, "text": f"{stand} – voll", "stufe": "ruhig", "zusatz": ""}
+    if vergangen < 1:
+        return {**out, "text": stand, "stufe": "unbekannt", "zusatz": "Tempo ab Jahr 2"}
+    tempo = ruf / vergangen
+    rest = ziel - ruf
+    noetig = rest / (ziel_jahre - vergangen) if vergangen < ziel_jahre - 0.5 else None
+    sieg_jahr = int(vergangen + rest / tempo) + 1 if tempo > 0 else None
+    if noetig is None:
+        s = "rot"
+    elif tempo >= noetig:
+        s = "ruhig"
+    else:
+        s = "gelb" if tempo >= 0.75 * noetig else "rot"
+    text = f"{stand} · {tempo:.1f}/Jahr".replace(".", ",")
+    text += f" → Sieg etwa Jahr {sieg_jahr}" if sieg_jahr else " → kein Zuwachs"
+    zusatz = (f"für Jahr {ziel_jahre}: {noetig:.1f}/Jahr".replace(".", ",")
+              if noetig is not None else f"Jahr {ziel_jahre} ist vorbei")
+    return {**out, "tempo_je_jahr": round(tempo, 2), "noetig_je_jahr": (
+        round(noetig, 2) if noetig is not None else None), "sieg_etwa_jahr": sieg_jahr,
+        "ziel_jahre": ziel_jahre, "text": text, "stufe": s, "zusatz": zusatz}
+
+
 def uhren(nahrung: dict | None, ungeduld: dict | None, statistik: dict | None = None,
           statistik_vorher: dict | None = None, pestfaeule: dict | None = None) -> dict:
     """Die drei Uhren und welche davon entscheidet.

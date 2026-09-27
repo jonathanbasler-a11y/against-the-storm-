@@ -66,10 +66,14 @@ def nachsehen(kategorie: str, name: str | None, pfad: Path | str = PFAD) -> list
     """
     if not name:
         return []
-    ziel = schluessel(name)
+    ziele = {schluessel(name)}
+    if kategorie == "biom":
+        # Der Spielstand nennt „Moorlands“, die Liste „Scarlet Orchard“.
+        from .biome import englisch
+        ziele.add(schluessel(englisch(name)))
     out = []
     for z in laden(pfad):
-        if z["kategorie"] == kategorie and schluessel(z["en"]) == ziel:
+        if z["kategorie"] == kategorie and schluessel(z["en"]) in ziele:
             eintrag = {"stufe": z["stufe"], "quelle": z.get("quelle") or "?",
                        "stand": z.get("stand") or "unbekannt"}
             for feld in ("kontext", "notiz"):

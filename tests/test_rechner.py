@@ -353,6 +353,21 @@ def test_die_laeufe_werden_ausgewertet(tmp_path: Path) -> None:
     art, wert = ausgang.get_nowait()
     assert art == "laeufe" and wert["berichte"][0]["kennung"] == "lauf"
     assert wert["lehren"]
+    assert wert["historie"] is None                       # kein MetaSave im Ordner
+
+
+def test_die_laeufe_bringen_die_spielhistorie_mit(tmp_path: Path) -> None:
+    import json
+    ausgang: queue.Queue = queue.Queue()
+    (tmp_path / "MetaSave.save").write_text(json.dumps({"gamesHistory": {"records": [
+        {"hasWon": False, "biome": "Poro Biome", "years": 4, "endTimestamp": 1},
+        {"hasWon": True, "biome": "Moorlands", "years": 11, "endTimestamp": 2}]}}),
+        encoding="utf-8")
+    r = rechner.Rechner(tmp_path, tmp_path / "runs", tmp_path / "kb.sqlite", ausgang)
+    r._ausfuehren(rechner.Auftrag("laeufe"))
+    _, wert = ausgang.get_nowait()
+    assert "Bambusebene 0 von 1" in wert["historie"]
+    assert "Scharlachroter Obstgarten 1 von 1" in wert["historie"]
 
 
 def test_aktualisieren_laeuft_im_arbeits_thread(tmp_path: Path, monkeypatch) -> None:

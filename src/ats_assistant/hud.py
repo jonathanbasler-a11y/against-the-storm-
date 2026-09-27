@@ -38,9 +38,12 @@ from pathlib import Path
 from typing import Callable
 
 from . import tierlisten
+from .engpass import NAMEN as _UHRNAMEN
 from .rechner import alter as _alter, erster_satz
 
 log = logging.getLogger(__name__)
+
+NAMEN = {**_UHRNAMEN, "ruf": "Ruf"}
 
 # Unter dem Stellvertreter der Fenstertests gibt es kein `TclError`.
 _TK_FEHLER = getattr(tk, "TclError", Exception)
@@ -333,7 +336,9 @@ def _ganz(wert, vorgabe: int) -> int:
 class Hud:
     """Der Kasten selbst. Alles, was er zeigt, kommt über `zeigen`."""
 
-    UHREN = ("nahrung", "ungeduld", "pestfaeule")
+    # Die drei Uhren, darunter das Ruf-Tempo -- kein Notfall, aber die Frage,
+    # ob der Lauf auf sieben oder auf elf Jahre zuläuft.
+    UHREN = ("nahrung", "ungeduld", "pestfaeule", "ruf")
 
     def __init__(self, root, pfad: Path | str | None = None,
                  beim_lesen: Callable[[], None] | None = None,
@@ -475,20 +480,28 @@ class Hud:
                              if stufe in ("rot", "gelb") else TEXT)
         self._info_text = infozeile(self._daten["zustand"])
         self.info.configure(text=self._info_text)
-        uhren = {u.get("art"): u for u in ((self._daten["engpass"] or {}).get("uhren") or [])
-                 if isinstance(u, dict)}
+        engpass = self._daten["engpass"] or {}
+        uhren = {u.get("art"): u for u in (engpass.get("uhren") or []) if isinstance(u, dict)}
+        if isinstance(engpass.get("ruf"), dict):
+            uhren["ruf"] = {**engpass["ruf"], "name": "Ruf"}
         for art, teile in self.zeilen.items():
             u = uhren.get(art) or {}
             farbe = FARBEN.get(u.get("stufe"), FARBEN["unbekannt"])
-            teile["name"].configure(text=u.get("name") or art.capitalize())
+            teile["name"].configure(text=u.get("name") or NAMEN.get(art, art.capitalize()))
             text = u.get("text") or "–"
             if u.get("zusatz"):
                 text += f" · {u['zusatz']}"
             teile["text"].configure(text=text, foreground=farbe if u.get("stufe") in (
                 "rot", "gelb") else TEXT)
             sekunden = u.get("sekunden")
-            anteil = (min(max(sekunden / BALKEN_VOLL_SEKUNDEN, 0.03), 1.0)
-                      if isinstance(sekunden, (int, float)) else 0.0)
+            if art == "ruf":
+                # Beim Ruf füllt sich der Balken zum Sieg hin.
+                ruf, ziel = u.get("ruf"), u.get("ziel")
+                anteil = (min(max(ruf / ziel, 0.0), 1.0)
+                          if isinstance(ruf, (int, float)) and ziel else 0.0)
+            else:
+                anteil = (min(max(sekunden / BALKEN_VOLL_SEKUNDEN, 0.03), 1.0)
+                          if isinstance(sekunden, (int, float)) else 0.0)
             teile["fuellung"].configure(background=farbe)
             teile["fuellung"].place(relx=0, rely=0, relheight=1, relwidth=anteil)
         auswahl = auswahlzeile(self._daten["zustand"], self._daten["wissen"],

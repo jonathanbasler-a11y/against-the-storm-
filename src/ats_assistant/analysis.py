@@ -206,6 +206,18 @@ def summarise(vergleich: Laufvergleich, top: int = 5) -> str:
     if vergleich.jahre_sieg is not None and vergleich.jahre_niederlage is not None:
         L.append(f"Dauer im Mittel: {vergleich.jahre_sieg:.0f} Jahre bei Sieg, "
                  f"{vergleich.jahre_niederlage:.0f} bei Niederlage.")
+    if vergleich.nach_biom:
+        # Mit dem Namen aus dem Spiel: die Historie sagt „Poro Biome“, der
+        # Spieler kennt „Bambusebene“. Die Biome mit Niederlagen zuerst.
+        from .biome import deutsch
+        teile = []
+        for roh, z in sorted(vergleich.nach_biom.items(),
+                             key=lambda kv: (-kv[1]["niederlagen"], kv[0])):
+            gesamt = z["siege"] + z["niederlagen"]
+            if gesamt:
+                teile.append(f"{deutsch(roh)} {z['siege']} von {gesamt}")
+        if teile:
+            L.append("Gewonnen nach Biom: " + ", ".join(teile) + ".")
     for titel, merkmale in (("Grundsteine", vergleich.grundsteine),
                             ("Gebäude", vergleich.gebaeude)):
         auffaellig = [m for m in merkmale if abs(m.differenz) >= 0.25][:top]
