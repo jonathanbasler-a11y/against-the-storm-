@@ -183,14 +183,28 @@ Angewandt aus der Lage heraus, nicht stur abgearbeitet.
 Situation ohne Ausweichweg. Vor jeder Empfehlung prüfen, ob die Versorgung für
 zwei Jahreszeiten steht.
 
-**Steht die Nahrung gelb oder rot (`engpass`), schlägt ein Nahrungsgebäude
-jede Tier-Stufe.** Gemessen an P17 (27.09.2026): Reichweite in Jahr 1 nur 4–6
-Minuten, und der Rat empfahl Weber und Manufaktur, weil sie in der Tierliste
-höher standen — die Kleinfarm für zehn brachliegende Äcker kam erst in Jahr 6,
-nach 176 Hungerereignissen und 8 Toten. Bei knapper Nahrung zuerst: was
-Rohnahrung liefert oder vorhandene Äcker und Vorkommen nutzbar macht, dann
-was sie verarbeitet (`nahrung_rat`), und erst danach die Tierliste. Stehen
-Äcker (`Farmfield`) ohne Farm in `gebaeude_liste`, ist das der erste Satz.
+**Nahrung zuerst — wenn der Mangel strukturell ist.** Eine kurze Reichweite
+allein entscheidet keine Wahl; am Anfang ist der Vorrat immer klein, und
+Sammler liefern in Schüben. Strukturell ist der Mangel, wenn mindestens eins
+davon zutrifft:
+- Rohnahrungsquellen fehlen: kein Sammler-, Jäger-, Fischer- oder
+  Farmgebäude in `gebaeude_liste`, oder Äcker (`Farmfield`) ohne Farm,
+- die Nahrungsuhr bleibt über mehrere Speicherstände rot (ohne „über 15 min
+  stabil“),
+- Hunger und Abgänge kommen zusammen.
+Dann schlägt ein Nahrungsgebäude jede Tier-Stufe: erst was Rohnahrung liefert
+oder Äcker und Vorkommen nutzbar macht, dann was sie verarbeitet
+(`nahrung_rat`). Anlass P17 (27.09.2026): bei 4–6 Minuten Reichweite in Jahr 1
+empfahl der Rat Weber und Manufaktur nach der Tierliste, die Kleinfarm für
+zehn brache Äcker kam erst in Jahr 6 — nach 176 Hungerereignissen und 8 Toten.
+Stehen Äcker ohne Farm in `gebaeude_liste`, ist das der erste Satz.
+
+Stehen dagegen Rohnahrungsquellen und eine Verarbeitung, und die Uhr schwankt
+nur, darf ein anderer Engpass vorgehen — Brennstoff, Baustoffe, Ruf — und die
+Antwort sagt in einem Satz, warum die Nahrung trotz kurzer Uhr trägt.
+Beispiel vom Spieler (27.09.2026, neuer Lauf): Sammler- und Trapperlager an
+großen Vorkommen mit über 80 Ladungen, Verarbeitung steht — den Brennofen
+gegen Brennstoffmangel frei zu wählen war richtig.
 
 **Verarbeitete Nahrung sättigt zwei- bis dreimal so viel wie rohe.** Gemessen
 aus den Spieldaten: Rohnahrung 1,0, Haferbrei/Dörrfleisch/Kekse/Paste 2,0,

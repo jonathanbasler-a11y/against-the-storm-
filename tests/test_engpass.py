@@ -161,5 +161,52 @@ def test_die_historie_nennt_biome_wie_im_spiel() -> None:
 def test_bei_knapper_nahrung_schlaegt_ein_nahrungsgebaeude_die_tierliste() -> None:
     """P17: Weber und Manufaktur nach Tierliste, die Kleinfarm erst in Jahr 6."""
     text = " ".join(berater.systemtext().split())
+    assert "Nahrung zuerst — wenn der Mangel strukturell ist" in text
     assert "schlägt ein Nahrungsgebäude jede Tier-Stufe" in text
     assert "Äcker (`Farmfield`) ohne Farm" in text
+    # … aber nicht binär: mit Quellen und Verarbeitung darf anderes vorgehen.
+    assert "darf ein anderer Engpass vorgehen" in text
+
+
+def test_eine_schwankende_nahrungsuhr_ist_kein_absturz() -> None:
+    """P17: die Uhr sprang zwischen 6 min, „wächst“ und 90 min. Hält sich der
+    Vorrat über drei Speicherstände, eine Stufe weniger."""
+    kurz = {"reichweite_sekunden": 200.0}
+    stabil = engpass.uhren(kurz, {}, nahrung_verlauf=[20.0, 35.0, 22.0])
+    nahrung = _uhr(stabil, "nahrung")
+    assert nahrung["stufe"] == "gelb" and nahrung["zusatz"].startswith("über 15 min stabil")
+    faellt = engpass.uhren(kurz, {}, nahrung_verlauf=[60.0, 40.0, 22.0])
+    assert _uhr(faellt, "nahrung")["stufe"] == "rot"
+    zu_kurz = engpass.uhren(kurz, {}, nahrung_verlauf=[20.0, 22.0])
+    assert _uhr(zu_kurz, "nahrung")["stufe"] == "rot"      # erst ab drei Ständen
+    gelb = engpass.uhren({"reichweite_sekunden": 600.0}, {}, nahrung_verlauf=[20, None, 30, 25])
+    assert _uhr(gelb, "nahrung")["stufe"] == "ruhig"
+    # Hunger mit Abgängen hebt die Stufe trotzdem wieder.
+    mit_abgang = engpass.uhren(kurz, {}, {"hunger": 5, "gegangen": 2},
+                               {"hunger": 3, "gegangen": 1}, nahrung_verlauf=[20.0, 30.0, 25.0])
+    assert _uhr(mit_abgang, "nahrung")["stufe"] == "rot"
+
+
+def test_tools_api_reicht_den_vorratsverlauf_herein(tmp_path: Path) -> None:
+    """Vier Stände, der Vorrat hält sich: die kurze Reichweite wird gelb, nicht rot."""
+    def reihe(werte):
+        return {"Food": [float(w) for w in werte]}
+    basis = [30.0] * 180
+    stände = []
+    for i, ende in enumerate((30.0, 25.0, 40.0, 30.0)):   # Vorrat 27 → 42 → 32
+        werte = list(basis)
+        for k in range(30):                       # 30 frische Stützstellen je Speichern
+            werte[(i * 30 + k) % 180] = ende + (k % 3)
+        basis = werte
+        stände.append({"game_time": 300.0 * (i + 1), "category_trends": reihe(werte)})
+    (tmp_path / "lauf.jsonl").write_text("\n".join(json.dumps(s) for s in stände) + "\n",
+                                         encoding="utf-8")
+    e = tools_api.engpass(tmp_path, "lauf", nahrung={"reichweite_sekunden": 200.0}, ungeduld={})
+    assert _uhr(e, "nahrung")["stufe"] == "gelb"
+    # Derselbe Verlauf, aber fallend: bleibt rot.
+    for k in range(30):                           # nur die frischen Werte: Vorrat 10
+        stände[-1]["category_trends"]["Food"][(3 * 30 + k) % 180] = 10.0 + (k % 3)
+    (tmp_path / "lauf.jsonl").write_text("\n".join(json.dumps(s) for s in stände) + "\n",
+                                         encoding="utf-8")
+    e = tools_api.engpass(tmp_path, "lauf", nahrung={"reichweite_sekunden": 200.0}, ungeduld={})
+    assert _uhr(e, "nahrung")["stufe"] == "rot"
