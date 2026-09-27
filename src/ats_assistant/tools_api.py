@@ -922,7 +922,7 @@ def engpass(runs_dir: str | Path = "runs", run_id: str | None = None,
     sagt, was seit dem letzten Speichern dazukam -- Hunger zählt erst, wenn
     auch Leute gegangen sind.
     """
-    zustaende, quelle = _letzte_zustaende(runs_dir, run_id)
+    zustaende, quelle = _letzte_zustaende(runs_dir, run_id, anzahl=4)
     if not zustaende:
         return {"verfuegbar": False, "grund": "Keine Mitschrift vorhanden."}
     if nahrung is None:
@@ -932,7 +932,13 @@ def engpass(runs_dir: str | Path = "runs", run_id: str | None = None,
     letzter = zustaende[-1]
     jetzt = letzter.get("stats") or {}
     vorher = (zustaende[-2].get("stats") or {}) if len(zustaende) > 1 else None
-    out = {"verfuegbar": True, "quelle": quelle, **_uhren(nahrung, ungeduld, jetzt, vorher)}
+    # Der Vorrat je Speicherstand, aus denselben Zeitreihen wie die Uhr --
+    # damit eine kurze Reichweite von einem echten Absturz zu trennen ist.
+    verlauf = [
+        _food_forecast(_als_zustand(b), _als_zustand(a)).stock
+        for a, b in zip(zustaende, zustaende[1:], strict=False)]
+    out = {"verfuegbar": True, "quelle": quelle,
+           **_uhren(nahrung, ungeduld, jetzt, vorher, nahrung_verlauf=verlauf)}
     # Nicht was droht, sondern wie schnell der Sieg kommt -- daneben, nicht
     # unter den Uhren: ein langsamer Lauf ist kein Notfall.
     ruf = _ruf_tempo(letzter.get("reputation"), letzter.get("reputation_to_win"),

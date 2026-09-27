@@ -69,7 +69,8 @@ def _seit(jetzt: dict, vorher: dict | None, schluessel: str) -> float | None:
     return max(a - b, 0.0)
 
 
-def _nahrung(nahrung: dict, statistik: dict, vorher: dict | None) -> dict:
+def _nahrung(nahrung: dict, statistik: dict, vorher: dict | None,
+             verlauf: list[float] | None = None) -> dict:
     sekunden = _zahl(nahrung.get("reichweite_sekunden"))
     rate = _zahl(nahrung.get("rate_je_spielzeitsekunde"))
     if sekunden is not None:
@@ -89,6 +90,14 @@ def _nahrung(nahrung: dict, statistik: dict, vorher: dict | None) -> dict:
         zusatz.append(f"Hunger {hunger:.0f}×" + (f" (+{hunger_neu:.0f})" if hunger_neu else ""))
     if gegangen:
         zusatz.append(f"{gegangen:.0f} gegangen" + (f" (+{gegangen_neu:.0f})" if gegangen_neu else ""))
+    if s in ("gelb", "rot") and verlauf and len(verlauf) >= 3 and verlauf[-1] >= verlauf[0]:
+        # Die Uhr rechnet über die letzten fünf Minuten, und Sammler liefern
+        # in Schüben -- in P17 sprang sie zwischen „6 min“, „wächst“ und
+        # „90 min“. Hat sich der Vorrat über drei Speicherstände (rund eine
+        # Viertelstunde) gehalten, ist die kurze Reichweite Schwankung, kein
+        # Absturz: eine Stufe weniger. Wunsch des Spielers: nicht so binär.
+        s = "gelb" if s == "rot" else "ruhig"
+        zusatz.insert(0, "über 15 min stabil")
     if hunger_neu and gegangen_neu:
         # Beides seit dem letzten Speichern: jetzt kostet der Hunger Leute.
         s = _hoeher(s)
@@ -180,7 +189,8 @@ def ruf_tempo(ruf, ziel, jahr, jahreszeit, ziel_jahre: int = ZIEL_JAHRE) -> dict
 
 
 def uhren(nahrung: dict | None, ungeduld: dict | None, statistik: dict | None = None,
-          statistik_vorher: dict | None = None, pestfaeule: dict | None = None) -> dict:
+          statistik_vorher: dict | None = None, pestfaeule: dict | None = None,
+          nahrung_verlauf: list[float] | None = None) -> dict:
     """Die drei Uhren und welche davon entscheidet.
 
     Entscheidend ist die dringendste Uhr, die gelb oder rot steht: rot vor
@@ -189,7 +199,8 @@ def uhren(nahrung: dict | None, ungeduld: dict | None, statistik: dict | None = 
     statistik = statistik if isinstance(statistik, dict) else {}
     vorher = statistik_vorher if isinstance(statistik_vorher, dict) else None
     liste = [
-        _nahrung(nahrung if isinstance(nahrung, dict) else {}, statistik, vorher),
+        _nahrung(nahrung if isinstance(nahrung, dict) else {}, statistik, vorher,
+                 [v for v in (nahrung_verlauf or []) if _zahl(v) is not None]),
         _ungeduld(ungeduld if isinstance(ungeduld, dict) else {}),
         _pestfaeule(statistik, vorher, pestfaeule if isinstance(pestfaeule, dict) else None),
     ]
