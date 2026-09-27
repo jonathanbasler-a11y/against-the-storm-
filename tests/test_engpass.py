@@ -155,3 +155,11 @@ def test_die_historie_nennt_biome_wie_im_spiel() -> None:
                  for i in range(2)])
     text = analysis.summarise(analysis.compare_runs(laeufe, n=100))
     assert "Gewonnen nach Biom: Bambusebene 1 von 6, Scharlachroter Obstgarten 2 von 2." in text
+
+
+
+def test_bei_knapper_nahrung_schlaegt_ein_nahrungsgebaeude_die_tierliste() -> None:
+    """P17: Weber und Manufaktur nach Tierliste, die Kleinfarm erst in Jahr 6."""
+    text = " ".join(berater.systemtext().split())
+    assert "schlägt ein Nahrungsgebäude jede Tier-Stufe" in text
+    assert "Äcker (`Farmfield`) ohne Farm" in text

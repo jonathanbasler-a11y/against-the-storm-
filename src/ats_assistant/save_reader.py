@@ -659,7 +659,15 @@ def read_state(directory: Path, wait: bool = True) -> tuple[GameState, list[Reso
         mods = pick(meta, midx, "world_modifiers", (), ("modifiers", "playedWorldEffects"), list)
         state.world_modifiers = [m for m in (mods or []) if isinstance(m, str)]
 
-    if world is not None:
+    # Gemessen am 27.09.2026: die Siedler stehen je einer in
+    # `Save.actors.villagers` (23 in einem Lauf, in dem das Fenster 0 zeigte).
+    # Das `population` aus WorldSave ist `cities[0].Value.population` -- die
+    # Weltkarte, nicht die laufende Siedlung: es stand über ganze Läufe auf 13
+    # oder 0. Es bleibt nur Rückfall, wenn der Spielstand keine Liste hat.
+    siedler = _an_pfad(save, "$.actors.villagers") if save is not None else None
+    if isinstance(siedler, list):
+        state.population = len(siedler)
+    elif world is not None:
         widx = index_keys(world)
         state.population = pick(world, widx, "population", (), ("population",), int)
 
