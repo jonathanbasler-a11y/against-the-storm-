@@ -235,3 +235,95 @@ def test_bei_vollem_ruf_ist_der_lauf_gewonnen() -> None:
     offen = engpass.mit_ruf(e, engpass.ruf_tempo(12.0, 18, 9, 0))
     assert offen["entscheidend"] == "ungeduld" and "gewonnen" not in offen
     assert engpass.mit_ruf(e, None) is e
+
+
+# --------------------------------------------------------------------------
+# Ruf steht still -- der gewonnene P17-Lauf, Spalten aus tools/verlauf.py
+# (am Spielrechner, 28.09.2026)
+# --------------------------------------------------------------------------
+
+P17 = [(1, 0, 0.0), (1, 1, 0.0), (1, 2, 0.0), (2, 0, 2.0), (2, 1, 4.0), (3, 0, 4.0),
+       (3, 1, 4.1), (3, 2, 4.3), (4, 1, 4.7), (4, 2, 5.2), (5, 0, 5.4), (5, 1, 7.1),
+       (6, 0, 8.7), (6, 1, 9.1), (6, 1, 9.3), (6, 2, 9.9), (7, 0, 9.9), (7, 2, 10.0),
+       (8, 0, 10.1), (8, 1, 10.4), (8, 2, 11.2), (9, 1, 11.7), (9, 2, 13.3),
+       (10, 1, 15.0), (10, 2, 15.4), (11, 0, 16.6), (11, 1, 18.0)]
+
+
+def _bis(jahr: int, zeit: int) -> list:
+    return P17[:P17.index(next(p for p in P17 if p[:2] == (jahr, zeit))) + 1]
+
+
+def test_der_stillstand_im_p17_lauf_waere_zweimal_aufgefallen() -> None:
+    frueh = engpass.ruf_stillstand(_bis(3, 1))
+    assert frueh["seit_jahr"] == 2 and frueh["text"] == "steht seit Jahr 2 (4,0 → 4,1)"
+    mitte = engpass.ruf_stillstand(_bis(7, 2))
+    assert mitte["text"] == "steht seit Jahr 6 (9,1 → 10,0)" and mitte["jahre"] == 1.3
+    assert engpass.ruf_stillstand(_bis(8, 1))["seit_jahr"] == 6
+    # Sobald der Ruf wieder zieht, ist die Warnung weg.
+    for jahr, zeit in ((5, 1), (8, 2), (9, 2), (11, 1)):
+        assert engpass.ruf_stillstand(_bis(jahr, zeit)) is None, (jahr, zeit)
+
+
+def test_stillstand_grenzfaelle() -> None:
+    assert engpass.ruf_stillstand([]) is None
+    assert engpass.ruf_stillstand([(3, 0, 4.0)]) is None
+    assert engpass.ruf_stillstand([(3, 0, 4.0), ("x", 1, 4.0), (3, 1, None), "kaputt"]) is None
+    # Weniger als ein Jahr ohne Zuwachs ist noch kein Stillstand.
+    assert engpass.ruf_stillstand([(3, 0, 4.0), (3, 2, 4.5)]) is None
+    assert engpass.ruf_stillstand([(3, 0, 4.0), (4, 0, 4.5)])["jahre"] == 1.0
+
+
+def test_stillstand_faerbt_die_ruf_zeile() -> None:
+    still = engpass.ruf_stillstand(_bis(7, 2))
+    ruf = engpass.mit_stillstand(engpass.ruf_tempo(10.0, 18, 7, 2), still)
+    assert ruf["stufe"] == "rot" and ruf["zusatz"] == still["text"]      # rot bleibt rot
+    frueh = engpass.mit_stillstand(engpass.ruf_tempo(4.1, 18, 3, 1),
+                                   engpass.ruf_stillstand(_bis(3, 1)))
+    assert frueh["stufe"] == "gelb" and "seit Jahr 2" in frueh["zusatz"]  # gemessen, auch früh
+    voll = engpass.ruf_tempo(18.0, 18, 11, 1)
+    assert engpass.mit_stillstand(voll, still) is voll
+    assert engpass.mit_stillstand(None, still) is None
+    assert engpass.mit_stillstand(voll, None) is voll
+
+
+def test_der_engpass_liest_den_stillstand_aus_der_mitschrift(tmp_path: Path) -> None:
+    zeilen = [{"game_time": 300.0 * i, "year": j, "season": s, "reputation": r,
+               "reputation_to_win": 18} for i, (j, s, r) in enumerate(_bis(7, 2))]
+    zeilen.insert(5, {"typ": "notiz", "text": "Rat"})
+    pfad = tmp_path / "lauf.jsonl"
+    pfad.write_text("".join(json.dumps(z) + "\n" for z in zeilen) + "{abgerissen\n",
+                    encoding="utf-8")
+    e = tools_api.engpass(tmp_path, "lauf", nahrung={}, ungeduld={})
+    assert e["ruf"]["stillstand"]["seit_jahr"] == 6
+    assert e["ruf"]["zusatz"] == "steht seit Jahr 6 (9,1 → 10,0)"
+    # Nur bis zum letzten Stand gelesen, der einen Punkt tiefer lag.
+    assert tools_api._ruf_verlauf(tmp_path, "lauf")[0] == (6, 0, 8.7)
+    auszug = berater.kontext(zustand={"jahr": 7}, engpass=e)
+    assert auszug["engpass"]["ruf"]["stillstand"]["seit_jahr"] == 6
+    assert tools_api._ruf_verlauf(tmp_path, None) == []
+    assert tools_api._ruf_verlauf(tmp_path, "fehlt") == []
+
+
+def test_der_ruf_verlauf_liest_nach_einem_neuen_stand_nur_das_neue(tmp_path: Path,
+                                                                   monkeypatch) -> None:
+    pfad = tmp_path / "lauf.jsonl"
+    zeilen = [{"year": j, "season": s, "reputation": r} for j, s, r in _bis(7, 0)]
+    pfad.write_text("".join(json.dumps(z) + "\n" for z in zeilen), encoding="utf-8")
+    assert tools_api._ruf_verlauf(tmp_path, "lauf")[-1] == (7, 0, 9.9)
+    gelesen = []
+    echt = json.loads
+    monkeypatch.setattr(tools_api.json, "loads", lambda t: gelesen.append(1) or echt(t))
+    with pfad.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"year": 7, "season": 2, "reputation": 10.0}) + "\n")
+    verlauf = tools_api._ruf_verlauf(tmp_path, "lauf")
+    assert len(gelesen) == 1                             # nur die neue Zeile
+    assert verlauf[0] == (6, 0, 8.7) and verlauf[-1] == (7, 2, 10.0)
+    assert engpass.ruf_stillstand(verlauf)["seit_jahr"] == 6
+    # Ein Sprung nach oben schneidet vorn ab.
+    with pfad.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"year": 8, "season": 0, "reputation": 12.0}) + "\n")
+    assert tools_api._ruf_verlauf(tmp_path, "lauf")[0] == (7, 2, 10.0)
+
+
+def test_der_skill_kennt_den_stillstand() -> None:
+    assert "`engpass.ruf.stillstand`" in " ".join(berater.systemtext().split())

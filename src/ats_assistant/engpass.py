@@ -230,6 +230,64 @@ def uhren(nahrung: dict | None, ungeduld: dict | None, statistik: dict | None = 
             "kurz": kurz}
 
 
+# Ruf „steht“, wenn er in mindestens einem Jahr um weniger als einen Punkt
+# stieg. Gemessen am gewonnenen P17-Lauf (28.09.2026): zweimal je gut ein
+# Jahr fast ohne Zuwachs (Jahr 2–4 bei 4–5, Jahr 6–8 bei 9–10), beide Male
+# bei leerem Nahrungslager -- zusammen etwa zwei Jahre bis zum Sieg.
+STILLSTAND_PUNKTE = 1.0
+STILLSTAND_JAHRE = 1.0
+
+
+def _zeitpunkt(jahr, jahreszeit) -> float | None:
+    j, s = _zahl(jahr), _zahl(jahreszeit)
+    if j is None:
+        return None
+    return (j - 1) + (min(max(s, 0.0), 2.0) / 3 if s is not None else 0.0)
+
+
+def ruf_stillstand(verlauf: list) -> dict | None:
+    """Seit wann der Ruf kaum steigt -- aus (Jahr, Jahreszeit, Ruf) je Speicherstand.
+
+    Ältester zuerst, der letzte ist jetzt. Vom letzten Stand zurück, solange
+    der Ruf seither um weniger als `STILLSTAND_PUNKTE` stieg; reicht diese
+    Spanne über `STILLSTAND_JAHRE`, steht er. Gemessen, nicht hochgerechnet
+    -- deshalb gilt es auch vor Jahr 4.
+    """
+    punkte = []
+    for eintrag in verlauf or []:
+        if not isinstance(eintrag, (list, tuple)) or len(eintrag) != 3:
+            continue
+        t, r = _zeitpunkt(eintrag[0], eintrag[1]), _zahl(eintrag[2])
+        if t is not None and r is not None:
+            punkte.append((t, r, eintrag[0]))
+    if len(punkte) < 2:
+        return None
+    t_jetzt, r_jetzt, _ = punkte[-1]
+    seit = None
+    for t, r, jahr in reversed(punkte[:-1]):
+        if t > t_jetzt or r_jetzt - r >= STILLSTAND_PUNKTE:
+            break
+        seit = (t, r, jahr)
+    if seit is None or t_jetzt - seit[0] < STILLSTAND_JAHRE:
+        return None
+    von = f"{seit[1]:.1f}".replace(".", ",")
+    bis = f"{r_jetzt:.1f}".replace(".", ",")
+    return {"seit_jahr": int(seit[2]), "von": round(seit[1], 1), "bis": round(r_jetzt, 1),
+            "jahre": round(t_jetzt - seit[0], 1),
+            "text": f"steht seit Jahr {int(seit[2])} ({von} → {bis})"}
+
+
+def mit_stillstand(ruf: dict | None, stillstand: dict | None) -> dict | None:
+    """Ein Stillstand macht die Ruf-Zeile mindestens gelb -- außer bei vollem Ruf."""
+    if not isinstance(ruf, dict) or not isinstance(stillstand, dict):
+        return ruf
+    wert, ziel = _zahl(ruf.get("ruf")), _zahl(ruf.get("ziel"))
+    if wert is not None and ziel and wert >= ziel:
+        return ruf
+    stufe = ruf.get("stufe") if ruf.get("stufe") == "rot" else "gelb"
+    return {**ruf, "stillstand": stillstand, "stufe": stufe, "zusatz": stillstand["text"]}
+
+
 def mit_ruf(engpass: dict, ruf: dict | None) -> dict:
     """Das Ruf-Tempo daneben -- und bei vollem Ruf ist der Lauf gewonnen.
 
