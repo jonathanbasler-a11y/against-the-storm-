@@ -47,7 +47,7 @@ Statuszeile. Neue Python-Pakete holt der Knopf nicht; dafür bleibt
 | **Nahrung** | Die drei Sätze — Empfehlung, Begründung, Alternative — darunter jede Kette, die der Bestand trägt: Gebäude, Einsatz, gewonnene Sättigung, Faktor, Engpass, Arbeitszeit, gewonnene Reichweite |
 | **Auswahl** | „Bildschirm lesen" bei offener Grundstein- oder Bauplanwahl; oder die Namen von Hand eintippen, mit Komma getrennt |
 | **Rat** | Claude bekommt die Lage als JSON und antwortet in drei Sätzen |
-| **Läufe** | „Auswerten“: Lehren aus den Mitschriften, darunter die **Spielhistorie** aus dem Spielstand — alle abgeschlossenen Läufe, Dauer bei Sieg und Niederlage, gewonnen je Biom (mit den Namen aus dem Spiel, nicht „Poro Biome“) |
+| **Läufe** | „Auswerten“: Lehren aus den Mitschriften, darunter die **Spielhistorie** aus dem Spielstand — alle abgeschlossenen Läufe, Dauer bei Sieg und Niederlage, gewonnen je Biom (mit den Namen aus dem Spiel, nicht „Poro Biome“). Jede Lehre sagt, aus wie vielen Läufen sie kommt; unter drei je Seite steht „Hinweis, kein Befund“. Mitschriften, die nahtlos aneinander anschließen (ältere Fassungen begannen bei jedem Start eine neue), gelten als ein Lauf |
 
 Unten steht, was fehlt, und ein Suchfeld für den Nachschlag.
 

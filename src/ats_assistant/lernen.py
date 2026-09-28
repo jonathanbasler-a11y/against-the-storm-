@@ -41,7 +41,7 @@ KNAPP_SEKUNDEN = 120.0
 LEHREN_HOECHSTENS = 5
 # Aendert sich, was ein Bericht enthaelt, wird der Zwischenspeicher neu
 # gerechnet -- sonst fehlten den alten Berichten die neuen Felder.
-BERICHT_FASSUNG = 2
+BERICHT_FASSUNG = 3
 
 
 def wissensordner(runs_dir: Path | str) -> Path:
@@ -88,6 +88,7 @@ def laufbericht(zustaende: list[dict], kennung: str,
         "biom": letzter.get("biome"),
         "prestige": letzter.get("prestige"),
         "jahre": max((z.get("year") or 0) for z in zustaende) or None,
+        "spielzeit_start": zustaende[0]["game_time"],
         "spielzeit_ende": letzter["game_time"],
         "ausgang": _ausgang(zustaende),
         "ungeduld_max": max((_zahl(z.get("impatience")) or 0.0) for z in zustaende),
@@ -220,14 +221,15 @@ def berichte(runs_dir: Path | str, historie: list[dict] | None = None) -> list[d
             notizen = [e for e in eintraege if e.get("typ") == "notiz"]
             bericht = laufbericht(zustaende, datei.stem, notizen)
         neu[datei.name] = {"marke": marke, "fassung": BERICHT_FASSUNG, "bericht": bericht}
-        bericht = dict(bericht)
+        out.append(dict(bericht))
+    out = zusammenfuehren(out)
+    for bericht in out:
         if bericht.get("ausgang") == "offen" and historie:
             aus_historie = _aus_historie(bericht, historie)
             if aus_historie:
                 bericht["ausgang"] = aus_historie
                 bericht["ausgang_quelle"] = "Spielhistorie"
                 bericht["ursache"] = ursache(bericht)
-        out.append(bericht)
     try:
         speicher_pfad.parent.mkdir(parents=True, exist_ok=True)
         # Erst daneben schreiben, dann ersetzen: Lage und Rat rufen das aus
@@ -241,9 +243,71 @@ def berichte(runs_dir: Path | str, historie: list[dict] | None = None) -> list[d
     return out
 
 
+# Ein neuer Lauf beginnt bei Spielzeit 0. Setzt eine Mitschrift dort fort,
+# wo die vorige aufhörte (bis auf ein paar Sekunden), ist es dieselbe Siedlung.
+FORTSETZUNG_TOLERANZ_S = 5.0
+
+
+def _fortsetzung(vorher: dict, danach: dict) -> bool:
+    ende, start = _zahl(vorher.get("spielzeit_ende")), _zahl(danach.get("spielzeit_start"))
+    return (ende is not None and start is not None
+            and vorher.get("biom") == danach.get("biom")
+            and vorher.get("prestige") == danach.get("prestige")
+            and start >= ende - FORTSETZUNG_TOLERANZ_S)
+
+
+def zusammenfuehren(berichte_: list[dict]) -> list[dict]:
+    """Bruchstücke derselben Siedlung zu einem Lauf -- älteste zuerst.
+
+    Gesehen am 28.09.2026: ältere Fassungen begannen bei jedem Start des
+    Fensters eine neue Mitschrift („The Marshlands-77“ … „-7636“, 24 Stück
+    eines Laufs). Zwei davon endeten zufällig bei Ungeduld 14,0 und zählten
+    als Niederlage, obwohl der Lauf weiterging und gewonnen wurde -- die
+    Lehren verglichen damit zwei erfundene Niederlagen.
+    """
+    out: list[dict] = []
+    for b in berichte_:
+        if out and _fortsetzung(out[-1], b):
+            out[-1] = _vereint(out[-1], b)
+        else:
+            out.append(dict(b))
+    return out
+
+
+def _vereint(a: dict, b: dict) -> dict:
+    """Zwei aufeinanderfolgende Bruchstücke: Summen aus dem späteren, Tiefpunkte
+    aus beiden, der Ausgang aus dem letzten."""
+    out = {**a, **{k: v for k, v in b.items() if v is not None}}
+    out["kennung"] = f"{a.get('kennung_erste', a.get('kennung'))} … {b.get('kennung')}"
+    out["kennung_erste"] = a.get("kennung_erste", a.get("kennung"))
+    out["teile"] = a.get("teile", 1) + b.get("teile", 1)
+    out["spielzeit_start"] = a.get("spielzeit_start")
+    out["zustaende"] = (a.get("zustaende") or 0) + (b.get("zustaende") or 0)
+    out["jahre"] = max(a.get("jahre") or 0, b.get("jahre") or 0) or None
+    out["ungeduld_max"] = max(a.get("ungeduld_max") or 0.0, b.get("ungeduld_max") or 0.0)
+    for feld in ("ruf_nach_jahr", "gebaeude_nach_jahr"):
+        out[feld] = {**(a.get(feld) or {}), **(b.get(feld) or {})}
+    tiefe = [t for t in (a.get("nahrung_min_reichweite"), b.get("nahrung_min_reichweite"))
+             if isinstance(t, dict) and t.get("sekunden") is not None]
+    out["nahrung_min_reichweite"] = min(tiefe, key=lambda t: t["sekunden"]) if tiefe else None
+    out["nahrung_knapp_ab"] = (a.get("nahrung_knapp_ab") if a.get("nahrung_knapp_ab")
+                               is not None else b.get("nahrung_knapp_ab"))
+    out["nahrung_knapp_jahr1"] = bool(a.get("nahrung_knapp_jahr1") or b.get("nahrung_knapp_jahr1"))
+    if a.get("hunger_jahr1") is not None:
+        out["hunger_jahr1"] = a["hunger_jahr1"]
+    out["empfehlungen"] = (a.get("empfehlungen") or []) + (b.get("empfehlungen") or [])
+    out["ausgang"] = b.get("ausgang") or "offen"
+    out["ursache"] = ursache(out)
+    return out
+
+
 # --------------------------------------------------------------------------
 # Lehren
 # --------------------------------------------------------------------------
+
+
+def _laeufe(n: int, eins: str, mehr: str) -> str:
+    return f"aus {n} {eins if n == 1 else mehr}"
 
 
 def lehren(berichte_: list[dict]) -> list[str]:
@@ -266,8 +330,8 @@ def lehren(berichte_: list[dict]) -> list[str]:
                 f"In {n_k} von {len(niederlagen)} Niederlagen fiel die Nahrung in Jahr 1 "
                 f"unter {KNAPP_SEKUNDEN / 60:.0f} Minuten, in {s_k} von {len(siege)} Siegen.")
 
-        def median(gruppe: list[dict], wert) -> float | None:
-            return analysis._median([v for v in (wert(b) for b in gruppe) if v is not None])
+        def werte(gruppe: list[dict], wert) -> list[float]:
+            return [v for v in (wert(b) for b in gruppe) if v is not None]
 
         # Hunger und Abwanderung zuerst: das ist das Kernproblem, und es sind
         # hoechstens fuenf Saetze.
@@ -279,13 +343,22 @@ def lehren(berichte_: list[dict]) -> list[str]:
                  lambda b: _zahl((b.get("gebaeude_nach_jahr") or {}).get("1")), ""),
                 ("Höchste Ungeduld", lambda b: _zahl(b.get("ungeduld_max")), ""),
                 ("Erledigte Aufträge", lambda b: _zahl(b.get("auftraege_erledigt")), "")):
-            n_m, s_m = median(niederlagen, wert), median(siege, wert)
-            if n_m is None or s_m is None:
+            # Je Lehre gezählt, aus wie vielen Läufen sie kommt: am 28.09.2026
+            # stand „Hunger im Mittel 156 bei Niederlagen“ -- aus einem Lauf,
+            # denn nur einer hatte die Statistik. Ohne Zahl sah das aus wie ein Befund.
+            n_w, s_w = werte(niederlagen, wert), werte(siege, wert)
+            if not n_w or not s_w:
                 continue
+            n_m, s_m = analysis._median(n_w), analysis._median(s_w)
             groesser = max(abs(n_m), abs(s_m))
             if groesser and abs(n_m - s_m) / groesser >= 0.2:
-                saetze.append(f"{titel}: im Mittel {n_m:.1f}{einheit} bei Niederlagen, "
-                              f"{s_m:.1f}{einheit} bei Siegen.")
+                satz = (f"{titel}: Median {n_m:.1f}{einheit} bei Niederlagen, "
+                        f"{s_m:.1f}{einheit} bei Siegen "
+                        f"({_laeufe(len(n_w), 'Niederlage', 'Niederlagen')}, "
+                        f"{_laeufe(len(s_w), 'Sieg', 'Siegen')}).")
+                wenig = min(len(n_w), len(s_w)) < analysis.MINDEST_LAEUFE
+                saetze.append(("Hinweis, kein Befund: " if wenig and not vorbehalt else "")
+                              + satz)
     else:
         fehlt = "gewonnener" if not siege else "verlorener"
         saetze.append(f"Noch kein {fehlt} Lauf mitgeschrieben – der Vergleich fehlt.")
