@@ -149,6 +149,10 @@ def _pestfaeule(statistik: dict, vorher: dict | None, gemessen: dict | None) -> 
 # 6 bis 8 Jahre üblich (Steam-Diskussionen, gefunden per Suche). Sieben Jahre
 # sind deshalb das Ziel, gegen das das Tempo gemessen wird.
 ZIEL_JAHRE = 7
+# Vor Jahr 4 kein Urteil: am 28.09.2026 stand in Jahr 3 bei Ruf 2 „Sieg etwa
+# Jahr 25“ in Rot, und der Rat drängte deshalb zum Markt. Aus zwei Jahren
+# Aufbau lässt sich kein Tempo für elf hochrechnen.
+FRUEH_JAHRE = 3
 
 
 def ruf_tempo(ruf, ziel, jahr, jahreszeit, ziel_jahre: int = ZIEL_JAHRE) -> dict | None:
@@ -170,6 +174,10 @@ def ruf_tempo(ruf, ziel, jahr, jahreszeit, ziel_jahre: int = ZIEL_JAHRE) -> dict
     if vergangen < 1:
         return {**out, "text": stand, "stufe": "unbekannt", "zusatz": "Tempo ab Jahr 2"}
     tempo = ruf / vergangen
+    if vergangen < FRUEH_JAHRE:
+        return {**out, "tempo_je_jahr": round(tempo, 2),
+                "text": f"{stand} · {tempo:.1f}/Jahr".replace(".", ","),
+                "stufe": "unbekannt", "zusatz": f"Urteil ab Jahr {FRUEH_JAHRE + 1}"}
     rest = ziel - ruf
     noetig = rest / (ziel_jahre - vergangen) if vergangen < ziel_jahre - 0.5 else None
     sieg_jahr = int(vergangen + rest / tempo) + 1 if tempo > 0 else None

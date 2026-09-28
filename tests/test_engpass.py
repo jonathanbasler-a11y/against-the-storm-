@@ -106,10 +106,19 @@ def test_ruf_tempo_misst_gegen_sieben_jahre() -> None:
     assert langsam["sieg_etwa_jahr"] == 12 and langsam["stufe"] == "rot"
     assert langsam["text"] == "6,5 von 18 · 1,6/Jahr → Sieg etwa Jahr 12"
     assert langsam["zusatz"] == "für Jahr 7: 3,8/Jahr"
-    schnell = engpass.ruf_tempo(6, 18, 3, 0)
+    schnell = engpass.ruf_tempo(9, 18, 4, 0)
     assert schnell["stufe"] == "ruhig" and schnell["sieg_etwa_jahr"] == 7
-    knapp = engpass.ruf_tempo(4.5, 18, 3, 0)            # 2,25 gegen 2,7
+    knapp = engpass.ruf_tempo(7, 18, 4, 0)              # 2,33 gegen 2,75
     assert knapp["stufe"] == "gelb"
+
+
+def test_ruf_tempo_urteilt_nicht_vor_jahr_vier() -> None:
+    # Am Spielrechner, 28.09.2026: Jahr 3, Ruf 2 -- stand rot mit „Sieg etwa Jahr 25“.
+    frueh = engpass.ruf_tempo(2.0, 18, 3, 0)
+    assert frueh["stufe"] == "unbekannt" and frueh["zusatz"] == "Urteil ab Jahr 4"
+    assert frueh["text"] == "2,0 von 18 · 1,0/Jahr"
+    assert "sieg_etwa_jahr" not in frueh and "noetig_je_jahr" not in frueh
+    assert engpass.ruf_tempo(2.0, 18, 4, 0)["stufe"] == "rot"
 
 
 def test_ruf_tempo_grenzfaelle() -> None:

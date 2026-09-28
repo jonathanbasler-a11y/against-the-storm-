@@ -62,7 +62,7 @@ Spiel wechseln muss, um zu sehen, was drängt. Er zeigt:
 | **Nahrung** | Wann das Lager leer ist; dazu Hunger und Gegangene. Hunger allein hebt die Stufe nicht — erst Hunger **und** Abgänge seit dem letzten Speichern |
 | **Ungeduld** | Wann die Schwelle erreicht ist, und wo sie jetzt steht |
 | **Pestfäule** | Die gezählten Zysten (entstanden, verbrannt, entfernt). Eine Zeit bis zum verseuchten Herd gibt es noch nicht — das ist nicht gemessen und wird nicht geraten |
-| **Ruf** | Wie schnell der Ruf wächst, in welchem Jahr der Sieg bei diesem Tempo käme und was für einen Sieg in Jahr 7 nötig wäre. Die Community nennt auf hohem Prestige 6–8 Jahre üblich; deine Siege dauerten 9–13. Gelb oder rot heißt: zu langsam für Jahr 7 — erst Ruf (Aufträge, Zufriedenheit), dann weiter ausbauen. Die Jahreszeiten sind verschieden lang, das Tempo ist eine Näherung |
+| **Ruf** | Wie schnell der Ruf wächst, in welchem Jahr der Sieg bei diesem Tempo käme und was für einen Sieg in Jahr 7 nötig wäre. Die Community nennt auf hohem Prestige 6–8 Jahre üblich; deine Siege dauerten 9–13. Gelb oder rot heißt: zu langsam für Jahr 7 — erst Ruf (Aufträge, Zufriedenheit), dann weiter ausbauen. Vor Jahr 4 steht nur die Zahl, ohne Urteil — aus zwei Aufbaujahren lässt sich nichts hochrechnen. Die Jahreszeiten sind verschieden lang, das Tempo ist eine Näherung |
 | **Auswahl** | Die offene Bauplanwahl aus dem Spielstand oder die gelesenen Karten, je mit der Tier-Stufe der neuesten Quelle; darunter der erste Satz des Rats |
 
 **Bedienung:** an der Kopfzeile ziehen verschiebt; am Griff „◢“ unten rechts
@@ -76,7 +76,7 @@ Zustand bleiben über einen Neustart in `runs/wissen/hud.json`. Der Haken
 
 | Tasten | |
 |---|---|
-| **Strg+Umschalt+L** | Die Karten lesen — das HUD geht fürs Foto kurz weg, das Hauptfenster bleibt, wo es ist. Bei offener Bauplanwahl liest es Baupläne, sonst Grundsteine. Mit Haken „Auswahl automatisch fragen“ und Anmeldung fragt es danach einmal den Rat |
+| **Strg+Umschalt+L** | Die Karten lesen — das HUD geht fürs Foto kurz weg, das Hauptfenster bleibt, wo es ist. Bei offener Bauplanwahl liest es Baupläne, sonst Grundsteine. Mit Haken „Auswahl automatisch fragen“ und Anmeldung fragt es danach einmal den Rat. Die gelesenen Karten gelten vor dem Bauplanangebot im Spielstand — nach „Zurücksetzen“ steht dort noch das alte |
 | **Strg+Umschalt+H** | HUD ein und aus |
 
 Dasselbe Lesen liegt auf dem Knopf „▶ Karten lesen“ im HUD. Ein Klick ins HUD
