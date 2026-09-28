@@ -21,6 +21,8 @@ from typing import Any
 from . import (analysis, biome, forecast, kb, nahrung, namen_match, save_reader, screen,
                tierlisten, watcher)
 from .engpass import mit_ruf as _mit_ruf
+from .engpass import mit_stillstand as _mit_stillstand
+from .engpass import ruf_stillstand as _ruf_stillstand
 from .engpass import ruf_tempo as _ruf_tempo
 from .engpass import uhren as _uhren
 from .forecast import food_forecast as _food_forecast
@@ -944,7 +946,63 @@ def engpass(runs_dir: str | Path = "runs", run_id: str | None = None,
     # unter den Uhren: ein langsamer Lauf ist kein Notfall.
     ruf = _ruf_tempo(letzter.get("reputation"), letzter.get("reputation_to_win"),
                      letzter.get("year"), letzter.get("season"))
+    ruf = _mit_stillstand(ruf, _ruf_stillstand(_ruf_verlauf(runs_dir, quelle)))
     return _mit_ruf(out, ruf)
+
+
+_RUF_SPEICHER: dict[str, tuple[int, list]] = {}
+_RUF_HOECHSTENS = 60
+
+
+def _ruf_verlauf(runs_dir: str | Path, kennung: str | None) -> list:
+    """(Jahr, Jahreszeit, Ruf) je Speicherstand, ältester zuerst -- nur so weit
+    zurück, wie der Stillstand es braucht.
+
+    Vom Dateiende her, bis der Ruf einen Punkt unter dem jetzigen lag: dahinter
+    kann kein Stillstand mehr beginnen. Eine Zeile ist gut 200 kB -- gemessen
+    kosteten 40 Zeilen 170 ms. Deshalb gemerkt: die Mitschrift wächst nur,
+    also wird nach einem neuen Spielstand nur das Neue gelesen.
+    """
+    if not kennung:
+        return []
+    pfad = Path(runs_dir) / f"{kennung}.jsonl"
+    try:
+        groesse = pfad.stat().st_size
+    except OSError:
+        return []
+    alt = _RUF_SPEICHER.get(str(pfad))
+    if alt and alt[0] == groesse:
+        return alt[1]
+    bisher_bis = alt[0] if alt and alt[0] < groesse else 0
+    neu: list = []
+    try:
+        for anfang, zeile in watcher._zeilen_rueckwaerts(pfad):
+            if anfang < bisher_bis:
+                break                              # ab hier ist es schon gemerkt
+            try:
+                eintrag = json.loads(zeile.decode("utf-8", "replace"))
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(eintrag, dict) or eintrag.get("typ") == "notiz":
+                continue
+            ruf = eintrag.get("reputation")
+            if isinstance(ruf, bool) or not isinstance(ruf, (int, float)):
+                continue
+            neu.append((eintrag.get("year"), eintrag.get("season"), ruf))
+            if neu[0][2] - ruf >= 1.0 or len(neu) >= _RUF_HOECHSTENS:
+                bisher_bis = 0                     # weit genug, das Alte braucht es nicht
+                break
+    except OSError:
+        return []
+    punkte = (alt[1] if bisher_bis and alt else []) + neu[::-1]
+    if punkte:
+        # Vorn weg, was mehr als einen Punkt unter dem jetzigen liegt -- bis auf
+        # den letzten davon, der die Spanne begrenzt.
+        jetzt = punkte[-1][2]
+        tief = [i for i, p in enumerate(punkte) if jetzt - p[2] >= 1.0]
+        punkte = punkte[tief[-1]:] if tief else punkte[-_RUF_HOECHSTENS:]
+    _RUF_SPEICHER[str(pfad)] = (groesse, punkte)
+    return punkte
 
 
 @_wall

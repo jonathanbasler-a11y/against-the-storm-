@@ -321,3 +321,15 @@ def test_das_hud_zeigt_das_ruf_tempo(wurzel) -> None:
     assert zeile["name"].cget("text") == "Ruf"
     assert zeile["text"].cget("text").startswith("6,5 von 18 · 1,6/Jahr → Sieg etwa Jahr 12")
     assert zeile["fuellung"].place_info()["relwidth"].startswith("0.36")
+
+
+def test_das_hud_zeigt_den_stillstand_gelb(wurzel) -> None:
+    kasten = hud.Hud(wurzel, pfad=None)
+    e = engpass.uhren({}, {})
+    still = engpass.ruf_stillstand([(2, 1, 4.0), (3, 0, 4.0), (3, 1, 4.1)])
+    e["ruf"] = engpass.mit_stillstand(engpass.ruf_tempo(4.1, 18, 3, 1), still)
+    kasten.zeigen("engpass", e)
+    wurzel.update_idletasks()
+    zeile = kasten.zeilen["ruf"]
+    assert zeile["text"].cget("text").endswith("· steht seit Jahr 2 (4,0 → 4,1)")
+    assert str(zeile["text"].cget("foreground")) == hud.FARBEN["gelb"]

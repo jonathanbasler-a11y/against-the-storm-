@@ -109,6 +109,12 @@ Bonus überhaupt greift.
   nicht hochrechnen und keine Wahl damit begründen — die ersten Jahre sind
   Aufbau (Spieler, 28.09.2026: „komischer Rat“ bei „Sieg etwa Jahr 25“ in
   Jahr 3).
+- **`engpass.ruf.stillstand`**: Der Ruf stieg über mindestens ein Jahr um
+  weniger als einen Punkt (gemessen, nicht hochgerechnet — gilt auch vor
+  Jahr 4). Im gewonnenen P17-Lauf geschah das zweimal, beide Male bei leerem
+  Nahrungslager, und kostete zusammen etwa zwei Jahre. Steht er, **nenne ihn
+  und seine wahrscheinliche Ursache aus der Lage** (Nahrung, Hunger, Tote,
+  unzufriedenes Volk) und miss eine offene Wahl daran, ob sie ihn löst.
 - **`effekte.aktiv`** ist, was gerade wirkt (Reiter „Allgemeine Effekte“),
   dazu `hunger_multiplikator` und `mehrverbrauch`. Ein Bonus, der dort nicht
   steht, wirkt nicht. **`effekte.abweichungen`** nennt jede Rate, die auf
