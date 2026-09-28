@@ -265,7 +265,9 @@ def ruf_stillstand(verlauf: list) -> dict | None:
     t_jetzt, r_jetzt, _ = punkte[-1]
     seit = None
     for t, r, jahr in reversed(punkte[:-1]):
-        if t > t_jetzt or r_jetzt - r >= STILLSTAND_PUNKTE:
+        # Jahr 1 ist Aufbau: am Spielrechner (P18, 28.09.2026) stand zu
+        # Beginn von Jahr 2 „steht seit Jahr 1 (0,0 → 0,0)“ -- ein Fehlalarm.
+        if t > t_jetzt or t < 1.0 or r_jetzt - r >= STILLSTAND_PUNKTE:
             break
         seit = (t, r, jahr)
     if seit is None or t_jetzt - seit[0] < STILLSTAND_JAHRE:
