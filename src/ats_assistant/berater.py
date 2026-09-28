@@ -271,7 +271,8 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             auszug["engpass"]["ruf"] = {
                 k: v for k, v in engpass["ruf"].items()
                 if k in ("text", "zusatz", "tempo_je_jahr", "noetig_je_jahr", "sieg_etwa_jahr",
-                         "ziel_jahre", "stufe", "stillstand") and v not in (None, "")}
+                         "ziel_jahre", "stufe", "stillstand", "gegen_ungeduld")
+                and v not in (None, "")}
     if auswahl and auswahl.get("angebot"):
         # Was die Wissensbasis als Angebot kennt, zuerst -- und die
         # Kennzeichnung geht mit. Eine Lesung, die nur auf dem Bildschirm

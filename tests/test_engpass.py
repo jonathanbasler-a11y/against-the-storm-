@@ -319,10 +319,10 @@ def test_der_ruf_verlauf_liest_nach_einem_neuen_stand_nur_das_neue(tmp_path: Pat
     assert len(gelesen) == 1                             # nur die neue Zeile
     assert verlauf[0] == (6, 0, 8.7) and verlauf[-1] == (7, 2, 10.0)
     assert engpass.ruf_stillstand(verlauf)["seit_jahr"] == 6
-    # Ein Sprung nach oben schneidet vorn ab.
+    # Ein Sprung nach oben schneidet vorn ab -- bis auf ein Jahr fürs Tempo.
     with pfad.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps({"year": 8, "season": 0, "reputation": 12.0}) + "\n")
-    assert tools_api._ruf_verlauf(tmp_path, "lauf")[0] == (7, 2, 10.0)
+    assert tools_api._ruf_verlauf(tmp_path, "lauf")[0] == (7, 0, 9.9)
 
 
 def test_der_skill_kennt_den_stillstand() -> None:
@@ -336,3 +336,86 @@ def test_jahr_eins_ist_kein_stillstand() -> None:
     still = engpass.ruf_stillstand([(1, 0, 0.0), (1, 2, 0.0), (2, 0, 0.0), (2, 2, 0.0),
                                     (3, 0, 0.0)])
     assert still["seit_jahr"] == 2 and still["jahre"] == 1.0
+
+
+
+# --------------------------------------------------------------------------
+# Nach Jahr 7: das Rennen gegen die Ungeduld (P18-Sieg, 28.09.2026)
+# --------------------------------------------------------------------------
+
+# Ungeduld je Stand im P17-Lauf, Spalte aus tools/verlauf.py; Spielzeit dazu.
+P17_UNGEDULD = {(8, 2): (12.1, 5731), (9, 1): (13.9, 6029), (9, 2): (13.6, 6328),
+                (10, 1): (13.2, 6627), (10, 2): (13.9, 6926), (11, 0): (14.0, 7225)}
+
+
+def _p17_urteil(jahr: int, zeit: int) -> dict:
+    ruf = engpass.ruf_tempo(_bis(jahr, zeit)[-1][2], 18, jahr, zeit)
+    ungeduld, spielzeit = P17_UNGEDULD[(jahr, zeit)]
+    return engpass.ruf_gegen_ungeduld(
+        ruf, {"jetzt": ungeduld, "schwelle": 14, "je_spielzeitsekunde": 0.00255},
+        spielzeit, engpass.entlastung(0.5), engpass.tempo_letztes_jahr(_bis(jahr, zeit)))
+
+
+def test_der_p17_sieg_war_bei_diesem_tempo_knapp() -> None:
+    # Gewonnen mit 14,0 von 14 in Jahr 11 -- „knapp“ ab Jahr 9/2, nicht „nein“.
+    for stand in ((9, 2), (10, 1), (10, 2), (11, 0)):
+        assert _p17_urteil(*stand)["urteil"] == "knapp", stand
+    # Jahr 8/2: ein Jahr fast ohne Ruf dahinter -- bei diesem Tempo verloren.
+    assert _p17_urteil(8, 2)["urteil"] == "nein"
+
+
+def test_tempo_des_letzten_jahres() -> None:
+    assert round(engpass.tempo_letztes_jahr(_bis(9, 2)), 2) == 2.1    # 11,2 → 13,3
+    assert engpass.tempo_letztes_jahr(_bis(1, 2)) is None             # noch kein Jahr
+    assert engpass.tempo_letztes_jahr([]) is None
+    assert engpass.entlastung(0.5) == 0.5 and engpass.entlastung(None) == 1.0
+    assert engpass.entlastung(3) == 0.0
+
+
+def test_nach_jahr_sieben_zaehlt_das_rennen_gegen_die_ungeduld() -> None:
+    ruf = engpass.ruf_tempo(16.5, 18, 12, 0)                          # P18, Jahr 12
+    assert ruf["zusatz"] == "Jahr 7 ist vorbei" and ruf["stufe"] == "rot"
+    gegen = engpass.ruf_gegen_ungeduld(
+        ruf, {"jetzt": 10.4, "schwelle": 14, "je_spielzeitsekunde": 0.00255}, 8000,
+        engpass.entlastung(0.5), 2.5)
+    assert gegen["urteil"] == "ja"
+    neu = engpass.mit_ungeduld(ruf, gegen)
+    assert neu["stufe"] == "ruhig" and neu["zusatz"].startswith("vor der Ungeduld: ja (Rest +")
+    # Vor Jahr 7 bleibt das Sieben-Jahres-Ziel -- nur ein „nein“ färbt rot.
+    frueh = engpass.ruf_tempo(9, 18, 4, 0)
+    assert engpass.mit_ungeduld(frueh, {**gegen, "urteil": "knapp"})["stufe"] == "ruhig"
+    nein = {"urteil": "nein", "rest": -5.0, "text": "vor der Ungeduld: nein (Rest −5,0)"}
+    assert engpass.mit_ungeduld(frueh, nein)["stufe"] == "rot"
+    assert engpass.mit_ungeduld(None, gegen) is None
+    assert engpass.mit_ungeduld(ruf, None) is ruf
+
+
+def test_rennen_gegen_die_ungeduld_grenzfaelle() -> None:
+    ruf = engpass.ruf_tempo(10, 18, 8, 0)
+    ung = {"jetzt": 9.0, "schwelle": 14, "je_spielzeitsekunde": 0.00255}
+    assert engpass.ruf_gegen_ungeduld(ruf, ung, 5000, tempo_jetzt=0)["urteil"] == "nein"
+    assert engpass.ruf_gegen_ungeduld(None, ung, 5000) is None
+    assert engpass.ruf_gegen_ungeduld(ruf, {}, 5000) is None
+    assert engpass.ruf_gegen_ungeduld(ruf, ung, None) is None
+    assert engpass.ruf_gegen_ungeduld(engpass.ruf_tempo(18, 18, 9, 0), ung, 5000) is None
+
+
+def test_der_engpass_misst_nach_jahr_sieben_gegen_die_ungeduld(tmp_path: Path) -> None:
+    zeilen = [{"game_time": 700.0 * i, "year": j, "season": s, "reputation": r,
+               "reputation_to_win": 18,
+               "effects": {"abweichungen": [{"feld": "bonusReputationPenaltyPerReputation",
+                                            "wert": 0.5}]}}
+              for i, (j, s, r) in enumerate(_bis(10, 1), start=1)]
+    (tmp_path / "lauf.jsonl").write_text("".join(json.dumps(z) + "\n" for z in zeilen),
+                                         encoding="utf-8")
+    e = tools_api.engpass(tmp_path, "lauf", nahrung={},
+                          ungeduld={"jetzt": 13.2, "schwelle": 14,
+                                    "je_spielzeitsekunde": 0.00255})
+    assert e["ruf"]["gegen_ungeduld"]["urteil"] == "knapp"
+    assert e["ruf"]["stufe"] == "gelb" and "vor der Ungeduld: knapp" in e["ruf"]["zusatz"]
+    auszug = berater.kontext(zustand={"jahr": 10}, engpass=e)
+    assert auszug["engpass"]["ruf"]["gegen_ungeduld"]["urteil"] == "knapp"
+
+
+def test_der_skill_kennt_das_rennen_gegen_die_ungeduld() -> None:
+    assert "`engpass.ruf.gegen_ungeduld`" in " ".join(berater.systemtext().split())

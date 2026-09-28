@@ -236,6 +236,8 @@ def uhren(nahrung: dict | None, ungeduld: dict | None, statistik: dict | None = 
 # bei leerem Nahrungslager -- zusammen etwa zwei Jahre bis zum Sieg.
 STILLSTAND_PUNKTE = 1.0
 STILLSTAND_JAHRE = 1.0
+# Jahreszeiten sind Drittel: 8⅔ − 7⅔ ist als Kommazahl 0,99999…
+_GENAU = 1e-9
 
 
 def _zeitpunkt(jahr, jahreszeit) -> float | None:
@@ -270,13 +272,106 @@ def ruf_stillstand(verlauf: list) -> dict | None:
         if t > t_jetzt or t < 1.0 or r_jetzt - r >= STILLSTAND_PUNKTE:
             break
         seit = (t, r, jahr)
-    if seit is None or t_jetzt - seit[0] < STILLSTAND_JAHRE:
+    if seit is None or t_jetzt - seit[0] < STILLSTAND_JAHRE - _GENAU:
         return None
     von = f"{seit[1]:.1f}".replace(".", ",")
     bis = f"{r_jetzt:.1f}".replace(".", ",")
     return {"seit_jahr": int(seit[2]), "von": round(seit[1], 1), "bis": round(r_jetzt, 1),
             "jahre": round(t_jetzt - seit[0], 1),
             "text": f"steht seit Jahr {int(seit[2])} ({von} → {bis})"}
+
+
+# Wie stark ein Ruf-Punkt die Ungeduld senkt. Ohne Zusatz gemessen: genau 1,0
+# (docs/PHASE0.md). „Zusätzliche Ungeduld je Ruf“ (hohes Prestige, Wert 0,5)
+# zieht davon ab. Nachgerechnet am P17-Sieg: von Jahr 9 bis 11 stieg der Ruf
+# um 6,3 und die Ungeduld fiel trotz 1300 s Anstieg -- netto etwa 0,6 je
+# Punkt. Früh im Lauf verpufft die Entlastung, weil die Ungeduld nicht unter
+# 0 fällt; deshalb sah der Schnitt über den ganzen Lauf nach 0,3 aus.
+ENTLASTUNG_OHNE_ZUSATZ = 1.0
+# Ab wie viel Rest an der Schwelle es „ja“ heißt, bis wohin „knapp“. Am
+# P17-Sieg geprüft: Jahr 10 und 11 rechnen −1,1 bis −1,6 -- der Lauf ging
+# mit 14,0 von 14 gerade noch durch, also „knapp“, nicht „nein“.
+GEGEN_UNGEDULD_JA = 1.5
+GEGEN_UNGEDULD_KNAPP = -2.0
+
+
+def entlastung(zusatz_je_ruf) -> float:
+    """Je Ruf-Punkt weniger Ungeduld: 1,0 abzüglich „Zusätzliche Ungeduld je Ruf“."""
+    z = _zahl(zusatz_je_ruf)
+    return max(ENTLASTUNG_OHNE_ZUSATZ - (z or 0.0), 0.0)
+
+
+def tempo_letztes_jahr(verlauf: list) -> float | None:
+    """Ruf je Jahr über das letzte Jahr -- aus (Jahr, Jahreszeit, Ruf) je Stand.
+
+    Der Schnitt seit Spielbeginn unterschätzt einen Lauf, der spät anzieht:
+    P17 lag in Jahr 9 bei 1,5/Jahr im Schnitt, im letzten Jahr bei 2,1.
+    """
+    punkte = [(t, r) for e in (verlauf or []) if isinstance(e, (list, tuple)) and len(e) == 3
+              for t, r in [(_zeitpunkt(e[0], e[1]), _zahl(e[2]))]
+              if t is not None and r is not None]
+    if len(punkte) < 2:
+        return None
+    t_jetzt, r_jetzt = punkte[-1]
+    frueher = [(t, r) for t, r in punkte[:-1] if t_jetzt - t >= 1.0 - _GENAU]
+    if not frueher:
+        return None
+    t, r = frueher[-1]
+    return max(r_jetzt - r, 0.0) / (t_jetzt - t)
+
+
+def ruf_gegen_ungeduld(ruf: dict | None, ungeduld: dict | None, spielzeit,
+                       entlastung_je_ruf: float = ENTLASTUNG_OHNE_ZUSATZ,
+                       tempo_jetzt: float | None = None) -> dict | None:
+    """Kommt der Sieg bei diesem Tempo vor der vollen Ungeduld? -- „ja“, „knapp“, „nein“.
+
+    Das Tempo ist das des letzten Jahres, sonst der Schnitt seit Spielbeginn.
+    Die Ungeduld wächst wie jetzt, und jeder Ruf-Punkt bis zum Ziel senkt sie
+    um `entlastung_je_ruf`. Die Spielzeit je Jahr kommt aus dem Lauf selbst
+    -- die Jahreszeiten sind je nach Prestige verschieden lang.
+    """
+    if not isinstance(ruf, dict) or not isinstance(ungeduld, dict):
+        return None
+    wert, ziel = _zahl(ruf.get("ruf")), _zahl(ruf.get("ziel"))
+    tempo = _zahl(tempo_jetzt)
+    if tempo is None:
+        tempo = _zahl(ruf.get("tempo_je_jahr"))
+    jahre, zeit = _zahl(ruf.get("jahre_vergangen")), _zahl(spielzeit)
+    jetzt, schwelle = _zahl(ungeduld.get("jetzt")), _zahl(ungeduld.get("schwelle"))
+    je_sekunde = _zahl(ungeduld.get("je_spielzeitsekunde"))
+    if (None in (wert, ziel, tempo, jahre, zeit, jetzt, schwelle, je_sekunde)
+            or wert >= ziel or not jahre or zeit <= 0):
+        return None
+    if tempo <= 0:
+        return {"urteil": "nein", "rest": None, "tempo": 0.0,
+                "text": "vor der Ungeduld: nein (kein Zuwachs)"}
+    rest_ruf = ziel - wert
+    bis_sieg = rest_ruf / tempo                           # in Jahren
+    am_ende = jetzt + je_sekunde * zeit / jahre * bis_sieg - entlastung_je_ruf * rest_ruf
+    rest = schwelle - am_ende
+    urteil = ("ja" if rest >= GEGEN_UNGEDULD_JA
+              else "knapp" if rest >= GEGEN_UNGEDULD_KNAPP else "nein")
+    zahl = f"{rest:+.1f}".replace(".", ",").replace("-", "−")
+    return {"urteil": urteil, "rest": round(rest, 1), "tempo": round(tempo, 2),
+            "text": f"vor der Ungeduld: {urteil} (Rest {zahl})"}
+
+
+def mit_ungeduld(ruf: dict | None, gegen: dict | None) -> dict | None:
+    """Nach Jahr 7 zählt nur noch das Rennen gegen die Ungeduld.
+
+    Gesehen am P18-Sieg (28.09.2026): ab Jahr 7 stand die Ruf-Zeile
+    dauerhaft rot mit „Jahr 7 ist vorbei“ -- auch als der Sieg sicher kam.
+    Davor bleibt das Sieben-Jahres-Ziel; ein „nein“ macht die Zeile trotzdem rot.
+    """
+    if not isinstance(ruf, dict) or not isinstance(gegen, dict):
+        return ruf
+    out = {**ruf, "gegen_ungeduld": gegen}
+    farbe = {"ja": "ruhig", "knapp": "gelb", "nein": "rot"}[gegen["urteil"]]
+    if ruf.get("noetig_je_jahr") is None and ruf.get("ziel_jahre"):
+        out.update(stufe=farbe, zusatz=gegen["text"])
+    elif gegen["urteil"] == "nein":
+        out.update(stufe="rot", zusatz=gegen["text"])
+    return out
 
 
 def mit_stillstand(ruf: dict | None, stillstand: dict | None) -> dict | None:

@@ -109,6 +109,15 @@ Bonus überhaupt greift.
   nicht hochrechnen und keine Wahl damit begründen — die ersten Jahre sind
   Aufbau (Spieler, 28.09.2026: „komischer Rat“ bei „Sieg etwa Jahr 25“ in
   Jahr 3).
+- **`engpass.ruf.gegen_ungeduld`**: ob der Sieg **bei dem Tempo des letzten
+  Jahres** vor der vollen Ungeduld kommt — `ja`, `knapp` oder `nein`, mit
+  `rest` (Ungeduld, die am Sieg noch bis zur Schwelle bliebe). Ab Jahr 7
+  ersetzt es das Sieben-Jahres-Ziel (P18-Sieg, 28.09.2026: dort stand sonst
+  nur „Jahr 7 ist vorbei“ in Rot). Eine Rechnung, keine Messung: Die
+  Entlastung je Ruf-Punkt ist 1,0 minus „Zusätzliche Ungeduld je Ruf“,
+  nachgerechnet am P17-Sieg. Bei `nein` sagen, wie viel Ruf je Jahr fehlt,
+  und Aufträge vorziehen — im P18-Sieg kamen 7 Aufträge in den letzten fünf
+  Jahren und drehten das Rennen.
 - **`engpass.ruf.stillstand`**: Der Ruf stieg über mindestens ein Jahr um
   weniger als einen Punkt (gemessen, nicht hochgerechnet — gilt auch vor
   Jahr 4). Im gewonnenen P17-Lauf geschah das zweimal, beide Male bei leerem
