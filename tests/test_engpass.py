@@ -327,3 +327,12 @@ def test_der_ruf_verlauf_liest_nach_einem_neuen_stand_nur_das_neue(tmp_path: Pat
 
 def test_der_skill_kennt_den_stillstand() -> None:
     assert "`engpass.ruf.stillstand`" in " ".join(berater.systemtext().split())
+
+
+def test_jahr_eins_ist_kein_stillstand() -> None:
+    # P18, 28.09.2026: Jahr 2 beginnt mit Ruf 0 -- das ist Aufbau, kein Stillstand.
+    assert engpass.ruf_stillstand([(1, 0, 0.0), (1, 1, 0.0), (1, 2, 0.0), (2, 0, 0.0)]) is None
+    # Bleibt es das ganze Jahr 2 bei 0, steht der Ruf -- seit Jahr 2.
+    still = engpass.ruf_stillstand([(1, 0, 0.0), (1, 2, 0.0), (2, 0, 0.0), (2, 2, 0.0),
+                                    (3, 0, 0.0)])
+    assert still["seit_jahr"] == 2 and still["jahre"] == 1.0
