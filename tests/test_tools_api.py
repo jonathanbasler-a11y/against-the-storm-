@@ -1077,3 +1077,51 @@ def test_eine_mitschrift_in_fremder_form_bricht_keine_rechnung(tmp_path: Path) -
     assert zustaende[-1]["category_trends"] == {"Food": [6.0, 5.0]}
     assert "storage" not in zustaende[-1] and zustaende[-1]["blueprint_pick"] == {}
     assert lernen.berichte(tmp_path)[0]["zustaende"] == 2
+
+
+def test_die_bauplanwahl_wird_am_bildschirm_erkannt(tmp_path: Path) -> None:
+    """Am Spielrechner (28.09.2026): Spielstand 9 Minuten alt, noch ohne Wahl --
+    gelesen wurde nach Grundsteinen, und die Erzeugnisse auf den Karten
+    („Stiefel“, „Pastete“) passten auf gleichnamige Effekte. Schuster und
+    Ofen fielen durch. Die Zeilen sind die des Bildschirmfotos."""
+    from ats_assistant import localization
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Building_Cobbler_Name", "Cobbler", "Schuster", "building"),
+        localization.Eintrag("Building_Furnace_Name", "Furnace", "Ofen", "building"),
+        localization.Eintrag("ResolveEffect_BootsEffect_Name", "Boots", "Stiefel", "effect"),
+        localization.Eintrag("ResolveEffect_PieEffect_Name", "Pie", "Pastete", "effect"),
+    ])
+    conn.close()
+    zeilen = ["REPUTATIONSBONUS", "Dein Ansehen wächst. Du kannst dir jetzt einen der "
+              "verfügbaren Entwürfe", "SCHUSTER", "Kann produzieren:", "Stiefel (★★★),",
+              "OFEN", "Kann produzieren:", "Pastete (★★),"]
+    out = tools_api.read_choice(text=zeilen, db=db, arten=("effect",))
+    assert out["art_erkannt"] == "building"
+    assert [a["en"] for a in out["angebot"]] == ["Cobbler", "Furnace"]
+    # Ohne Merkmal bleibt es bei der verlangten Art.
+    ohne = tools_api.read_choice(text=["Stiefel", "Schuster"], db=db, arten=("effect",))
+    assert "art_erkannt" not in ohne and [a["en"] for a in ohne["angebot"]] == ["Boots"]
+
+
+def test_auch_die_zweite_bauplanwahl_nach_zuruecksetzen(tmp_path: Path) -> None:
+    """Dieselbe Sitzung, neu gewürfelt: „Kiste kristallisierter Tau“ (ein
+    Effekt, Güte 0,73–0,88) stand statt der Waldarbeiterhütte im HUD."""
+    from ats_assistant import localization
+
+    db = tmp_path / "kb.sqlite"
+    conn = kb.connect(db)
+    localization.import_localization(conn, [
+        localization.Eintrag("Building_Grove_Name", "Forester's Hut", "Waldarbeiterhütte",
+                             "building"),
+        localization.Eintrag("Building_Tinctury_Name", "Tinctury", "Destillerie", "building"),
+        localization.Eintrag("Reward_CrystalizedDew_Name", "Crate of Crystalized Dew",
+                             "Kiste kristallisierter Tau", "effect"),
+    ])
+    conn.close()
+    out = tools_api.read_choice(text=[
+        "REPUTATIONSBONUS", "WALDARBEITERHÜTTE", "Nutzt Äcker in der Nähe, um",
+        "Kristallisierter Tau", "DESTILLERIE", "Kann produzieren:"], db=db)
+    assert [a["en"] for a in out["angebot"]] == ["Forester's Hut", "Tinctury"]
