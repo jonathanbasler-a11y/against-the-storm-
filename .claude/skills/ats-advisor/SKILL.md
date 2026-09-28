@@ -57,8 +57,12 @@ Bonus überhaupt greift.
   Auftragsfenster nachsehen soll.
 - **`bauplan_wahl`** ist das Angebot einer offenen Bauplanwahl, gelesen aus
   dem Spielstand (je Option das Gebäude; `satz` ist ein ungedeuteter
-  Rohwert). Es gilt vor einer Bildschirmlesung unter `auswahl`. Deutsche
-  Namen stehen unter `namen_de`.
+  Rohwert). Deutsche Namen stehen unter `namen_de`. **Steht eine
+  Bildschirmlesung unter `auswahl`, gilt sie**: sie ist, was jetzt auf dem
+  Schirm steht, der Spielstand ist Minuten alt (nach „Zurücksetzen“ stand
+  dort noch das alte Angebot — 28.09.2026). **Empfiehl nur eine Karte, die
+  in `auswahl` bzw. `bauplan_wahl` steht** — nie ein Gebäude aus
+  `gebaeude_wissen` oder dem Gedächtnis, das nicht angeboten ist.
 - **`tier`** (an `auswahl[]`, `bauplan_vergleich[]`, `siedlung.voelker_tier`,
   `siedlung.biom_tier`) sind Community-Tierlisten: Meinungen mit Quelle,
   Stand und Kontext (oft Prestige 9, ältere Versionen) — keine Spieldaten.
@@ -98,7 +102,11 @@ Bonus überhaupt greift.
   Prestige 6–8 Jahre üblich — und jedes Jahr mehr lässt die Ungeduld weiter
   steigen (P16 endete bei 13,88 von 14). Steht `ruf.stufe` gelb oder rot und
   ist nichts akut, zuerst Ruf empfehlen (Aufträge, Zufriedenheit des größten
-  Volks über seine Schwelle) statt weiteren Ausbau.
+  Volks über seine Schwelle) statt weiteren Ausbau. **Vor Jahr 4 gibt es
+  kein Urteil** (`stufe` „unbekannt“, „Urteil ab Jahr 4“): dann das Tempo
+  nicht hochrechnen und keine Wahl damit begründen — die ersten Jahre sind
+  Aufbau (Spieler, 28.09.2026: „komischer Rat“ bei „Sieg etwa Jahr 25“ in
+  Jahr 3).
 - **`effekte.aktiv`** ist, was gerade wirkt (Reiter „Allgemeine Effekte“),
   dazu `hunger_multiplikator` und `mehrverbrauch`. Ein Bonus, der dort nicht
   steht, wirkt nicht. **`effekte.abweichungen`** nennt jede Rate, die auf

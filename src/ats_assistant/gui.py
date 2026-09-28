@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
@@ -497,6 +498,13 @@ class App:
         if schluessel == getattr(self, "_bauplan_schluessel", None):
             return
         self._bauplan_schluessel = schluessel
+        # Eine Lesung steht noch: dasselbe Angebot ist schon gefragt, ein
+        # anderes ist älter als die Lesung (sonst wäre sie verfallen) --
+        # etwa das Angebot vor „Zurücksetzen“. Beides fragt nicht noch einmal.
+        passt = berater.angebot_passt(wahl, getattr(self, "auswahl", None),
+                                      getattr(self, "wissen", None))
+        if passt is not None:
+            return
         self._hud_melden("rat_leeren")         # der Satz zur vorigen Wahl gilt nicht mehr
         vergleich = (getattr(self, "wissen", None) or {}).get("bauplan_vergleich") or []
         gespeichert = _alter(z.get("gespeichert"), "gespeichert") if z.get("gespeichert") else ""
@@ -707,6 +715,7 @@ class App:
             jetzt = getattr(self, "zustand", None) or {}
             self._auswahl_lauf = jetzt.get("mitschrift")
             self._auswahl_zeit = jetzt.get("spielzeit")
+            self._auswahl_wann = time.time()
             self._fenster_zurueck()
             self._zeige_auswahl(wert)
             self._hud_melden("auswahl", wert)
@@ -789,13 +798,29 @@ class App:
                 (lauf is not None and getattr(self, "_auswahl_lauf", None) is not None
                  and lauf != self._auswahl_lauf)
                 or (zeit is not None and start is not None
-                    and (zeit < start or zeit - start > AUSWAHL_GILT_S)))
+                    and (zeit < start or zeit - start > AUSWAHL_GILT_S))
+                or self._neueres_angebot(neu))
         if verfallen and getattr(self, "auswahl", None):
             self.auswahl = None
             self._hud_melden("auswahl", None)
             self._schreiben(self.auswahl_text,
                             "Die gelesene Auswahl ist verfallen – das Spiel lief weiter. "
                             "Neu lesen, falls sie noch offen ist.")
+
+    def _neueres_angebot(self, neu: dict) -> bool:
+        """Nach der Lesung gespeichert und ein anderes Bauplanangebot: das
+        Spiel ist weiter als die Lesung (neu gewürfelt, neue Wahl)."""
+        wann = getattr(self, "_auswahl_wann", None)
+        if wann is None or not neu.get("gespeichert"):
+            return False
+        if berater.angebot_passt(neu.get("bauplan_wahl"), getattr(self, "auswahl", None),
+                                 getattr(self, "wissen", None)) is not False:
+            return False
+        try:
+            from datetime import datetime
+            return datetime.fromisoformat(str(neu["gespeichert"])).timestamp() > wann
+        except (ValueError, TypeError, OverflowError):
+            return False
 
     def _kopf_auffrischen(self) -> None:
         """Das Alter im Kopf laeuft mit -- sonst stand "gerade eben" ewig."""

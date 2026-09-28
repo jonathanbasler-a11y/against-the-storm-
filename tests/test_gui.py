@@ -735,6 +735,54 @@ def test_eine_neue_bauplanwahl_fragt_genau_einmal(gui, tmp_path: Path) -> None:
     assert len([1 for art, _ in app.rechner.gebeten if art == "rat"]) == 2
 
 
+def _gelesen(*karten):
+    angebot = [{"en": en, "de": de, "kind": "building", "belegt": True, "guete": 1.0}
+               for en, de in karten]
+    return {"verfuegbar": True, "quelle": "hand", "angebot": angebot, "belegt": angebot}
+
+
+def _raete(app):
+    return [d for art, d in app.rechner.gebeten if art == "rat"]
+
+
+def test_nach_zuruecksetzen_fragt_das_alte_angebot_nicht(gui, tmp_path: Path) -> None:
+    """Am Spielrechner, 28.09.2026: neu gewürfelt, Karten gelesen -- der
+    Spielstand hatte noch das alte Angebot, und der Rat nannte den Weber."""
+    app = _vorbereitet(gui, tmp_path)
+    app._anmeldung = True
+    _mit_wahl(app, angebot=("Weaver", "Kiln"))
+    app._anzeigen("auswahl", _gelesen(("Market", "Markt"), ("Press", "Presse")))
+    assert len(_raete(app)) == 1                       # die Karten, einmal
+    app._anzeigen("anmeldung", True)                   # Lage mit dem alten Angebot
+    assert len(_raete(app)) == 1
+
+
+def test_dieselben_karten_im_spielstand_fragen_nicht_zweimal(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app._anmeldung = True
+    _mit_wahl(app, angebot=("Kiln", "Workshop"))
+    app._anzeigen("auswahl", _gelesen(("Kiln", "Brennofen"), ("Workshop", "Werkstatt")))
+    app._anzeigen("anmeldung", True)
+    assert len(_raete(app)) == 1
+
+
+def test_ein_spaeter_gespeichertes_anderes_angebot_ersetzt_die_lesung(gui, tmp_path: Path) -> None:
+    app = _vorbereitet(gui, tmp_path)
+    app._anmeldung = True
+    app._anzeigen("zustand", {"verfuegbar": True, "mitschrift": "lauf", "spielzeit": 600.0})
+    app._anzeigen("auswahl", _gelesen(("Market", "Markt"), ("Press", "Presse")))
+    app._auswahl_wann = 1000.0
+    alt = {"verfuegbar": True, "mitschrift": "lauf", "spielzeit": 610.0,
+           "gespeichert": "1970-01-01T00:15:00+00:00",          # vor der Lesung
+           "bauplan_wahl": {"angebot": ["Weaver", "Kiln"], "id": 3}}
+    app._anzeigen("zustand", alt)
+    assert app.auswahl                                  # älter als die Lesung: bleibt
+    app._anzeigen("zustand", {**alt, "gespeichert": "1970-01-01T00:20:00+00:00"})
+    assert not app.auswahl                              # danach gespeichert: das Spiel ist weiter
+    app._anzeigen("anmeldung", True)
+    assert "Baupläne" in _raete(app)[-1]["frage"]
+
+
 def test_ohne_anmeldung_oder_haekchen_nur_die_tabelle(gui, tmp_path: Path) -> None:
     app = _vorbereitet(gui, tmp_path)
     geschrieben = _mit_wahl(app)

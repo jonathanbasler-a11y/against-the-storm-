@@ -642,3 +642,52 @@ def test_kosten_auch_mit_datumsanhang_aber_nicht_fuer_fremde_modelle() -> None:
     assert kosten("claude-opus-5") == kosten("claude-opus-5-20260401") == 500.0
     assert kosten("claude-opus-5-5") is None          # anderes Modell, anderer Preis
     assert kosten(None) is None
+
+
+# --------------------------------------------------------------------------
+# 28.09.2026: nach „Zurücksetzen“ riet der Rat zu einer Karte, die nicht
+# mehr angeboten war -- der Spielstand hatte noch das alte Angebot.
+# --------------------------------------------------------------------------
+
+
+def _lesung(*karten):
+    return {"verfuegbar": True, "angebot": [
+        {"en": en, "de": de, "kind": "building", "belegt": True} for en, de in karten]}
+
+
+def test_die_lesung_gilt_vor_einem_alten_angebot_im_spielstand() -> None:
+    zustand = {"jahr": 3, "bauplan_wahl": {"angebot": ["Weaver", "Kiln"]}}
+    wissen = {"bauplan_vergleich": [{"gebaeude": "Weaver", "gebaeude_de": "Weber"}],
+              "gebaeude": {"Weaver": {"status": "angeboten"}, "Kiln": {"status": "angeboten"},
+                           "Bakery": {"status": "steht"}}}
+    auszug = berater.kontext(zustand=zustand, wissen=wissen,
+                             auswahl=_lesung(("Market", "Markt"), ("Press", "Presse")))
+    assert "bauplan_wahl" not in auszug["siedlung"]
+    assert "bauplan_vergleich" not in auszug
+    assert list(auszug["gebaeude_wissen"]) == ["Bakery"]
+    assert [k["de"] for k in auszug["auswahl"]] == ["Markt", "Presse"]
+    assert zustand["bauplan_wahl"]                     # das Original bleibt
+
+
+def test_passt_die_lesung_zum_spielstand_geht_beides_mit() -> None:
+    zustand = {"jahr": 3, "bauplan_wahl": {"angebot": ["Druid", "Kiln"]}}
+    wissen = {"namen_de": {"Druid": "Druidenhütte"},
+              "bauplan_vergleich": [{"gebaeude": "Kiln", "gebaeude_de": "Brennofen"}]}
+    lesung = _lesung(("Druid's Hut", "Druidenhütte"), ("Kiln", "Brennofen"))
+    assert berater.angebot_passt(zustand["bauplan_wahl"], lesung, wissen) is True
+    auszug = berater.kontext(zustand=zustand, wissen=wissen, auswahl=lesung)
+    assert auszug["siedlung"]["bauplan_wahl"] and auszug["bauplan_vergleich"]
+
+
+def test_angebot_passt_ohne_vergleich_ist_none() -> None:
+    assert berater.angebot_passt(None, _lesung(("Kiln", "Brennofen"))) is None
+    assert berater.angebot_passt({"angebot": ["Kiln"]}, None) is None
+    assert berater.angebot_passt({"angebot": ["Kiln"]}, {"angebot": "kaputt"}) is None
+    assert berater.angebot_passt("kaputt", _lesung(("Kiln", "Brennofen"))) is None
+
+
+def test_der_skill_laesst_die_lesung_gelten() -> None:
+    text = (Path(__file__).resolve().parents[1] / ".claude" / "skills" / "ats-advisor"
+            / "SKILL.md").read_text(encoding="utf-8")
+    assert "Steht eine\n  Bildschirmlesung unter `auswahl`, gilt sie" in text
+    assert "Vor Jahr 4 gibt es\n  kein Urteil" in text

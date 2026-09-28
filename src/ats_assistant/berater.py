@@ -138,6 +138,38 @@ def systemtext(pfad: Path | None = None) -> str:
     return text.strip()
 
 
+def _schluessel(text) -> str:
+    return "".join(c for c in str(text or "").casefold() if c.isalnum())
+
+
+def angebot_passt(wahl: dict | None, auswahl: dict | None,
+                  wissen: dict | None = None) -> bool | None:
+    """Zeigen Spielstand und Bildschirmlesung dasselbe Bauplanangebot?
+
+    None, wenn es nichts zu vergleichen gibt. Gesehen am 28.09.2026: nach
+    „Zurücksetzen“ stand im Spielstand noch das alte Angebot, und der Rat
+    empfahl den Weber, der auf dem Schirm gar nicht mehr zur Wahl stand. Der
+    Spielstand nennt Modellkennungen, die Lesung Anzeigenamen -- verglichen
+    wird über beide, dazu über den deutschen Namen aus den Spieldaten.
+    """
+    angebot = (wahl or {}).get("angebot") if isinstance(wahl, dict) else None
+    karten = [e for e in ((auswahl or {}).get("angebot") or []) if isinstance(e, dict)
+              and e.get("belegt", True)] if isinstance(auswahl, dict) else []
+    if not angebot or not karten:
+        return None
+    wissen = wissen if isinstance(wissen, dict) else {}
+    namen_de = wissen.get("namen_de") or {}
+    vergleich = {v.get("gebaeude"): v.get("gebaeude_de")
+                 for v in (wissen.get("bauplan_vergleich") or []) if isinstance(v, dict)}
+    gelesen = {_schluessel(e.get(k)) for e in karten for k in ("en", "de")} - {""}
+    for name in angebot:
+        eigene = {_schluessel(name), _schluessel(namen_de.get(name)),
+                  _schluessel(vergleich.get(name))} - {""}
+        if not eigene & gelesen:
+            return False
+    return True
+
+
 def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             ungeduld: dict | None = None, auswahl: dict | None = None,
             frage: str | None = None, ketten: dict | None = None,
@@ -151,8 +183,14 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
         return out or None
 
     auszug: dict = {}
+    # Die Lesung ist, was jetzt auf dem Schirm steht; der Spielstand ist bis
+    # zu Minuten alt. Passt sein Bauplanangebot nicht dazu, geht es nicht mit
+    # -- sonst riet das Modell zu einer Karte, die nicht mehr angeboten war.
+    veraltet = angebot_passt((zustand or {}).get("bauplan_wahl"), auswahl, wissen) is False
     if zustand:
         zustand = _gekappt(zustand)
+        if veraltet:
+            zustand.pop("bauplan_wahl", None)
         auszug["siedlung"] = sauber(zustand, (
             "jahr", "jahreszeit", "biom", "prestige", "bevoelkerung", "spezies",
             "feindseligkeit", "ungeduld", "ungeduld_schwelle", "reputation",
@@ -194,7 +232,8 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
             # ohne den englischen Zwecktext und mit hoechstens vier
             # Erzeugnissen -- sonst riss eine grosse Siedlung die Grenze.
             rang = {"angeboten": 0, "steht": 1}
-            eintraege = sorted(wissen["gebaeude"].items(),
+            eintraege = sorted(((n, e) for n, e in wissen["gebaeude"].items()
+                                if not (veraltet and e.get("status") == "angeboten")),
                                key=lambda kv: rang.get(kv[1].get("status"), 2))
             auszug["gebaeude_wissen"] = {
                 name: {k: (v[:4] if k == "erzeugnisse" else v)
@@ -203,7 +242,7 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
         if wissen.get("trends") and (wissen["trends"].get("fallend")
                                      or wissen["trends"].get("steigend")):
             auszug["trends"] = wissen["trends"]
-        if wissen.get("bauplan_vergleich"):
+        if wissen.get("bauplan_vergleich") and not veraltet:
             # Je angebotenem Bauplan: Sterne gegen das, was steht oder
             # freigeschaltet ist, Zutaten im Lager, Nahrung -- und die Stufe
             # aus den Tierlisten, falls eine Quelle sie nennt.
