@@ -20,6 +20,7 @@ from typing import Any
 
 from . import (analysis, biome, forecast, kb, nahrung, namen_match, save_reader, screen,
                tierlisten, watcher)
+from .engpass import mit_ruf as _mit_ruf
 from .engpass import ruf_tempo as _ruf_tempo
 from .engpass import uhren as _uhren
 from .forecast import food_forecast as _food_forecast
@@ -943,9 +944,7 @@ def engpass(runs_dir: str | Path = "runs", run_id: str | None = None,
     # unter den Uhren: ein langsamer Lauf ist kein Notfall.
     ruf = _ruf_tempo(letzter.get("reputation"), letzter.get("reputation_to_win"),
                      letzter.get("year"), letzter.get("season"))
-    if ruf:
-        out["ruf"] = ruf
-    return out
+    return _mit_ruf(out, ruf)
 
 
 @_wall

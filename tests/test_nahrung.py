@@ -552,3 +552,23 @@ def test_gleiches_gebaeude_nennt_das_rezept() -> None:
                   gebaeude_de="Feldküche")
     assert _bezeichnung(b, a) == "Kochhaus mit 8 Getreide"
     assert _bezeichnung(c, a) == "Feldküche"
+
+
+def test_deutsche_namen_auch_in_der_schreibweise_des_spielstands(tmp_path: Path) -> None:
+    """Am Spielrechner (28.09.2026) standen „Plant Fibre“, „Reeds“ und
+    „Waterskin“ englisch im Rat -- die Lokalisierung schreibt sie anders."""
+    from ats_assistant import localization
+
+    conn = wissensbasis(tmp_path)
+    localization.import_localization(conn, [
+        localization.Eintrag("Good_Fibre_Name", "Plant Fiber", "Pflanzenfaser", "resource"),
+        localization.Eintrag("Good_Reed_Name", "Reed", "Schilf", "resource"),
+        localization.Eintrag("Good_Waterskin_Name", "Waterskins", "Trinkschläuche", "resource"),
+        localization.Eintrag("Good_Tool_Name", "Tool", "Werkzeug", "resource"),
+        localization.Eintrag("Good_Tools_Name", "Tools", "Werkzeuge", "resource"),
+    ])
+    namen = nahrung._deutsch(conn)
+    assert namen["Plant Fibre"] == "Pflanzenfaser" and namen["Reeds"] == "Schilf"
+    assert namen["Waterskin"] == "Trinkschläuche"
+    assert namen["Tool"] == "Werkzeug" and namen["Tools"] == "Werkzeuge"   # genau geht vor
+    conn.close()
