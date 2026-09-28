@@ -213,3 +213,66 @@ def test_das_verlaufswerkzeug_zeigt_je_speicherstand_eine_zeile(tmp_path: Path, 
     assert "lauf-p17 | Sümpfe | Prestige 17" in text
     assert text.count("\nJ1/") == 2 and "Rat (Jahr 1): Nimm die Räucherei." in text
     assert verlauf.main(["--runs", str(tmp_path / "leer")]) == 1
+
+
+# --------------------------------------------------------------------------
+# 28.09.2026: ein Lauf in 24 Mitschriften, zwei davon als Niederlage gezählt
+# --------------------------------------------------------------------------
+
+
+def test_bruchstuecke_eines_laufs_werden_ein_lauf(tmp_path: Path) -> None:
+    """Ältere Fassungen begannen bei jedem Start eine neue Mitschrift. Ein
+    Bruchstück endete bei Ungeduld 14,0 -- der Lauf ging weiter und wurde
+    gewonnen."""
+    import os
+    runs = tmp_path / "runs"
+    teile = [
+        ("The Marshlands-77", [_stand(77.0, 1, [1.0] * 180, biome="The Marshlands"),
+                               _stand(600.0, 1, [1.0] * 180, biome="The Marshlands")]),
+        ("The Marshlands-600", [_mit_statistik(_stand(600.0, 1, [1.0] * 180,
+                                                      biome="The Marshlands"), 5),
+                                _stand(4500.0, 7, [1.0] * 180, ungeduld=14.0,
+                                       biome="The Marshlands")]),
+        ("The Marshlands-4580", [_mit_statistik(_stand(4580.0, 7, [1.0] * 180, ruf=12.0,
+                                                       ungeduld=13.0,
+                                                       biome="The Marshlands"), 9, 2),
+                                 _stand(7636.0, 11, [1.0] * 180, ruf=18.0, ungeduld=12.6,
+                                        biome="The Marshlands")]),
+        # Ein neuer Lauf im selben Biom beginnt wieder bei 0 -- getrennt.
+        ("The Marshlands-10", [_stand(10.0, 1, [1.0] * 180, biome="The Marshlands")]),
+    ]
+    for i, (name, zustaende) in enumerate(teile):
+        _mitschrift(runs, name, zustaende)
+        os.utime(runs / f"{name}.jsonl", (1000 + i, 1000 + i))
+    berichte = lernen.berichte(runs)
+    assert len(berichte) == 2
+    lauf, neu = berichte
+    assert lauf["teile"] == 3 and lauf["ausgang"] == "gewonnen" and lauf["ursache"] is None
+    assert lauf["kennung"] == "The Marshlands-77 … The Marshlands-4580"
+    assert (lauf["jahre"], lauf["ungeduld_max"], lauf["hunger"], lauf["gegangen"]) == \
+        (11, 14.0, 9, 2)
+    assert lauf["ruf_nach_jahr"]["7"] == 12.0 and lauf["zustaende"] == 6
+    assert neu["kennung"] == "The Marshlands-10" and "teile" not in neu
+
+
+def test_ein_bruchstueck_mit_voller_ungeduld_allein_bleibt_verloren() -> None:
+    """Ohne Fortsetzung bleibt es eine Niederlage -- zusammengeführt wird nur,
+    was nahtlos anschließt, im selben Biom und auf derselben Stufe."""
+    a = {"kennung": "a", "biom": "X", "prestige": 15, "spielzeit_start": 0.0,
+         "spielzeit_ende": 4500.0, "ausgang": "verloren", "ungeduld_ende": 14.0,
+         "ungeduld_schwelle": 14.0}
+    anderes_biom = {**a, "kennung": "b", "biom": "Y", "spielzeit_start": 4500.0}
+    andere_stufe = {**a, "kennung": "c", "prestige": 16, "spielzeit_start": 4500.0}
+    assert len(lernen.zusammenfuehren([a, anderes_biom])) == 2
+    assert len(lernen.zusammenfuehren([a, andere_stufe])) == 2
+    assert lernen.zusammenfuehren([a])[0]["ausgang"] == "verloren"
+
+
+def test_jede_lehre_sagt_aus_wie_vielen_laeufen_sie_kommt() -> None:
+    siege = [{"ausgang": "gewonnen", "hunger": 48}] + [{"ausgang": "gewonnen"}] * 3
+    niederlagen = [{"ausgang": "verloren", "hunger": 156}] + [{"ausgang": "verloren"}] * 3
+    lehren = lernen.lehren(siege + niederlagen)
+    hunger = next(s for s in lehren if "Hungerereignisse" in s)
+    assert hunger.startswith("Hinweis, kein Befund: ")     # je Seite nur ein Wert
+    assert "Median 156.0 bei Niederlagen, 48.0 bei Siegen (aus 1 Niederlage, aus 1 Sieg)" \
+        in hunger

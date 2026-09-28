@@ -99,6 +99,8 @@ def _laeufe_text(wert: dict) -> str:
         if b.get("jahre"):
             teile.append(f"{b['jahre']} Jahre")
         teile.append(b.get("ausgang") or "offen")
+        if (b.get("teile") or 1) > 1:
+            teile.append(f"aus {b['teile']} Mitschriften")
         knapp = b.get("nahrung_min_reichweite") or {}
         if knapp.get("sekunden") is not None:
             teile.append(f"Nahrung min. {_minuten(knapp['sekunden'])}"
