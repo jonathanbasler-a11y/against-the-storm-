@@ -20,6 +20,7 @@ from typing import Any
 
 from . import (analysis, biome, forecast, kb, nahrung, namen_match, save_reader, screen,
                tierlisten, watcher)
+from . import engpass as _engpass
 from .engpass import mit_ruf as _mit_ruf
 from .engpass import mit_stillstand as _mit_stillstand
 from .engpass import ruf_stillstand as _ruf_stillstand
@@ -968,12 +969,34 @@ def engpass(runs_dir: str | Path = "runs", run_id: str | None = None,
     # unter den Uhren: ein langsamer Lauf ist kein Notfall.
     ruf = _ruf_tempo(letzter.get("reputation"), letzter.get("reputation_to_win"),
                      letzter.get("year"), letzter.get("season"))
-    ruf = _mit_stillstand(ruf, _ruf_stillstand(_ruf_verlauf(runs_dir, quelle)))
+    verlauf_ruf = _ruf_verlauf(runs_dir, quelle)
+    ruf = _engpass.mit_ungeduld(ruf, _engpass.ruf_gegen_ungeduld(
+        ruf, ungeduld, letzter.get("game_time"), _entlastung(letzter),
+        _engpass.tempo_letztes_jahr(verlauf_ruf)))
+    ruf = _mit_stillstand(ruf, _ruf_stillstand(verlauf_ruf))
     return _mit_ruf(out, ruf)
+
+
+def _entlastung(zustand: dict) -> float:
+    """Je Ruf-Punkt weniger Ungeduld -- kleiner mit „Zusätzliche Ungeduld je Ruf“."""
+    effekte = zustand.get("effects") if isinstance(zustand.get("effects"), dict) else {}
+    for a in effekte.get("abweichungen") or []:
+        if isinstance(a, dict) and a.get("feld") == "bonusReputationPenaltyPerReputation":
+            return _engpass.entlastung(a.get("wert"))
+    return _engpass.ENTLASTUNG_OHNE_ZUSATZ
 
 
 _RUF_SPEICHER: dict[str, tuple[int, list]] = {}
 _RUF_HOECHSTENS = 60
+
+
+def _weit_genug(neu: list, punkt: tuple) -> bool:
+    """Liegt `punkt` einen Ruf-Punkt unter dem jüngsten und ein Jahr davor?"""
+    jetzt = neu[0]
+    t_jetzt = _engpass._zeitpunkt(jetzt[0], jetzt[1])
+    t = _engpass._zeitpunkt(punkt[0], punkt[1])
+    frueh_genug = t_jetzt is None or t is None or t_jetzt - t >= 1.0 - _engpass._GENAU
+    return jetzt[2] - punkt[2] >= 1.0 and frueh_genug
 
 
 def _ruf_verlauf(runs_dir: str | Path, kennung: str | None) -> list:
@@ -1011,18 +1034,19 @@ def _ruf_verlauf(runs_dir: str | Path, kennung: str | None) -> list:
             if isinstance(ruf, bool) or not isinstance(ruf, (int, float)):
                 continue
             neu.append((eintrag.get("year"), eintrag.get("season"), ruf))
-            if neu[0][2] - ruf >= 1.0 or len(neu) >= _RUF_HOECHSTENS:
+            if _weit_genug(neu, neu[-1]) or len(neu) >= _RUF_HOECHSTENS:
                 bisher_bis = 0                     # weit genug, das Alte braucht es nicht
                 break
     except OSError:
         return []
     punkte = (alt[1] if bisher_bis and alt else []) + neu[::-1]
     if punkte:
-        # Vorn weg, was mehr als einen Punkt unter dem jetzigen liegt -- bis auf
-        # den letzten davon, der die Spanne begrenzt.
-        jetzt = punkte[-1][2]
-        tief = [i for i, p in enumerate(punkte) if jetzt - p[2] >= 1.0]
-        punkte = punkte[tief[-1]:] if tief else punkte[-_RUF_HOECHSTENS:]
+        # Vorn weg, was weder der Stillstand (bis einen Punkt tiefer) noch das
+        # Tempo des letzten Jahres braucht -- bis auf den letzten Stand, der
+        # beides begrenzt.
+        jetzt = punkte[-1]
+        weit = [i for i, p in enumerate(punkte) if _weit_genug([jetzt], p)]
+        punkte = punkte[weit[-1]:] if weit else punkte[-_RUF_HOECHSTENS:]
     _RUF_SPEICHER[str(pfad)] = (groesse, punkte)
     return punkte
 
