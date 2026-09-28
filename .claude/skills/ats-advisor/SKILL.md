@@ -159,6 +159,7 @@ ist nicht belegt.
 | Hunger, Tote, Gegangene und gewählte Grundsteine stehen unter `stats` | gemessen, 23.09.2026 |
 | Prestige 16: ein Startbauplan weniger („Einen anfänglichen Entwurf weniger“) | am Spielrechner gesehen, 25.09.2026 |
 | Hohes Prestige: Verkaufspreise ×0,5, je 2 Bauplan- und Grundsteinoptionen weniger, Ereignistempo ×0,67 | gemessen in `effects`, 23.09.2026 |
+| Rohre werden beim Bau von Regenmaschinen verbraucht — ein fallender Rohrbestand ist dann gewollt, kein Engpass | Spieler, 28.09.2026 |
 
 **Nachschlagen statt raten.** Das Werkzeug `nachschlagen(name)` sieht in der
 Wissensbasis aus den Spieldaten nach — Ware oder Gebäude, deutsch oder
