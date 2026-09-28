@@ -753,6 +753,7 @@ def test_nach_zuruecksetzen_fragt_das_alte_angebot_nicht(gui, tmp_path: Path) ->
     _mit_wahl(app, angebot=("Weaver", "Kiln"))
     app._anzeigen("auswahl", _gelesen(("Market", "Markt"), ("Press", "Presse")))
     assert len(_raete(app)) == 1                       # die Karten, einmal
+    assert "Baupläne" in _raete(app)[0]["frage"]
     app._anzeigen("anmeldung", True)                   # Lage mit dem alten Angebot
     assert len(_raete(app)) == 1
 

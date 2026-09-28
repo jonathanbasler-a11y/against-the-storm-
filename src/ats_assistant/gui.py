@@ -641,7 +641,9 @@ class App:
         if schluessel == getattr(self, "_auswahl_schluessel", None):
             return
         self._auswahl_schluessel = schluessel
-        self._rat_holen(frage="Welche der angebotenen Karten soll ich nehmen?",
+        bauplan = any(e.get("kind") == "building" for e in wert["belegt"])
+        self._rat_holen(frage="Welchen der angebotenen Baupläne soll ich nehmen?" if bauplan
+                        else "Welche der angebotenen Karten soll ich nehmen?",
                         automatisch=True)
 
     # -- Anzeige -----------------------------------------------------------

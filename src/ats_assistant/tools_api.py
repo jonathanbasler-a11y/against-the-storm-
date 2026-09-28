@@ -296,6 +296,9 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
                     "umgebung": screen.verfuegbar()}
         zeilen = [z.text for z in erkannt]
 
+    erkannt_als = _art_vom_bildschirm(zeilen)
+    if erkannt_als and tuple(arten) != (erkannt_als,):
+        arten = (erkannt_als,)
     conn = kb.connect(db)
     try:
         gelesen = namen_match.lies_auswahl(conn, zeilen, arten=arten)
@@ -354,7 +357,26 @@ def read_choice(bild: str | Path | None = None, text: list[str] | None = None,
         # Zeilen aus den Randleisten (Voelker, Auftraege), nicht gelesen.
         "am_rand_verworfen": am_rand,
         "grund": None if sicher else _nichts_erkannt(quelle, [], unsicher),
+        **({"art_erkannt": erkannt_als} if erkannt_als else {}),
     }
+
+
+# Woran die Bauplanwahl auf dem Schirm zu erkennen ist -- gemessen an drei
+# Bildschirmfotos vom Spielrechner (27./28.09.2026): Titel „REPUTATIONSBONUS“,
+# „Dein Ansehen wächst … Entwürfe“, je Karte „Kann produzieren:“.
+_BAUPLAN_MERKMALE = ("reputationsbonus", "kannproduzieren", "verfugbarenentwurfe")
+
+
+def _art_vom_bildschirm(zeilen: list[str]) -> str | None:
+    """Die Bauplanwahl am Bildschirmtext erkennen, nicht am Spielstand.
+
+    Am 28.09.2026 war der Spielstand 9 Minuten alt und kannte die Wahl noch
+    nicht; gelesen wurde nach Grundsteinen, und „Stiefel“, „Pastete“,
+    „Fleischspieße“ -- die Erzeugnisse auf den Karten -- passten auf
+    gleichnamige Effekte, während Schuster und Ofen durchfielen.
+    """
+    gefaltet = " ".join(namen_match.falte(z) for z in zeilen)
+    return "building" if any(m in gefaltet for m in _BAUPLAN_MERKMALE) else None
 
 
 # Ab hier ist eine Lesung eine Lesung. Darunter ist sie eine Vermutung ueber
