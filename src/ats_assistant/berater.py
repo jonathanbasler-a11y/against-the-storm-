@@ -262,6 +262,7 @@ def kontext(zustand: dict | None = None, nahrung: dict | None = None,
     if engpass and engpass.get("uhren"):
         # Welche Gefahr zuerst zuschlaegt -- dieselbe Rechnung wie im HUD.
         auszug["engpass"] = {
+            **({"gewonnen": True} if engpass.get("gewonnen") else {}),
             "entscheidend": engpass.get("entscheidend"),
             "uhren": [{k: u[k] for k in ("art", "sekunden", "stufe", "text", "zusatz")
                        if u.get(k) not in (None, "")}

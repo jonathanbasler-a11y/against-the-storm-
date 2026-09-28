@@ -228,3 +228,22 @@ def uhren(nahrung: dict | None, ungeduld: dict | None, statistik: dict | None = 
             "stufe": entscheidend["stufe"] if entscheidend else (
                 "ruhig" if kurz == "nichts akut" else "unbekannt"),
             "kurz": kurz}
+
+
+def mit_ruf(engpass: dict, ruf: dict | None) -> dict:
+    """Das Ruf-Tempo daneben -- und bei vollem Ruf ist der Lauf gewonnen.
+
+    Gesehen am 28.09.2026 (P17 gewonnen): Ruf 18 von 18, und das HUD stand
+    rot „Ungeduld voll in 5 min“. Mit dem Sieg entscheidet keine Uhr mehr.
+    """
+    if not isinstance(ruf, dict):
+        return engpass
+    out = {**engpass, "ruf": ruf}
+    wert, ziel = _zahl(ruf.get("ruf")), _zahl(ruf.get("ziel"))
+    if wert is None or not ziel or wert < ziel:
+        return out
+    out["uhren"] = [{**u, "stufe": "ruhig", "zusatz": "Ruf voll – zählt nicht mehr"}
+                    if isinstance(u, dict) and u.get("stufe") in ("gelb", "rot") else u
+                    for u in (engpass.get("uhren") or [])]
+    out.update(entscheidend=None, stufe="ruhig", kurz="Ruf voll – gewonnen", gewonnen=True)
+    return out

@@ -71,6 +71,8 @@ def test_kopf_und_info() -> None:
     e = engpass.uhren({"reichweite_sekunden": 240.0}, {})
     assert hud.kopfzeile(e) == ("Engpass: Nahrung 4 min", "rot")
     assert hud.kopfzeile(None) == ("Engpass: –", "unbekannt")
+    assert hud.kopfzeile({"uhren": [{}], "gewonnen": True, "kurz": "Ruf voll – gewonnen",
+                          "stufe": "ruhig"}) == ("Ruf voll – gewonnen", "ruhig")
     assert hud.infozeile({"verfuegbar": False}) == "Kein Spielstand"
     assert hud.infozeile({"jahr": 3}) == "Jahr 3"
 

@@ -93,7 +93,9 @@ Bonus überhaupt greift.
   `entscheidend` ist die dringendste Uhr, die `gelb` (unter 15 Minuten) oder
   `rot` (unter einem Speicherintervall) steht. **Steht sie rot, zuerst darauf
   eingehen**; eine offene Wahl daran messen, ob sie diesen Engpass löst. Für
-  die Pestfäule keine Zeit schätzen, die nicht dasteht.
+  die Pestfäule keine Zeit schätzen, die nicht dasteht. Steht
+  `engpass.gewonnen`, ist der Ruf voll und der Lauf gewonnen — dann keine
+  Uhr mehr als Gefahr nennen, sondern den Lauf auswerten.
 - **`engpass.ruf`** ist das Ruf-Tempo: Ruf je Jahr, was für einen Sieg in
   sieben Jahren nötig wäre, und in welchem Jahr der Sieg bei diesem Tempo
   käme. Gemessen an der Spielhistorie: 15 Siege nach 9–13 Jahren (Median 11).

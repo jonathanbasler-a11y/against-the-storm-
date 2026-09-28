@@ -170,6 +170,8 @@ def tierbuchstabe(art: str, en: str | None) -> str:
 def kopfzeile(engpass: dict | None) -> tuple[str, str]:
     if not isinstance(engpass, dict) or not engpass.get("uhren"):
         return "Engpass: –", "unbekannt"
+    if engpass.get("gewonnen"):
+        return engpass.get("kurz") or "Ruf voll – gewonnen", "ruhig"
     return f"Engpass: {engpass.get('kurz') or '–'}", engpass.get("stufe") or "unbekannt"
 
 

@@ -260,13 +260,26 @@ def essbar_im_lager(conn: sqlite3.Connection, bestand: dict[str, float]) -> list
     return sorted(out, key=lambda e: -e["menge"])
 
 
+def _varianten(en: str) -> list[str]:
+    """Wie der Spielstand denselben Namen schreibt. Gesehen am 28.09.2026:
+    „Plant Fibre“, „Reeds“, „Waterskin“ im Lager, „Plant Fiber“, „Reed“,
+    „Waterskins“ in der Lokalisierung -- sie standen englisch im Rat."""
+    out = [en.replace("Fiber", "Fibre"), en.replace("Fibre", "Fiber")]
+    out.append(en[:-1] if en.endswith("s") else en + "s")
+    return [v for v in out if v != en]
+
+
 def _deutsch(conn: sqlite3.Connection) -> dict[str, str]:
-    return {
+    namen = {
         r["en"]: r["de"]
         for r in conn.execute(
             "SELECT en, de FROM name_map WHERE confidence = 'localization'")
         if r["en"]
     }
+    for en, de in list(namen.items()):
+        for v in _varianten(en):
+            namen.setdefault(v, de)            # ein genauer Eintrag geht vor
+    return namen
 
 
 def _dauer_text(sekunden: float) -> str:

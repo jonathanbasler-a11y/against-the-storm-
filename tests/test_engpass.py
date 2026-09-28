@@ -219,3 +219,19 @@ def test_tools_api_reicht_den_vorratsverlauf_herein(tmp_path: Path) -> None:
                                          encoding="utf-8")
     e = tools_api.engpass(tmp_path, "lauf", nahrung={"reichweite_sekunden": 200.0}, ungeduld={})
     assert _uhr(e, "nahrung")["stufe"] == "rot"
+
+
+def test_bei_vollem_ruf_ist_der_lauf_gewonnen() -> None:
+    # P17 gewonnen, 28.09.2026: Ruf 18 von 18, Ungeduld 13,2 von 14 stand rot.
+    e = engpass.uhren({"reichweite_sekunden": None, "rate_je_spielzeitsekunde": 0.01},
+                      {"sekunden_bis_verlust": 297.0, "jetzt": 13.2, "schwelle": 14})
+    assert e["entscheidend"] == "ungeduld"
+    fertig = engpass.mit_ruf(e, engpass.ruf_tempo(18.0, 18, 11, 1))
+    assert fertig["gewonnen"] and fertig["entscheidend"] is None
+    assert fertig["kurz"] == "Ruf voll – gewonnen" and fertig["stufe"] == "ruhig"
+    ungeduld = next(u for u in fertig["uhren"] if u["art"] == "ungeduld")
+    assert ungeduld["stufe"] == "ruhig" and "Ruf voll" in ungeduld["zusatz"]
+    assert e["entscheidend"] == "ungeduld"               # das Original bleibt
+    offen = engpass.mit_ruf(e, engpass.ruf_tempo(12.0, 18, 9, 0))
+    assert offen["entscheidend"] == "ungeduld" and "gewonnen" not in offen
+    assert engpass.mit_ruf(e, None) is e
