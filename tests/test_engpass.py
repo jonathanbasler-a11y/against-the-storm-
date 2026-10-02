@@ -419,3 +419,26 @@ def test_der_engpass_misst_nach_jahr_sieben_gegen_die_ungeduld(tmp_path: Path) -
 
 def test_der_skill_kennt_das_rennen_gegen_die_ungeduld() -> None:
     assert "`engpass.ruf.gegen_ungeduld`" in " ".join(berater.systemtext().split())
+
+
+
+def test_der_sturmwert_der_ungeduld_je_ruf_gilt_nicht_fuers_ganze_rennen(tmp_path: Path) -> None:
+    """P19, 02.10.2026: im Sturm von Jahr 7 stand der Zusatz auf 1,5, sonst
+    auf 0,5. Mit 1,5 hieß es „nein (Rest −13,5)“ -- gewonnen in Jahr 11."""
+    def stand(i, jahr, zeit, ruf, zusatz):
+        return {"game_time": 740.0 * i, "year": jahr, "season": zeit, "reputation": ruf,
+                "reputation_to_win": 18,
+                "effects": {"abweichungen": [{"feld": "bonusReputationPenaltyPerReputation",
+                                              "wert": zusatz}]}}
+    zeilen = [stand(1, 6, 2, 4.4, 1.5), stand(2, 7, 0, 4.9, 0.5), stand(3, 7, 1, 5.3, 0.5),
+              stand(4, 7, 2, 5.85, 1.5)]
+    (tmp_path / "lauf.jsonl").write_text("".join(json.dumps(z) + "\n" for z in zeilen),
+                                         encoding="utf-8")
+    ungeduld = {"jetzt": 9.3, "schwelle": 14, "je_spielzeitsekunde": 0.00255}
+    mit_sturm = engpass.ruf_gegen_ungeduld(
+        engpass.ruf_tempo(5.85, 18, 7, 2), ungeduld, 2960, engpass.entlastung(1.5), 1.45)
+    e = tools_api.engpass(tmp_path, "lauf", nahrung={}, ungeduld=ungeduld)
+    assert e["ruf"]["gegen_ungeduld"]["rest"] > mit_sturm["rest"] + 5
+    assert tools_api._ausserhalb_sturm(zeilen)["season"] == 1
+    nur_sturm = [stand(1, 7, 2, 5.0, 1.5)]
+    assert tools_api._ausserhalb_sturm(nur_sturm) is nur_sturm[0]

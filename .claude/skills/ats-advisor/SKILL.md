@@ -115,7 +115,7 @@ Bonus überhaupt greift.
   ersetzt es das Sieben-Jahres-Ziel (P18-Sieg, 28.09.2026: dort stand sonst
   nur „Jahr 7 ist vorbei“ in Rot). Eine Rechnung, keine Messung: Die
   Entlastung je Ruf-Punkt ist 1,0 minus „Zusätzliche Ungeduld je Ruf“,
-  nachgerechnet am P17-Sieg. Bei `nein` sagen, wie viel Ruf je Jahr fehlt,
+  nachgerechnet am P17-Sieg, bestätigt am P19-Sieg (0,49 je Punkt). Im Sturm kann der Zusatz kurz höher stehen (P19: 1,5 mit „SE No Impatience Reduction“) — das ist kein Dauerzustand; die Rechnung nimmt den Wert außerhalb des Sturms. Ein „nein“ in Jahr 7 auf P19 wurde in Jahr 11 noch ein Sieg: das Urteil gilt für das Tempo von jetzt, nicht als Prognose. Bei `nein` sagen, wie viel Ruf je Jahr fehlt,
   und Aufträge vorziehen — im P18-Sieg kamen 7 Aufträge in den letzten fünf
   Jahren und drehten das Rennen.
 - **`engpass.ruf.stillstand`**: Der Ruf stieg über mindestens ein Jahr um
