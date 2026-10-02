@@ -287,6 +287,9 @@ def ruf_stillstand(verlauf: list) -> dict | None:
 # um 6,3 und die Ungeduld fiel trotz 1300 s Anstieg -- netto etwa 0,6 je
 # Punkt. Früh im Lauf verpufft die Entlastung, weil die Ungeduld nicht unter
 # 0 fällt; deshalb sah der Schnitt über den ganzen Lauf nach 0,3 aus.
+# Bestätigt am P19-Sieg: Jahr 7 → 11 liefen 6,2 Ungeduld auf, sie stieg aber
+# nur um 0,3 bei 12,15 Ruf -- 0,49 je Punkt bei Zusatz 0,5. Im Sturm stand
+# der Zusatz auf 1,5; der gilt nur dort (siehe tools_api._ausserhalb_sturm).
 ENTLASTUNG_OHNE_ZUSATZ = 1.0
 # Ab wie viel Rest an der Schwelle es „ja“ heißt, bis wohin „knapp“. Am
 # P17-Sieg geprüft: Jahr 10 und 11 rechnen −1,1 bis −1,6 -- der Lauf ging

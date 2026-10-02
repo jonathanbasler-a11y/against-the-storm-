@@ -971,10 +971,28 @@ def engpass(runs_dir: str | Path = "runs", run_id: str | None = None,
                      letzter.get("year"), letzter.get("season"))
     verlauf_ruf = _ruf_verlauf(runs_dir, quelle)
     ruf = _engpass.mit_ungeduld(ruf, _engpass.ruf_gegen_ungeduld(
-        ruf, ungeduld, letzter.get("game_time"), _entlastung(letzter),
+        ruf, ungeduld, letzter.get("game_time"), _entlastung(_ausserhalb_sturm(zustaende)),
         _engpass.tempo_letztes_jahr(verlauf_ruf)))
     ruf = _mit_stillstand(ruf, _ruf_stillstand(verlauf_ruf))
     return _mit_ruf(out, ruf)
+
+
+STURM = 2
+
+
+def _ausserhalb_sturm(zustaende: list[dict]) -> dict:
+    """Der jüngste Stand außerhalb des Sturms -- sonst der jüngste.
+
+    Gesehen am P19-Sieg (02.10.2026): im Sturm von Jahr 7 stand „Zusätzliche
+    Ungeduld je Ruf“ auf 1,5 (dazu „SE No Impatience Reduction“), sonst auf
+    0,5. Mit dem Sturmwert hochgerechnet hieß es „nein (Rest −13,5)“ -- der
+    Lauf wurde in Jahr 11 mit 4 Ungeduld Luft gewonnen. Das Rennen läuft über
+    viele Jahreszeiten; der Sturm ist eine davon.
+    """
+    for z in reversed(zustaende):
+        if z.get("season") != STURM:
+            return z
+    return zustaende[-1]
 
 
 def _entlastung(zustand: dict) -> float:
