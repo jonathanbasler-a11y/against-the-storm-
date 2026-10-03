@@ -128,7 +128,7 @@ def systemtext(pfad: Path | None = None) -> str:
         text = pfad.read_text(encoding="utf-8")
     except OSError:
         log.warning("Beraterregeln nicht lesbar: %s", pfad)
-        return ("Du berätst einen Spieler von Against the Storm auf Prestige 13, "
+        return ("Du berätst einen Spieler von Against the Storm auf hohem Prestige, "
                 "deutsche Oberfläche. Eine Empfehlung, ein Satz Begründung, ein "
                 "Satz zur besten Alternative.")
     # Der Kopfteil (--- name: ... ---) ist Verwaltung, keine Anweisung.

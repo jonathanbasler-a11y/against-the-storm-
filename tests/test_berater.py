@@ -53,8 +53,24 @@ def test_der_systemtext_kommt_aus_der_skill_datei() -> None:
     """Dieselbe Datei wie für Claude Code -- sonst driften die Regeln."""
     text = berater.systemtext()
     assert "Eine Empfehlung" in text
-    assert "Prestige 13" in text
+    assert "Prestige 19" in text
     assert not text.startswith("---")        # der Kopfteil ist Verwaltung
+
+
+def test_die_ungeduldsregel_steht_nur_einmal_und_ohne_widerspruch() -> None:
+    """Bis 03.10.2026 stand „fällt um genau 1,0“ neben „1,0 minus Zusatz“ --
+    gemessen sind ab P17 etwa 0,5. Der Rat konnte sich die falsche aussuchen."""
+    text = " ".join(berater.systemtext().split())
+    assert "um genau 1,0" not in text
+    assert "netto also etwa 0,5" in text and "Unter 0 fällt die Ungeduld nicht" in text
+
+
+def test_die_heuristiken_aus_den_laeufen_stehen_drin() -> None:
+    text = " ".join(berater.systemtext().split())
+    for satz in ("Leere Schlüsselgebäude zuerst", "Ruf-Fahrplan",
+                 "Eine Ware für mehrere Völker zuerst", "Bilanz des Spielers",
+                 "Gebühr für jede entdeckte Lichtung"):
+        assert satz in text, satz
 
 
 def test_systemtext_faellt_zurueck_wenn_die_datei_fehlt(tmp_path: Path) -> None:

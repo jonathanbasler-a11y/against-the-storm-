@@ -144,6 +144,39 @@ Beim Bildweg versteckt sich das Fenster für einen Augenblick selbst: die
 Aufnahme nimmt den ganzen Bildschirm, und ein Assistent über den Karten wäre
 das, was die Texterkennung dann liest.
 
+## Einen Lauf nachlesen
+
+```
+python tools\verlauf.py --liste                  # alle Mitschriften mit Namen
+python tools\verlauf.py --lauf <Name>            # je Speicherstand eine Zeile, dazu die Rat-Notizen
+```
+
+Der Name gehört hinter `--lauf`. `python tools\verlauf.py --Poro_Biome-…`
+(ohne `--lauf`) bricht mit „unrecognized arguments“ ab — so am 27.09.2026
+geschehen. Was mit der Ausgabe geschieht, beschreibt der Skill
+`ats-laufauswertung`.
+
+## Neue Fassung holen
+
+Im Fenster **„Aktualisieren“**: holt die neue Fassung aus `main` und fragt,
+ob neu gestartet werden soll. Erst nach dem Neustart gilt sie — ein Fehler,
+der „noch immer“ auftritt, ist oft die alte Fassung, die noch läuft.
+
+## Das HUD über dem Spiel
+
+| Taste | Wirkung |
+|---|---|
+| Strg+Umschalt+L | die Karten der offenen Wahl lesen; das HUD geht dafür kurz weg |
+| Strg+Umschalt+H | HUD aus- und einblenden |
+
+Verschieben an der Kopfzeile, Größe am Griff unten rechts, Einklappen mit
+„▁“ oder Doppelklick; Ort und Größe stehen in `runs/wissen/hud.json`.
+Meldet die Statuszeile eine Taste als „schon vergeben“, hält ein anderes
+Programm die Kombination — etwa eine zweite Instanz des Fensters (vermutet,
+am 27.09.2026 nicht nachgeprüft). Läuft das
+Spiel im exklusiven Vollbild, liegt das HUD dahinter: im Spiel das randlose
+Fenster wählen. `python tools\hud_probe.py --tasten` prüft beides ohne Siedlung.
+
 ## Prüfen, ob noch alles hält
 
 ```

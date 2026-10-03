@@ -75,7 +75,7 @@ def test_unsicheres_wird_als_unsicher_benannt(text: str) -> None:
 
 
 def test_es_gibt_mehr_als_einen_skill() -> None:
-    assert len(ALLE) >= 4, [p.parent.name for p in ALLE]
+    assert len(ALLE) >= 5, [p.parent.name for p in ALLE]
 
 
 @pytest.mark.parametrize("pfad", ALLE, ids=lambda p: p.parent.name)
@@ -100,3 +100,20 @@ def test_jeder_skill_sagt_wann_er_gilt(pfad: Path) -> None:
     """Eine Beschreibung ohne Anlass wird nie gezogen."""
     kopf = pfad.read_text(encoding="utf-8").split("---")[1].lower()
     assert "nutzen" in kopf or "verwenden" in kopf, pfad.parent.name
+
+
+def test_die_laufauswertung_macht_das_gelernte_dauerhaft() -> None:
+    """Fünfmal neu erfunden bis Oktober 2026 -- jetzt ein Skill. Er muss sagen,
+    wie die Daten kommen und wohin das Ergebnis gehört."""
+    text = (SKILLS / "ats-laufauswertung" / "SKILL.md").read_text(encoding="utf-8")
+    assert "verlauf.py --lauf" in text
+    assert "Mechanik — nur Belegtes" in text and "ersetzen" in text
+    assert "Stichprobe" in text and "nicht als Prognose" in text
+
+
+def test_die_beiden_ats_skills_ueberschneiden_sich_nicht() -> None:
+    berater = (SKILLS / "ats-advisor" / "SKILL.md").read_text(encoding="utf-8").split("---")[1]
+    auswertung = (SKILLS / "ats-laufauswertung" / "SKILL.md").read_text(
+        encoding="utf-8").split("---")[1]
+    assert "ats-laufauswertung" in berater and "ats-advisor" in auswertung
+    assert "wenn ein Lauf ausgewertet werden soll" not in berater
