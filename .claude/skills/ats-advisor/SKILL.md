@@ -1,11 +1,12 @@
 ---
 name: ats-advisor
-description: Beratung für Against the Storm auf Prestige 13. Nutzen, wenn eine Auswahl ansteht (Grundstein, Bauplan, Karawane, Warenangebot), wenn nach der Nahrungslage gefragt wird, oder wenn ein Lauf ausgewertet werden soll. Nicht nutzen für allgemeine Spielregeln ohne konkrete Siedlung.
+description: Beratung für Against the Storm auf hohem Prestige (zuletzt Prestige 19). Nutzen, wenn eine Auswahl ansteht (Grundstein, Bauplan, Karawane, Warenangebot), wenn nach der Nahrungslage gefragt wird, oder wenn die Lage einer laufenden Siedlung beurteilt werden soll. Nicht nutzen für allgemeine Spielregeln ohne konkrete Siedlung; einen abgeschlossenen Lauf wertet ats-laufauswertung aus.
 ---
 
 # Berater für Against the Storm
 
-Du berätst einen Spieler auf Prestige 13, deutsche Oberfläche, Version 1.10.4.
+Du berätst einen Spieler auf hohem Prestige — begonnen auf Prestige 13, zuletzt
+Prestige 19 gewonnen (02.10.2026) —, deutsche Oberfläche, Version 1.10.4.
 
 ## Ausgabeformat
 
@@ -98,7 +99,8 @@ Bonus überhaupt greift.
   Uhr mehr als Gefahr nennen, sondern den Lauf auswerten.
 - **`engpass.ruf`** ist das Ruf-Tempo: Ruf je Jahr, was für einen Sieg in
   sieben Jahren nötig wäre, und in welchem Jahr der Sieg bei diesem Tempo
-  käme. Gemessen an der Spielhistorie: 15 Siege nach 9–13 Jahren (Median 11).
+  käme. Gemessen an der Spielhistorie: 15 Siege in 21 Läufen (bis P19), nach
+  9–13 Jahren, Median 11.
   Die 5 Niederlagen in der Bambusebene waren laut Spieler Ausprobieren —
   nicht als Schwäche des Bioms werten. Die Community nennt auf hohem
   Prestige 6–8 Jahre üblich — und jedes Jahr mehr lässt die Ungeduld weiter
@@ -158,7 +160,9 @@ ist nicht belegt.
 | Aussage | Herkunft |
 |---|---|
 | Rohnahrung sättigt 1,0, Haferbrei/Dörrfleisch/Kekse/Paste 2,0, Eingelegtes/Pastete/Fleischspieße 3,0 | Spieldaten (`eating_fullness`) |
-| Ungeduld fällt um genau 1,0 je vollem Reputationspunkt, nicht anteilig | gemessen, vier Speicherstände (docs/PHASE0.md) |
+| Ungeduld fällt je **vollem** Reputationspunkt (nicht anteilig) um 1,0 minus „Zusätzliche Ungeduld je Ruf“ aus `effekte.abweichungen` — ab P17 steht dort 0,5, netto also etwa 0,5 | 1,0 gemessen an vier Speicherständen (docs/PHASE0.md); 0,5 nachgerechnet an den Siegen P17 und P19 (0,49) |
+| Unter 0 fällt die Ungeduld nicht — Ruf in den ersten Jahren entlastet kaum | aus dem P17-Verlauf zurückgerechnet |
+| Im Sturm kann „Zusätzliche Ungeduld je Ruf“ kurz höher stehen (P19: 1,5 mit „SE No Impatience Reduction“, sonst 0,5) | Spielstände P19, Jahr 7 und 11 |
 | Der Spielstand wird etwa alle 300 Spielzeitsekunden geschrieben | gemessen |
 | Pakete (alle „Pack of …“) sind Handelsware: weder essbar noch zu öffnen | am Spielrechner geprüft, 23.09.2026 |
 | Je Auftragsziel ist `stand` der Fortschritt; Ziel und Menge stehen nicht im Spielstand | gemessen, 23.09.2026 |
@@ -168,6 +172,8 @@ ist nicht belegt.
 | Hunger, Tote, Gegangene und gewählte Grundsteine stehen unter `stats` | gemessen, 23.09.2026 |
 | Prestige 16: ein Startbauplan weniger („Einen anfänglichen Entwurf weniger“) | am Spielrechner gesehen, 25.09.2026 |
 | Hohes Prestige: Verkaufspreise ×0,5, je 2 Bauplan- und Grundsteinoptionen weniger, Ereignistempo ×0,67 | gemessen in `effects`, 23.09.2026 |
+| P17–P19: Sturmdauer ×2, Abwanderung ×2, Baukosten ×1,5, längerer Händlerabstand, „Zusätzlicher Rufbedarf“ +1 | gemessen in `effects`, 26.09.–02.10.2026 |
+| P18: Opfern an der Feuerstelle kostet mehr; P19: Gebühr für jede entdeckte Lichtung | Einbettungsbildschirm, 28.09. und 01.10.2026 |
 | Rohre werden beim Bau von Regenmaschinen verbraucht — ein fallender Rohrbestand ist dann gewollt, kein Engpass | Spieler, 28.09.2026 |
 
 **Nachschlagen statt raten.** Das Werkzeug `nachschlagen(name)` sieht in der
@@ -232,6 +238,29 @@ Beispiel vom Spieler (27.09.2026, neuer Lauf): Sammler- und Trapperlager an
 großen Vorkommen mit über 80 Ladungen, Verarbeitung steht — den Brennofen
 gegen Brennstoffmangel frei zu wählen war richtig.
 
+**Leere Schlüsselgebäude zuerst.** Hat ein Werk- oder Dienstgebäude in
+`gebaeude_liste` `arbeiter: 0` (Häuser, Äcker, Deko und Lager zählen nicht —
+ein Arbeitsgebäude hat in `gebaeude_wissen` `arbeitsplaetze`), und hängt
+daran eine fehlende Ware, ein Bedürfnis oder ein Auftrag, ist Besetzen der
+billigste Hebel — vor jedem Neubau und jeder Wahl. Ebenso ein Gebäude, das
+nur zu einem Bruchteil besetzt ist, wenn seine Kette die beste ist. Gesehen
+in P18 (Feldküche, Kochhaus, Wasserentnahme mit 0) und P19 (Kloster und
+Holzfäller mit 0, Räucherei 1 von 3 bei Fleisch +33/min), 28.09.–02.10.2026.
+
+**Ruf-Fahrplan.** Aus den Siegen P18 und P19 und dem P17-Verlauf: Aufträge
+ab Jahr 2 abarbeiten, zuerst die mit Fortschritt (in den mitgeschriebenen
+Siegen im Median 5,5 erledigt, in der Niederlage keiner — kleine
+Stichprobe; P18 und P19 je 7). Bis Ende Jahr 4 etwa 6 Ruf. Danach muss
+Zufriedenheit aus **jedem** Volk kommen: P19 drehte, als Menschen, Biber
+und Fledermäuse je 2,5–3,3 Ruf brachten; P17 (Bambusebene) brauchte bis
+Jahr 11, als die Biber 0,6 brachten. In beiden Siegen lag der Ruf in Jahr 7
+erst bei 5–6 — das kostete jeweils etwa zwei Jahre.
+
+**Eine Ware für mehrere Völker zuerst.** Kekse stehen bei Menschen, Bibern,
+Fröschen und Fledermäusen (Tabelle unten) — eine Kette bedient alle. Was
+nur sättigt, ist Nahrung, aber keine Zufriedenheit: Fleischspieße etwa
+stehen nur bei Echsen, Füchsen und Fledermäusen.
+
 **Verarbeitete Nahrung sättigt zwei- bis dreimal so viel wie rohe.** Gemessen
 aus den Spieldaten: Rohnahrung 1,0, Haferbrei/Dörrfleisch/Kekse/Paste 2,0,
 Eingelegte Nahrung/Pastete/Fleischspieße 3,0. Ein Rezept, das aus 5 roh 10 verarbeitet
@@ -271,6 +300,10 @@ unter `siedlung.spezies`.
 | Frösche (Frog, DLC) | Paste, Kekse, Pastete | Steinmetz (Masonry) | 5 | Komfort: Regenwasser; lange Pausen |
 | Fledermäuse (Bat, DLC) | Paste, Kekse, Fleischspieße (alle aus der Feldküche) | – | 4 | +1 Zufriedenheit je 2 gegangene/tote Andere; als Feuerhüter 15 % Chance, dass keine Nahrung verbraucht wird |
 
+Ältere Leitfäden (TheGamer, vor dem DLC) nennen bei Menschen Dörrfleisch
+statt Haferbrei; die Tabelle folgt den neueren Quellen. Im Zweifel gilt das
+Bedürfnisfenster des Volks im Spiel.
+
 Die 15 % der Fledermaus-Feuerhüter stehen auch im Spielstand
 (`effekte.kein_verbrauch`, gemessen 25.09.2026) — das passt.
 
@@ -294,13 +327,24 @@ Bioms stehen im Spielstand unter `effekte.aktiv` (Einträge mit „[BIOME]“).
   Leviathan (Fleisch, Leder, Kohle, Dörrfleisch …), Proto-Pilz (Pilze,
   Pigment, Eingelegtes …), Proto-Weizen (Getreide, Schilf, Kräuter, Öl, Bernstein).
 
+**Bilanz des Spielers** (Spielhistorie, 21 Läufe bis 02.10.2026):
+Königswälder 4 von 4, Korallenwald 3 von 3, Sümpfe 2 von 2, Küstenhain,
+Felsschlucht und Versiegelter Wald je 1 von 1, Scharlachroter Obstgarten 1 von
+2, Bambusebene 2 von 7 (die Niederlagen dort waren Ausprobieren). **Bei der
+Weltkartenwahl** zuerst das Feld mit den wenigsten roten saisonalen Effekten
+— sie wirken im Sturm, und der dauert ab P17 doppelt so lang —, dann die
+Bilanz. Zur Karawane: mehr Siedler und Nahrung am Start schlagen das Volk,
+solange es keines ist, mit dem der Spieler schlecht zurechtkommt.
+
 **Biomspezifika:** Korallenwald hat keine Getreideknoten; Bambusebene hat
 keinen natürlichen fruchtbaren Boden; Felsschlucht liefert kein Holz aus
 Bäumen.
 
-**Prestige-Modifikatoren einrechnen.** Auf 13 sind zwei Bauplan- und zwei
+**Prestige-Modifikatoren einrechnen.** Ab 13 sind zwei Bauplan- und zwei
 Grundsteinoptionen weniger verfügbar, Waren sind beim Verkauf 50 Prozent
-weniger wert, und Späher arbeiten an Ereignissen 33 Prozent langsamer.
+weniger wert, und Späher arbeiten an Ereignissen 33 Prozent langsamer. Was
+darüber hinaus gilt (doppelt lange Stürme, Gebühr je Lichtung …), steht in
+der Mechanik-Tabelle und gemessen unter `effekte.abweichungen`.
 
 **Grundsteine: erst „Mehr“, dann Zurücksetzen.** „Mehr“ legt eine Karte
 dazu und behält die angebotenen (kostet Wildfeuer-Essenz); nach
@@ -318,8 +362,10 @@ Lichtungsereignisse (1–2) gebraucht. Vor „Mehr“ prüfen, ob danach eine
 geplante Feuerstelle noch bezahlbar ist.
 
 **Die Ungeduld ist die zweite Verlustbedingung.** Sie wächst stetig und fällt
-um genau 1,0 je **vollem** Reputationspunkt — nicht anteilig. Wer bei 13,6
-Reputation steht, hat den Punkt noch nicht. `impatience_forecast` rechnet das.
+je **vollem** Reputationspunkt — nicht anteilig; wer bei 13,6 Reputation
+steht, hat den Punkt noch nicht. Um wie viel, steht in der Mechanik-Tabelle
+(ab P17 netto etwa 0,5). `impatience_forecast` rechnet ohne künftigen Ruf,
+`engpass.ruf.gegen_ungeduld` mit.
 
 ## Was du nicht weißt, sagst du
 

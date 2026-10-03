@@ -96,6 +96,21 @@ Dasselbe gilt für Belastbarkeit allgemein: wo Daten aus verschiedenen Quellen
 zusammenlaufen, gehört an jede Zeile, woher sie kommt. Dann lässt sich später
 entscheiden, was eine Auskunft trägt und was nicht.
 
+## Ein Messpunkt ist keine Konstante
+
+Eine Zahl, die einmal gemessen wurde, gilt für den Moment, in dem sie
+gemessen wurde. Bevor sie in eine Rechnung über die Zukunft geht: an einem
+zweiten, anders gelagerten Messpunkt prüfen, ob sie hält.
+
+> **Beispiel.** Ein Spielfaktor stand in einem Spielstand auf 1,5 und wurde
+> für den Rest der Partie angenommen; die Anzeige sagte „verloren“. Im
+> nächsten Spielstand stand er auf 0,5 — er galt nur im Sturm. Die Partie
+> wurde gewonnen. Ein zweiter Stand aus einer anderen Jahreszeit hätte es
+> vorher gezeigt.
+
+Dasselbe gilt für die eigene Vorhersage: was aus einem Tempo hochgerechnet
+ist, wird als „bei diesem Tempo“ gesagt, nicht als Ausgang.
+
 ## Sagen, was nicht geprüft wurde
 
 Am Ende einer Arbeit steht nicht nur, was läuft, sondern auch, was nicht

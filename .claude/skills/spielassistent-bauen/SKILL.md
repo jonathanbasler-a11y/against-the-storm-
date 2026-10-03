@@ -129,6 +129,36 @@ Unter Windows steckt eine brauchbare Texterkennung im System (`winsdk`,
 `Windows.Media.Ocr`) — lokal, ohne Konto, ohne Netz. Und ein Weg, die Namen
 von Hand einzugeben, hält die Kette am Leben, wenn nichts installiert ist.
 
+## Fallen, die erst im Spiel auffallen
+
+Alle sechs kamen erst beim Spieler heraus, keine in den Tests. Jede kostete
+einen falschen Rat oder eine falsche Zahl, bevor sie gefunden war.
+
+- **Der Spielstand hinkt dem Bildschirm hinterher.** Bei einem Takt von fünf
+  Minuten steht nach einem Neuwürfeln noch das alte Angebot im Spielstand.
+  Der Rat empfahl zweimal eine Karte, die nicht mehr zur Wahl stand. Was
+  gerade auf dem Schirm gelesen wurde, gilt vor dem Spielstand — und der
+  Spielstand gilt erst wieder, wenn er nach der Lesung geschrieben wurde.
+- **Ein Bildschirm muss sagen, was er ist.** Wer die Art der Auswahl aus dem
+  Spielstand ableitet, liest nach den falschen Namen: es wurden Grundsteine
+  gesucht, auf dem Schirm standen Baupläne, und die Erzeugnisse auf den
+  Karten („Stiefel“, „Pastete“) passten auf gleichnamige Effekte. Die Art am
+  Bildschirmtext selbst erkennen (Titel, feste Beschriftungen).
+- **Ein Wert aus einem Stand ist kein Wert für den Lauf.** Manche Raten
+  ändern sich mit der Jahreszeit; im Sturm stand ein Ungeduldsfaktor
+  dreimal so hoch wie sonst. Hochgerechnet ergab das „verloren“ für einen
+  Lauf, der vier Jahre später gewonnen wurde. Vor einer Hochrechnung prüfen,
+  ob der Wert über mehrere Stände und Jahreszeiten gleich bleibt.
+- **Eine Datei ist nicht ein Lauf.** Eine frühe Fassung begann bei jedem
+  Programmstart eine neue Mitschrift — 24 Dateien für eine Siedlung, zwei
+  davon als Niederlage gezählt. Die Identität eines Laufs ist eine Eigenschaft
+  des Spiels (Biom, Stufe, durchlaufende Spieluhr), nicht der Datei.
+- **Jede Statistik nennt ihre Stichprobe.** Ein Median über „alle Läufe mit
+  Wert“ kann aus einem einzigen Lauf stammen und sieht dann aus wie ein Befund.
+- **Ein Urteil ist keine Prognose.** „Bei diesem Tempo nicht zu schaffen“ ist
+  richtig und nützlich; „nicht zu schaffen“ ist eine Behauptung über die
+  Zukunft des Spielers. Spieler drehen Läufe — die Anzeige muss das zulassen.
+
 ## Reihenfolge
 
 1. **Messen** (Format, Takt, Sprache) — entscheidet alles Weitere
