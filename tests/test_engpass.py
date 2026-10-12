@@ -390,6 +390,20 @@ def test_nach_jahr_sieben_zaehlt_das_rennen_gegen_die_ungeduld() -> None:
     assert engpass.mit_ungeduld(ruf, None) is ruf
 
 
+def test_vor_jahr_vier_faellt_auch_gegen_die_ungeduld_kein_urteil() -> None:
+    # P20, Jahr 2 (12.10.2026): Ruf 1,3 nach gut einem Jahr, und das HUD stand
+    # rot mit „vor der Ungeduld: nein (Rest −10,0)“ -- hochgerechnet aus dem
+    # Aufbau, genau das, was „Urteil ab Jahr 4“ verhindern soll.
+    ruf = engpass.ruf_tempo(1.3, 18, 2, 0)
+    assert ruf["stufe"] == "unbekannt" and ruf["zusatz"] == "Urteil ab Jahr 4"
+    nein = {"urteil": "nein", "rest": -10.0, "text": "vor der Ungeduld: nein (Rest −10,0)"}
+    neu = engpass.mit_ungeduld(ruf, nein)
+    assert neu["stufe"] == "unbekannt" and neu["zusatz"] == "Urteil ab Jahr 4"
+    assert "gegen_ungeduld" not in neu
+    erstes = engpass.ruf_tempo(0.0, 18, 1, 1)                          # Tempo ab Jahr 2
+    assert engpass.mit_ungeduld(erstes, nein) == erstes
+
+
 def test_rennen_gegen_die_ungeduld_grenzfaelle() -> None:
     ruf = engpass.ruf_tempo(10, 18, 8, 0)
     ung = {"jetzt": 9.0, "schwelle": 14, "je_spielzeitsekunde": 0.00255}
