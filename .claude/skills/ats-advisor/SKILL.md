@@ -174,7 +174,7 @@ ist nicht belegt.
 | Hohes Prestige: Verkaufspreise ×0,5, je 2 Bauplan- und Grundsteinoptionen weniger, Ereignistempo ×0,67 | gemessen in `effects`, 23.09.2026 |
 | P17–P19: Sturmdauer ×2, Abwanderung ×2, Baukosten ×1,5, längerer Händlerabstand, „Zusätzlicher Rufbedarf“ +1 | gemessen in `effects`, 26.09.–02.10.2026 |
 | P18: Opfern an der Feuerstelle kostet mehr; P19: Gebühr für jede entdeckte Lichtung (laut Patch-Notiz 2 Bernstein je kleiner, 6 je gefährlicher Lichtung) | Einbettungsbildschirm, 28.09. und 01.10.2026 |
-| P20: jeder gegangene oder gestorbene Siedler kostet 0,5 Ungeduld zusätzlich (zusammen 0,8 statt 0,3) — Siedler halten geht vor Ruf | Einbettungsbildschirm 12.10.2026; Wert aus dem Wiki, im Spielstand kein Feld dafür |
+| P20: jeder gegangene oder gestorbene Siedler kostet 0,8 Ungeduld (0,3 + 0,5) — Siedler halten geht vor Ruf | nachgerechnet am P20-Verlauf (Jahr 2→3: +3,9 bei 4 Abgängen ohne Ruf-Änderung, Zeitanteil 0,77), Wiki nennt dasselbe; kein Feld im Spielstand, 12.10.2026 |
 | Rohre werden beim Bau von Regenmaschinen verbraucht — ein fallender Rohrbestand ist dann gewollt, kein Engpass | Spieler, 28.09.2026 |
 
 **Nachschlagen statt raten.** Das Werkzeug `nachschlagen(name)` sieht in der
