@@ -53,7 +53,7 @@ def test_der_systemtext_kommt_aus_der_skill_datei() -> None:
     """Dieselbe Datei wie für Claude Code -- sonst driften die Regeln."""
     text = berater.systemtext()
     assert "Eine Empfehlung" in text
-    assert "Prestige 19" in text
+    assert "Prestige 20" in text
     assert not text.startswith("---")        # der Kopfteil ist Verwaltung
 
 

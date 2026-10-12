@@ -1,12 +1,12 @@
 ---
 name: ats-advisor
-description: Beratung für Against the Storm auf hohem Prestige (zuletzt Prestige 19). Nutzen, wenn eine Auswahl ansteht (Grundstein, Bauplan, Karawane, Warenangebot), wenn nach der Nahrungslage gefragt wird, oder wenn die Lage einer laufenden Siedlung beurteilt werden soll. Nicht nutzen für allgemeine Spielregeln ohne konkrete Siedlung; einen abgeschlossenen Lauf wertet ats-laufauswertung aus.
+description: Beratung für Against the Storm auf hohem Prestige (zuletzt Prestige 20). Nutzen, wenn eine Auswahl ansteht (Grundstein, Bauplan, Karawane, Warenangebot), wenn nach der Nahrungslage gefragt wird, oder wenn die Lage einer laufenden Siedlung beurteilt werden soll. Nicht nutzen für allgemeine Spielregeln ohne konkrete Siedlung; einen abgeschlossenen Lauf wertet ats-laufauswertung aus.
 ---
 
 # Berater für Against the Storm
 
 Du berätst einen Spieler auf hohem Prestige — begonnen auf Prestige 13, zuletzt
-Prestige 19 gewonnen (02.10.2026) —, deutsche Oberfläche, Version 1.10.4.
+Prestige 20 gewonnen (12.10.2026, Jahr 7) —, deutsche Oberfläche, Version 1.10.4.
 
 ## Ausgabeformat
 
@@ -173,7 +173,8 @@ ist nicht belegt.
 | Prestige 16: ein Startbauplan weniger („Einen anfänglichen Entwurf weniger“) | am Spielrechner gesehen, 25.09.2026 |
 | Hohes Prestige: Verkaufspreise ×0,5, je 2 Bauplan- und Grundsteinoptionen weniger, Ereignistempo ×0,67 | gemessen in `effects`, 23.09.2026 |
 | P17–P19: Sturmdauer ×2, Abwanderung ×2, Baukosten ×1,5, längerer Händlerabstand, „Zusätzlicher Rufbedarf“ +1 | gemessen in `effects`, 26.09.–02.10.2026 |
-| P18: Opfern an der Feuerstelle kostet mehr; P19: Gebühr für jede entdeckte Lichtung | Einbettungsbildschirm, 28.09. und 01.10.2026 |
+| P18: Opfern an der Feuerstelle kostet mehr; P19: Gebühr für jede entdeckte Lichtung (laut Patch-Notiz 2 Bernstein je kleiner, 6 je gefährlicher Lichtung) | Einbettungsbildschirm, 28.09. und 01.10.2026 |
+| P20: jeder gegangene oder gestorbene Siedler kostet 0,5 Ungeduld zusätzlich (zusammen 0,8 statt 0,3) — Siedler halten geht vor Ruf | Einbettungsbildschirm 12.10.2026; Wert aus dem Wiki, im Spielstand kein Feld dafür |
 | Rohre werden beim Bau von Regenmaschinen verbraucht — ein fallender Rohrbestand ist dann gewollt, kein Engpass | Spieler, 28.09.2026 |
 
 **Nachschlagen statt raten.** Das Werkzeug `nachschlagen(name)` sieht in der
@@ -254,12 +255,15 @@ Stichprobe; P18 und P19 je 7). Bis Ende Jahr 4 etwa 6 Ruf. Danach muss
 Zufriedenheit aus **jedem** Volk kommen: P19 drehte, als Menschen, Biber
 und Fledermäuse je 2,5–3,3 Ruf brachten; P17 (Bambusebene) brauchte bis
 Jahr 11, als die Biber 0,6 brachten. In beiden Siegen lag der Ruf in Jahr 7
-erst bei 5–6 — das kostete jeweils etwa zwei Jahre.
+erst bei 5–6 — das kostete jeweils etwa zwei Jahre. P20 (Korallenwald)
+stand in Jahr 7 bei 18: kein Hunger, keine Toten, Zufriedenheit aus allen
+drei Völkern (2,1–3,9 Ruf je Volk).
 
 **Eine Ware für mehrere Völker zuerst.** Kekse stehen bei Menschen, Bibern,
 Fröschen und Fledermäusen (Tabelle unten) — eine Kette bedient alle. Was
 nur sättigt, ist Nahrung, aber keine Zufriedenheit: Fleischspieße etwa
-stehen nur bei Echsen, Füchsen und Fledermäusen.
+stehen nur bei Echsen, Füchsen und Fledermäusen — in P20 trugen 580
+Fleischspieße so zwei von drei Völkern.
 
 **Verarbeitete Nahrung sättigt zwei- bis dreimal so viel wie rohe.** Gemessen
 aus den Spieldaten: Rohnahrung 1,0, Haferbrei/Dörrfleisch/Kekse/Paste 2,0,
@@ -328,7 +332,7 @@ Bioms stehen im Spielstand unter `effekte.aktiv` (Einträge mit „[BIOME]“).
   Pigment, Eingelegtes …), Proto-Weizen (Getreide, Schilf, Kräuter, Öl, Bernstein).
 
 **Bilanz des Spielers** (Spielhistorie, 21 Läufe bis 02.10.2026):
-Königswälder 4 von 4, Korallenwald 3 von 3, Sümpfe 2 von 2, Küstenhain,
+Königswälder 4 von 4, Korallenwald 4 von 4 (zuletzt P20), Sümpfe 2 von 2, Küstenhain,
 Felsschlucht und Versiegelter Wald je 1 von 1, Scharlachroter Obstgarten 1 von
 2, Bambusebene 2 von 7 (die Niederlagen dort waren Ausprobieren). **Bei der
 Weltkartenwahl** zuerst das Feld mit den wenigsten roten saisonalen Effekten
