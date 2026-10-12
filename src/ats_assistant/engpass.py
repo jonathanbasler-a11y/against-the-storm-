@@ -365,8 +365,12 @@ def mit_ungeduld(ruf: dict | None, gegen: dict | None) -> dict | None:
     Gesehen am P18-Sieg (28.09.2026): ab Jahr 7 stand die Ruf-Zeile
     dauerhaft rot mit „Jahr 7 ist vorbei“ -- auch als der Sieg sicher kam.
     Davor bleibt das Sieben-Jahres-Ziel; ein „nein“ macht die Zeile trotzdem rot.
+    Vor Jahr 4 gibt es auch hier kein Urteil (P20, Jahr 2: „nein (Rest −10,0)“
+    aus 1,3 Ruf hochgerechnet).
     """
     if not isinstance(ruf, dict) or not isinstance(gegen, dict):
+        return ruf
+    if ruf.get("stufe") == "unbekannt":
         return ruf
     out = {**ruf, "gegen_ungeduld": gegen}
     farbe = {"ja": "ruhig", "knapp": "gelb", "nein": "rot"}[gegen["urteil"]]
