@@ -60,6 +60,7 @@ nicht einen Durchschnitt über alles.
 | P17 Scharlachroter Obstgarten | — | Niederlage Jahr 7, Ungeduld | — Nahrung leer in Jahr 5, 15 gegangen |
 | P18 Scharlachroter Obstgarten | 5,4 | Sieg Jahr 12, Ungeduld 10,4 | 7 Aufträge, Pastete/Kekse/Mäntel, ~2,5 Ruf/Jahr |
 | P19 Königswälder | 5,9 | Sieg Jahr 11, Ungeduld 9,6 | Zufriedenheit 9,1 aus allen drei Völkern, 7 Aufträge |
+| P20 Korallenwald | 18 (Sieg) | Sieg Jahr 7, Ungeduld 11,2; 0 Tote, 0 Hunger, 9 gegangen | Fleisch aus Ranch und Trapperlager → 580 Fleischspieße für Echsen und Füchse; Zufriedenheit aus allen drei Völkern |
 
 Neue Läufe kommen in diese Tabelle (dieselbe Datei, eine Zeile).
 
